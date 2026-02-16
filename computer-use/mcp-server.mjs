@@ -6,7 +6,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
+import { platform } from "node:os";
 import { hsCall, takeScreenshot, runOsascript, findElements, clickElement, SCREENSHOT_PATH } from "./hammerspoon.mjs";
+const IS_LINUX = platform() === "linux";
 
 const server = new McpServer({ name: "computer-use", version: "1.0.0" });
 const n = z.coerce.number();
@@ -154,9 +156,10 @@ server.tool("browser_navigate", "Navigate Chrome to a URL. Auto-returns screensh
 	{ url: z.string().describe("URL to navigate to"),
 		new_tab: z.boolean().optional().describe("Open in new tab") },
 	async ({ url, new_tab }) => {
+		const mod = IS_LINUX ? "ctrl" : "cmd";
 		await hsCall("POST", "/launch", { app: "Google Chrome" });
 		await new Promise(r => setTimeout(r, 300));
-		await hsCall("POST", "/type", { key: new_tab ? "t" : "l", modifiers: ["cmd"] });
+		await hsCall("POST", "/type", { key: new_tab ? "t" : "l", modifiers: [mod] });
 		await new Promise(r => setTimeout(r, 200));
 		await hsCall("POST", "/type", { text: url });
 		await new Promise(r => setTimeout(r, 100));
