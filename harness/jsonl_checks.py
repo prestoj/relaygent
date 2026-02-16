@@ -111,7 +111,8 @@ def should_sleep(session_id: str, workspace: Path) -> bool:
             except json.JSONDecodeError:
                 continue
         return False
-    except Exception:
+    except Exception as e:
+        log(f"WARNING: should_sleep check failed: {e}")
         return False
 
 
@@ -138,5 +139,6 @@ def get_context_fill_from_jsonl(session_id: str, workspace: Path) -> float:
             except json.JSONDecodeError:
                 continue
         return 0.0
-    except Exception:
+    except Exception as e:
+        log(f"WARNING: context fill check failed: {e}")
         return 0.0

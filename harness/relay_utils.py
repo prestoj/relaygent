@@ -76,8 +76,8 @@ def rotate_log() -> None:
                 content = content[newline_pos + 1:]
             LOG_FILE.write_bytes(content)
             log(f"Log rotated (was {size} bytes)")
-    except OSError:
-        pass
+    except OSError as e:
+        log(f"WARNING: Log rotation failed: {e}")
 
 
 def cleanup_context_file() -> None:
