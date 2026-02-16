@@ -3,7 +3,7 @@
  * Stores secrets in ~/.relaygent/secrets.enc as encrypted JSON.
  */
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from "crypto";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -45,10 +45,16 @@ export function vaultExists() {
 	return existsSync(VAULT_PATH);
 }
 
+function atomicWrite(path, data) {
+	const tmp = path + ".tmp";
+	writeFileSync(tmp, data);
+	renameSync(tmp, path);
+}
+
 export function createVault(masterPassword) {
 	const secrets = {};
 	const data = encrypt(JSON.stringify(secrets), masterPassword);
-	writeFileSync(VAULT_PATH, data);
+	atomicWrite(VAULT_PATH, data);
 }
 
 export function loadVault(masterPassword) {
@@ -63,7 +69,7 @@ export function loadVault(masterPassword) {
 
 function saveVault(secrets, masterPassword) {
 	const data = encrypt(JSON.stringify(secrets), masterPassword);
-	writeFileSync(VAULT_PATH, data);
+	atomicWrite(VAULT_PATH, data);
 }
 
 export function getSecret(masterPassword, name) {

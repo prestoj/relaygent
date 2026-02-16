@@ -2,7 +2,7 @@
  * Gmail OAuth2 client — auto-refreshing tokens.
  * Credentials at ~/.relaygent/gmail/ (gcp-oauth.keys.json + credentials.json).
  */
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { google } from "googleapis";
@@ -26,11 +26,17 @@ export function getGmailClient() {
 	const { client_id, client_secret, redirect_uris } = keys.installed || keys.web;
 	const oauth2 = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 	oauth2.setCredentials(tokens);
-	// Auto-persist refreshed tokens
+	// Auto-persist refreshed tokens (atomic write to prevent corruption)
 	oauth2.on("tokens", (newTokens) => {
-		const current = JSON.parse(readFileSync(TOKEN_PATH, "utf-8"));
-		writeFileSync(TOKEN_PATH, JSON.stringify({ ...current, ...newTokens }, null, 2));
-		process.stderr.write("[email] OAuth tokens refreshed\n");
+		try {
+			const current = JSON.parse(readFileSync(TOKEN_PATH, "utf-8"));
+			const tmpPath = TOKEN_PATH + ".tmp";
+			writeFileSync(tmpPath, JSON.stringify({ ...current, ...newTokens }, null, 2));
+			renameSync(tmpPath, TOKEN_PATH);
+			process.stderr.write("[email] OAuth tokens refreshed\n");
+		} catch (e) {
+			process.stderr.write(`[email] WARNING: Failed to persist refreshed tokens: ${e.message}\n`);
+		}
 	});
 	client = google.gmail({ version: "v1", auth: oauth2 });
 	process.stderr.write("[email] Gmail client initialized\n");
@@ -60,7 +66,9 @@ export async function exchangeCode(code) {
 	const { client_id, client_secret, redirect_uris } = keys.installed || keys.web;
 	const oauth2 = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 	const { tokens } = await oauth2.getToken(code);
-	writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+	const tmpPath = TOKEN_PATH + ".tmp";
+	writeFileSync(tmpPath, JSON.stringify(tokens, null, 2));
+	renameSync(tmpPath, TOKEN_PATH);
 	process.stderr.write("[email] OAuth tokens saved\n");
 	client = null; // Reset so next getGmailClient() picks up new tokens
 }
