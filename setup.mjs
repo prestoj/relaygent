@@ -119,6 +119,9 @@ async function main() {
 			console.log(`  ${sub}: ${C.green}venv ready${C.reset}`);
 		} catch {
 			console.log(`  ${sub}: ${C.red}venv failed${C.reset}. Debian/Ubuntu: sudo apt install python3-venv`);
+			console.log(`  ${C.red}Cannot continue without ${sub}. Fix the error above and re-run setup.${C.reset}`);
+			rl.close();
+			process.exit(1);
 		}
 	}
 	console.log(`  Building hub...`);
