@@ -135,4 +135,16 @@ export async function clickElement({ title, role, app, index }) {
 	return { error: `No element found matching "${title || role}"` };
 }
 
+/** Startup self-test: verify backend is reachable. Logs warning to stderr. */
+export async function checkHealth() {
+	const r = await hsCallOnce("GET", "/health", null, 3000);
+	if (r.error) {
+		const backend = IS_LINUX ? "linux-server.py" : "Hammerspoon";
+		process.stderr.write(`[computer-use] Warning: ${backend} not reachable (${r.error})\n`);
+		return false;
+	}
+	process.stderr.write(`[computer-use] Backend OK (${r.platform || "macos"})\n`);
+	return true;
+}
+
 export { SCREENSHOT_PATH };
