@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
 import { marked } from 'marked';
+import { sanitizeHtml } from './sanitize.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = path.join(__dirname, '..', '..', '..');
@@ -88,7 +89,7 @@ export function getTopic(slug) {
 	} catch {
 		return { slug, title: slug, html: '<p>Error: could not parse this topic file.</p>', backlinks: [] };
 	}
-	const html = renderWikiLinks(marked(content));
+	const html = sanitizeHtml(renderWikiLinks(marked(content)));
 	const allFiles = findMarkdownFiles(KB_DIR).filter(({ slug: s }) => s !== slug);
 	const backlinks = allFiles.filter(({ filepath: fp }) => {
 		try {
