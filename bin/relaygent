@@ -66,8 +66,8 @@ stop_process() {
         local pid; pid=$(cat "$pidfile")
         if kill -0 "$pid" 2>/dev/null; then
             # Kill entire process group quickly
-            pkill -9 -P "$pid" 2>/dev/null
-            kill -9 "$pid" 2>/dev/null
+            pkill -9 -P "$pid" 2>/dev/null || true
+            kill -9 "$pid" 2>/dev/null || true
             echo -e "  $name: ${YELLOW}stopped${NC}"
         else
             echo -e "  $name: ${YELLOW}not running${NC}"
@@ -139,7 +139,7 @@ do_stop() {
     echo -e "${CYAN}Stopping Relaygent...${NC}"
     stop_process "Relay" "relay"
     # Kill any orphaned claude subprocesses spawned by the relay
-    local claude_pids; claude_pids=$(pgrep -f "claude.*--print" 2>/dev/null)
+    local claude_pids; claude_pids=$(pgrep -f "claude.*--print" 2>/dev/null) || true
     [ -n "$claude_pids" ] && kill -9 $claude_pids 2>/dev/null && \
         echo -e "  Claude processes: ${YELLOW}cleaned up${NC}" || true
     stop_process "Hub" "hub"
@@ -148,16 +148,16 @@ do_stop() {
     # Fallback: kill by port if pidfiles were lost
     for port_name in "${HUB_PORT:-8080}:Hub" "${FORUM_PORT:-8085}:Forum" "${NOTIF_PORT:-8083}:Notifications"; do
         port="${port_name%%:*}"; name="${port_name##*:}"
-        pids=$(lsof -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null)
+        pids=$(lsof -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null) || true
         [ -n "$pids" ] && kill $pids 2>/dev/null && \
-            echo -e "  $name orphan (port $port): ${YELLOW}killed${NC}"
+            echo -e "  $name orphan (port $port): ${YELLOW}killed${NC}" || true
     done
     # Kill MCP servers spawned by Claude CLI
-    local mcp_pids; mcp_pids=$(pgrep -f "mcp-chat\.mjs|mcp-server\.mjs" 2>/dev/null)
+    local mcp_pids; mcp_pids=$(pgrep -f "mcp-chat\.mjs|mcp-server\.mjs" 2>/dev/null) || true
     [ -n "$mcp_pids" ] && kill -9 $mcp_pids 2>/dev/null && \
         echo -e "  MCP servers: ${YELLOW}cleaned up${NC}" || true
     # Kill notification poller daemon
-    local poller_pids; poller_pids=$(pgrep -f "notification-poller" 2>/dev/null)
+    local poller_pids; poller_pids=$(pgrep -f "notification-poller" 2>/dev/null) || true
     [ -n "$poller_pids" ] && kill -9 $poller_pids 2>/dev/null && \
         echo -e "  Notification poller: ${YELLOW}cleaned up${NC}" || true
     # Clean up lock file
