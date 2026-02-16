@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Relaygent CLI — start, stop, status
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -125,9 +124,13 @@ do_start() {
     ensure_venv "$SCRIPT_DIR/notifications"
     start_service "Notifications (port $NOTIF_PORT)" "notifications" \
         "$SCRIPT_DIR/notifications/.venv/bin/python3 $SCRIPT_DIR/notifications/server.py"
-    # Relay
-    start_service "Relay" "relay" \
-        "cd $SCRIPT_DIR/harness && python3 relay.py"
+    # Relay — verify Claude auth before starting
+    if ! claude -p 'hi' >/dev/null 2>&1; then
+        echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
+    else
+        start_service "Relay" "relay" \
+            "cd $SCRIPT_DIR/harness && python3 relay.py"
+    fi
     echo ""
     echo -e "  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}"
     echo -e "  Logs:      $SCRIPT_DIR/logs/"
@@ -180,21 +183,12 @@ do_status() {
     fi
 }
 
-do_logs() {
-    echo -e "${CYAN}Tailing Relaygent logs (Ctrl-C to stop)...${NC}"
-    tail -f "$SCRIPT_DIR"/logs/relaygent*.log 2>/dev/null || echo -e "${RED}No log files found in $SCRIPT_DIR/logs/${NC}"
-}
-
-do_orient() {
-    bash "$SCRIPT_DIR/harness/orient.sh"
-}
-
 case "${1:-help}" in
     start)   do_start ;;
     stop)    do_stop; exit 0 ;;
     status)  do_status ;;
     restart) do_stop; sleep 1; do_start ;;
-    logs)    do_logs ;;
-    orient)  do_orient ;;
+    logs)    tail -f "$SCRIPT_DIR"/logs/relaygent*.log 2>/dev/null || echo -e "${RED}No logs found${NC}" ;;
+    orient)  bash "$SCRIPT_DIR/harness/orient.sh" ;;
     *)       echo "Usage: relaygent {start|stop|status|restart|logs|orient}" ;;
 esac
