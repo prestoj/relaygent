@@ -47,6 +47,20 @@ check_service "Hub" "http://127.0.0.1:${HUB_PORT}/api/health"
 HS_PORT=$(python3 -c "import json; c=json.load(open('$CONFIG_FILE')); print(c.get('services',{}).get('hammerspoon',{}).get('port',8097))" 2>/dev/null || echo 8097)
 check_service "Hammerspoon" "http://127.0.0.1:${HS_PORT}/health"
 
+# Unread chat messages
+UNREAD=$(curl -s --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/chat?mode=unread" 2>/dev/null)
+UNREAD_COUNT=$(echo "$UNREAD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo 0)
+if [ "$UNREAD_COUNT" -gt 0 ] 2>/dev/null; then
+    echo -e "\n\033[1;33mChat:\033[0m $UNREAD_COUNT unread message(s) — check with read_messages"
+fi
+
+# Pending reminders
+PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/pending" 2>/dev/null)
+PENDING_COUNT=$(echo "$PENDING" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
+if [ "$PENDING_COUNT" -gt 0 ] 2>/dev/null; then
+    echo -e "\033[1;33mReminders:\033[0m $PENDING_COUNT due"
+fi
+
 # Disk
 DISK_USED=$(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')
 echo -e "\n\033[0;34mDisk:\033[0m ${DISK_USED:-unknown}"
