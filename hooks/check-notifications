@@ -76,7 +76,7 @@ for line in reversed(data.strip().split(chr(10))):
     except: continue
 " 2>/dev/null)
     if [[ -n "$FILL_PCT" ]]; then
-        echo "$FILL_PCT" > "$CONTEXT_PCT_FILE"
+        echo "$FILL_PCT" > "${CONTEXT_PCT_FILE}.tmp" && mv "${CONTEXT_PCT_FILE}.tmp" "$CONTEXT_PCT_FILE"
         if [[ "$FILL_PCT" -ge "$CONTEXT_THRESHOLD" ]]; then
             CTX="$CTX | CONTEXT ${FILL_PCT}% — Wrap up: rewrite handoff.md, update working-state.md, commit KB, then stop."
         fi

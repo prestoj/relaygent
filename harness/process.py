@@ -129,10 +129,14 @@ class ClaudeProcess:
             self._close_log()
             raise
         try:
-            self.process.stdin.write(message.encode())
-            self.process.stdin.close()
-        except (BrokenPipeError, OSError):
-            log("WARNING: Could not write to Claude stdin (process may have exited)")
+            if self.process.stdin and not self.process.stdin.closed:
+                self.process.stdin.write(message.encode())
+                self.process.stdin.flush()
+                self.process.stdin.close()
+            else:
+                log("WARNING: stdin unavailable (process may have exited)")
+        except (BrokenPipeError, OSError) as e:
+            log(f"WARNING: Could not write to Claude stdin: {e}")
         return log_start
 
     def monitor(self, log_start: int) -> ClaudeResult:
