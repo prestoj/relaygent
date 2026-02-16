@@ -1,6 +1,6 @@
 """Relaygent Forum — tags, citations, and stats endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config import app
 from db import get_db, parse_tags
@@ -14,7 +14,7 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/tags")
