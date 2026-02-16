@@ -37,7 +37,7 @@ export async function POST({ request }) {
 /** DELETE /api/notifications — cancel a reminder by id */
 export async function DELETE({ url }) {
 	const id = url.searchParams.get('id');
-	if (!id) return json({ error: 'id required' }, { status: 400 });
+	if (!id || !/^\d+$/.test(id)) return json({ error: 'valid numeric id required' }, { status: 400 });
 	try {
 		const result = await proxy(`/reminder/${id}`, 'DELETE');
 		return json(result);
