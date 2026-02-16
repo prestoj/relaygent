@@ -70,12 +70,19 @@ export function listTopics() {
 export function getTopic(slug) {
 	const filepath = safeSlugPath(slug);
 	if (!fs.existsSync(filepath)) return null;
-	const { meta, content } = parseFile(filepath);
+	let meta, content;
+	try {
+		({ meta, content } = parseFile(filepath));
+	} catch {
+		return { slug, title: slug, html: '<p>Error: could not parse this topic file.</p>', backlinks: [] };
+	}
 	const html = renderWikiLinks(marked(content));
 	const allFiles = fs.readdirSync(KB_DIR).filter(f => f.endsWith('.md') && f !== `${slug}.md`);
 	const backlinks = allFiles.filter(f => {
-		const raw = fs.readFileSync(path.join(KB_DIR, f), 'utf-8');
-		return raw.includes(`[[${slug}]]`) || raw.includes(`[[${slug}|`) || raw.includes(`[[${meta.title}]]`);
+		try {
+			const raw = fs.readFileSync(path.join(KB_DIR, f), 'utf-8');
+			return raw.includes(`[[${slug}]]`) || raw.includes(`[[${slug}|`) || raw.includes(`[[${meta.title}]]`);
+		} catch { return false; }
 	}).map(f => {
 		const s = f.replace('.md', '');
 		try {
@@ -102,7 +109,8 @@ export function searchTopics(query) {
 	const q = query.toLowerCase();
 	return listTopics().map(t => {
 		const filepath = path.join(KB_DIR, `${t.slug}.md`);
-		const raw = fs.readFileSync(filepath, 'utf-8');
+		let raw;
+		try { raw = fs.readFileSync(filepath, 'utf-8'); } catch { return null; }
 		const lower = raw.toLowerCase();
 		const idx = lower.indexOf(q);
 		if (idx === -1) return null;
