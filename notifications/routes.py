@@ -21,8 +21,14 @@ HUB_PORT = os.environ.get("RELAYGENT_HUB_PORT", "8080")
 def get_notifications():
     """Unified endpoint: return all pending notifications."""
     notifications = []
-    _collect_due_reminders(notifications)
-    _collect_chat_messages(notifications)
+    try:
+        _collect_due_reminders(notifications)
+    except Exception:
+        logger.exception("Failed to collect due reminders")
+    try:
+        _collect_chat_messages(notifications)
+    except Exception:
+        logger.exception("Failed to collect chat messages")
     return jsonify(notifications)
 
 
