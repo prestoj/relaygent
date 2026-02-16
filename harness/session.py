@@ -29,6 +29,7 @@ class SleepManager:
     def __init__(self, timer: Timer):
         self.timer = timer
         self._seen_timestamps = set()
+        self._notif_error_logged = False
 
     def _check_notifications(self) -> list:
         """Check unified notifications endpoint. Returns list of NEW pending notifications."""
@@ -36,7 +37,13 @@ class SleepManager:
             req = urllib.request.Request(NOTIFICATIONS_API, method="GET")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 notifications = json.loads(resp.read().decode())
-        except Exception:
+            if self._notif_error_logged:
+                log("Notifications service recovered")
+                self._notif_error_logged = False
+        except Exception as e:
+            if not self._notif_error_logged:
+                log(f"WARNING: Notifications unreachable: {e}")
+                self._notif_error_logged = True
             return []
 
         new_notifications = []
