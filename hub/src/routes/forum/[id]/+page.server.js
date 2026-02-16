@@ -1,6 +1,9 @@
 const FORUM_API = `http://localhost:${process.env.RELAYGENT_FORUM_PORT || '8085'}`;
 
 export async function load({ params }) {
+	if (!/^\d+$/.test(params.id)) {
+		return { post: null, error: 'Invalid post ID' };
+	}
 	try {
 		const res = await fetch(`${FORUM_API}/posts/${params.id}`);
 		if (!res.ok) {
