@@ -81,11 +81,12 @@ function startWatching() {
 		try {
 			const stat = fs.statSync(sessionFile);
 			if (stat.size <= lastSize) return;
+			const chunkSize = Math.min(stat.size - lastSize, 1024 * 1024); // Cap at 1MB
 			const fd = fs.openSync(sessionFile, 'r');
-			const buffer = Buffer.alloc(stat.size - lastSize);
-			fs.readSync(fd, buffer, 0, buffer.length, lastSize);
+			const buffer = Buffer.alloc(chunkSize);
+			fs.readSync(fd, buffer, 0, chunkSize, lastSize);
 			fs.closeSync(fd);
-			lastSize = stat.size;
+			lastSize += chunkSize;
 
 			const chunk = incompleteLine + buffer.toString('utf-8');
 			const lines = chunk.split('\n');
@@ -107,7 +108,7 @@ function startWatching() {
 
 function broadcastRelay(message) {
 	const data = JSON.stringify(message);
-	relayWss.clients.forEach(c => { if (c.readyState === 1) c.send(data); });
+	relayWss.clients.forEach(c => { try { if (c.readyState === 1) c.send(data); } catch {} });
 }
 
 // --- Chat WebSocket: watch trigger file for new messages ---
@@ -115,7 +116,7 @@ const CHAT_TRIGGER = '/tmp/hub-chat-new.json';
 
 function broadcastChat(message) {
 	const data = JSON.stringify(message);
-	chatWss.clients.forEach(c => { if (c.readyState === 1) c.send(data); });
+	chatWss.clients.forEach(c => { try { if (c.readyState === 1) c.send(data); } catch {} });
 }
 
 let chatWatcher = null;
