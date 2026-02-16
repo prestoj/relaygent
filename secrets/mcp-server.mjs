@@ -10,7 +10,9 @@ import { getSecret, setSecret, listSecrets, deleteSecret, vaultExists } from "./
 
 const password = process.env.RELAYGENT_MASTER_PASSWORD;
 if (!password) {
-	process.stderr.write("[secrets] ERROR: RELAYGENT_MASTER_PASSWORD not set\n");
+	process.stderr.write("[secrets] ERROR: RELAYGENT_MASTER_PASSWORD not set.\n");
+	process.stderr.write("[secrets] Start with: relaygent start (prompts for password)\n");
+	process.stderr.write("[secrets] Or set: export RELAYGENT_MASTER_PASSWORD=<your-password>\n");
 	process.exit(1);
 }
 
