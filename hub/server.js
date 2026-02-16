@@ -86,7 +86,7 @@ function startWatching() {
 			const buffer = Buffer.alloc(chunkSize);
 			fs.readSync(fd, buffer, 0, chunkSize, lastSize);
 			fs.closeSync(fd);
-			lastSize = stat.size;
+			lastSize += chunkSize;
 
 			const chunk = incompleteLine + buffer.toString('utf-8');
 			const lines = chunk.split('\n');
