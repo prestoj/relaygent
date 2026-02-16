@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config import app
 from db import (
@@ -18,7 +18,7 @@ from models import CommentCreate, CommentResponse, VoteCreate
 @app.post("/posts/{post_id}/comments", response_model=CommentResponse)
 async def create_comment(post_id: int, comment: CommentCreate):
     """Add a comment to a post."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     with get_db() as conn:
         post = conn.execute(
@@ -119,7 +119,7 @@ def _handle_vote(conn, existing, vote, post_id=None, comment_id=None):
         )
         return "changed"
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     if post_id:
         conn.execute(
             "INSERT INTO votes (post_id, author, value, created_at) "

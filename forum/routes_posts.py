@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from config import app
@@ -26,7 +26,7 @@ async def create_post(post: PostCreate):
     if post.category not in ("discussion", "proposal", "question", "idea"):
         raise HTTPException(400, "Invalid category")
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     tags_json = json.dumps(post.tags)
 
     with get_db() as conn:
@@ -88,7 +88,7 @@ async def list_posts(
         if sort == "top":
             posts.sort(key=lambda p: p.score, reverse=True)
         elif sort == "hot":
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             for p in posts:
                 created = datetime.fromisoformat(p.created_at)
                 age_hours = max(
