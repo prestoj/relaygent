@@ -7,7 +7,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { readFileSync } from "node:fs";
 import { platform } from "node:os";
-import { hsCall, takeScreenshot, runOsascript, findElements, clickElement, SCREENSHOT_PATH } from "./hammerspoon.mjs";
+import { hsCall, takeScreenshot, runOsascript, findElements, clickElement, checkHealth, SCREENSHOT_PATH } from "./hammerspoon.mjs";
 const IS_LINUX = platform() === "linux";
 
 const server = new McpServer({ name: "computer-use", version: "1.0.0" });
@@ -185,5 +185,6 @@ server.tool("applescript", "Run AppleScript via osascript.",
 server.tool("reload_config", "Reload Hammerspoon config", {},
 	async () => jsonRes(await hsCall("POST", "/reload")));
 
+await checkHealth();
 const transport = new StdioServerTransport();
 await server.connect(transport);
