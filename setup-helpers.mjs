@@ -6,7 +6,7 @@ import { join } from 'path';
 export function setupHammerspoon(config, REPO_DIR, HOME, C, ask) {
 	if (process.platform !== 'darwin') {
 		console.log(`  Computer-use: ${C.yellow}Linux detected${C.reset} — uses python linux-server.py (started automatically)`);
-		console.log(`  ${C.dim}Install deps: sudo apt install xdotool scrot wmctrl imagemagick${C.reset}`);
+		console.log(`  ${C.dim}Debian/Ubuntu: sudo apt install xdotool scrot wmctrl imagemagick${C.reset}`);
 		return;
 	}
 	const hsDir = join(HOME, '.hammerspoon');

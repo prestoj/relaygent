@@ -113,9 +113,13 @@ async function main() {
 		const dir = join(REPO_DIR, sub);
 		const venv = join(dir, '.venv');
 		console.log(`  Setting up ${sub} Python venv...`);
-		execSync(`python3 -m venv "${venv}" && "${venv}/bin/pip" install -q -r requirements.txt`,
-			{ cwd: dir, stdio: 'pipe' });
-		console.log(`  ${sub}: ${C.green}venv ready${C.reset}`);
+		try {
+			execSync(`python3 -m venv "${venv}" && "${venv}/bin/pip" install -q -r requirements.txt`,
+				{ cwd: dir, stdio: 'pipe' });
+			console.log(`  ${sub}: ${C.green}venv ready${C.reset}`);
+		} catch {
+			console.log(`  ${sub}: ${C.red}venv failed${C.reset}. Debian/Ubuntu: sudo apt install python3-venv`);
+		}
 	}
 	console.log(`  Building hub...`);
 	execSync('npm run build', { cwd: join(REPO_DIR, 'hub'), stdio: 'pipe' });
