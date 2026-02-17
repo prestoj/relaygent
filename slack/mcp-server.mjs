@@ -8,29 +8,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { slackApi } from "./slack-client.mjs";
+import { userName, dmName } from "./slack-helpers.mjs";
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
 const txt = (t) => ({ content: [{ type: "text", text: t }] });
-
-// User ID → display name cache
-const userCache = new Map();
-async function userName(uid) {
-	if (!uid || !uid.startsWith("U")) return uid || "unknown";
-	if (userCache.has(uid)) return userCache.get(uid);
-	try {
-		const d = await slackApi("users.info", { user: uid });
-		const name = d.user?.real_name || d.user?.name || uid;
-		userCache.set(uid, name);
-		return name;
-	} catch { userCache.set(uid, uid); return uid; }
-}
-
-// Resolve DM channel name to partner's display name
-async function dmName(ch) {
-	if (ch.is_im && ch.user) return `DM: ${await userName(ch.user)}`;
-	if (ch.is_mpim) return `Group DM: ${ch.name}`;
-	return `#${ch.name}`;
-}
 
 server.tool("channels",
 	"List Slack channels the user has joined.",
