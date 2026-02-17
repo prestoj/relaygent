@@ -8,6 +8,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { slackApi } from "./slack-client.mjs";
+import { userName, dmName } from "./slack-helpers.mjs";
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
 const txt = (t) => ({ content: [{ type: "text", text: t }] });
@@ -22,10 +23,12 @@ server.tool("channels",
 			const data = await slackApi("conversations.list", {
 				limit, types, exclude_archived: true,
 			});
-			const lines = (data.channels || []).map(c =>
-				`#${c.name} (${c.id}) — ${c.num_members || 0} members` +
-				(c.topic?.value ? ` — ${c.topic.value}` : "")
-			);
+			const lines = await Promise.all((data.channels || []).map(async c => {
+				const label = await dmName(c);
+				return `${label} (${c.id})` +
+					(c.is_im || c.is_mpim ? "" : ` — ${c.num_members || 0} members`) +
+					(c.topic?.value ? ` — ${c.topic.value}` : "");
+			}));
 			if (!lines.length) return txt("No channels found.");
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack channels error: ${e.message}`); }
@@ -43,12 +46,12 @@ server.tool("read_messages",
 			});
 			const msgs = data.messages || [];
 			if (!msgs.length) return txt("No messages in this channel.");
-			const lines = msgs.reverse().map(m => {
+			const lines = await Promise.all(msgs.reverse().map(async m => {
 				const ts = new Date(parseFloat(m.ts) * 1000)
 					.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
-				const user = m.user || m.bot_id || "unknown";
+				const user = await userName(m.user || m.bot_id);
 				return `[${ts}] <${user}> ${m.text || ""}`;
-			});
+			}));
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack read error: ${e.message}`); }
 	}
@@ -108,14 +111,18 @@ server.tool("channel_info",
 		try {
 			const data = await slackApi("conversations.info", { channel });
 			const c = data.channel;
+			const label = await dmName(c);
 			const lines = [
-				`Name: #${c.name}`, `ID: ${c.id}`,
-				`Topic: ${c.topic?.value || "(none)"}`,
-				`Purpose: ${c.purpose?.value || "(none)"}`,
-				`Members: ${c.num_members || 0}`,
-				`Created: ${new Date(c.created * 1000).toISOString()}`,
-				`Archived: ${c.is_archived}`,
+				`Name: ${label}`, `ID: ${c.id}`,
+				`Type: ${c.is_im ? "DM" : c.is_mpim ? "Group DM" : c.is_private ? "Private" : "Public"}`,
 			];
+			if (!c.is_im) {
+				lines.push(`Topic: ${c.topic?.value || "(none)"}`);
+				lines.push(`Purpose: ${c.purpose?.value || "(none)"}`);
+			}
+			lines.push(`Members: ${c.num_members || (c.is_im ? 2 : 0)}`);
+			lines.push(`Created: ${new Date(c.created * 1000).toISOString()}`);
+			if (!c.is_im) lines.push(`Archived: ${c.is_archived}`);
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack channel_info error: ${e.message}`); }
 	}
@@ -146,17 +153,34 @@ server.tool("unread",
 	{},
 	async () => {
 		try {
+			// conversations.list doesn't return unread counts reliably;
+			// must call conversations.info per channel for accurate data.
 			const data = await slackApi("conversations.list", {
 				limit: 200, types: "public_channel,private_channel,mpim,im",
 				exclude_archived: true,
 			});
-			const unread = (data.channels || [])
-				.filter(c => c.unread_count > 0 || c.unread_count_display > 0);
+			const channels = data.channels || [];
+			if (!channels.length) return txt("No channels found.");
+			// Batch conversations.info calls (5 at a time) to avoid rate limits
+			const BATCH = 5;
+			const unread = [];
+			for (let i = 0; i < channels.length; i += BATCH) {
+				const batch = channels.slice(i, i + BATCH);
+				const results = await Promise.all(batch.map(async c => {
+					try {
+						const info = await slackApi("conversations.info", { channel: c.id });
+						const ch = info.channel;
+						if (ch.unread_count_display > 0) {
+							const label = await dmName(ch);
+							return `${label}: ${ch.unread_count_display} unread`;
+						}
+					} catch {}
+					return null;
+				}));
+				unread.push(...results.filter(Boolean));
+			}
 			if (!unread.length) return txt("No unread messages.");
-			const lines = unread.map(c =>
-				`#${c.name || c.id}: ${c.unread_count_display || c.unread_count} unread`
-			);
-			return txt(lines.join("\n"));
+			return txt(unread.join("\n"));
 		} catch (e) { return txt(`Slack unread error: ${e.message}`); }
 	}
 );
