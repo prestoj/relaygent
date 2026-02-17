@@ -38,6 +38,7 @@ class SleepManager:
     def __init__(self, timer: Timer):
         self.timer = timer
         self._seen_timestamps = set()
+        self._cache_missing_since: float | None = None
 
     def _check_notifications(self) -> list:
         """Read cached notifications file. Returns list of NEW pending notifications."""
@@ -114,15 +115,22 @@ class SleepManager:
                 log(f"Notification: {first.get('type', '?')}")
                 return True, notifications
 
-            # Force-wake if cache file is stale (poller may have died)
+            # Force-wake if cache file is stale or missing (poller may have died)
             try:
                 age = time.time() - os.path.getmtime(NOTIFICATIONS_CACHE)
+                self._cache_missing_since = None
                 if age > MAX_CACHE_STALE:
                     log(f"Notification cache stale ({int(age)}s), force-waking")
                     return True, [{"type": "system", "message":
                         "Notification cache stale — waking to check status."}]
             except OSError:
-                pass
+                if self._cache_missing_since is None:
+                    self._cache_missing_since = time.time()
+                elif time.time() - self._cache_missing_since > MAX_CACHE_STALE:
+                    log("Notification cache missing, force-waking")
+                    self._cache_missing_since = None
+                    return True, [{"type": "system", "message":
+                        "Notification cache missing — poller may not be running."}]
 
             if self.timer.is_expired():
                 log("Out of time")
