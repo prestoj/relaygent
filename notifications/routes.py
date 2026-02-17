@@ -116,7 +116,7 @@ def _collect_chat_messages(notifications):
                 "count": data["count"],
                 "messages": messages,
             })
-    except Exception:
+    except (urllib.error.URLError, json.JSONDecodeError, OSError):
         logger.warning("Failed to check hub chat for unread messages", exc_info=True)
 
 

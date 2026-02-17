@@ -37,13 +37,20 @@ def _slack_api(token, method, params=None, _retries=2):
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
+        if not data.get("ok"):
+            logger.debug("Slack API %s returned ok=false: %s",
+                         method, data.get("error", "unknown"))
         return data if data.get("ok") else None
     except urllib.error.HTTPError as e:
         if e.code == 429 and _retries > 0:
             retry_after = int(e.headers.get("Retry-After", "5"))
-            logger.info(f"Slack rate limited, waiting {retry_after}s")
+            logger.info("Slack rate limited, waiting %ds", retry_after)
             time.sleep(retry_after)
             return _slack_api(token, method, params, _retries - 1)
+        logger.warning("Slack API %s HTTP %d", method, e.code)
+        return None
+    except (urllib.error.URLError, OSError) as e:
+        logger.warning("Slack API %s network error: %s", method, e)
         return None
 
 
@@ -73,8 +80,8 @@ def collect(notifications):
         if os.path.exists(_LAST_CHECK_FILE):
             with open(_LAST_CHECK_FILE) as f:
                 last_ts = f.read().strip() or "0"
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning("Failed to read Slack last-check timestamp: %s", e)
 
     result = _slack_api(token, "conversations.list", {
         "limit": 200,
@@ -117,8 +124,8 @@ def ack():
         with open(_LAST_CHECK_FILE, "w") as f:
             # Use 6 decimal places to match Slack ts format
             f.write(f"{time.time():.6f}")
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning("Failed to write Slack ack timestamp: %s", e)
 
 
 @app.route("/notifications/ack-slack", methods=["POST"])
