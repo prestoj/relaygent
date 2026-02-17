@@ -92,18 +92,18 @@ class TestCheckNotifications:
         assert mgr._check_notifications() == []
 
 
-class TestClearSlackDedup:
-    def test_clears_slack_keys(self, timer):
+class TestSlackDedupPersistence:
+    def test_slack_keys_persist_across_sleep(self, timer, cache_file):
+        """Slack dedup keys must NOT be cleared on sleep — prevents phantom wake loop."""
         mgr = SleepManager(timer)
-        mgr._seen_timestamps = {"slack-C1-2", "slack-C2-1", "t1", "reminder-5"}
-        mgr._clear_slack_dedup()
-        assert mgr._seen_timestamps == {"t1", "reminder-5"}
-
-    def test_no_slack_keys_is_noop(self, timer):
-        mgr = SleepManager(timer)
-        mgr._seen_timestamps = {"t1", "t2"}
-        mgr._clear_slack_dedup()
-        assert mgr._seen_timestamps == {"t1", "t2"}
+        slack_notif = [{"source": "slack", "channels": [{"id": "C1", "unread": 1}]}]
+        cache_file.write_text(json.dumps(slack_notif))
+        with patch("session.set_status"), patch("session.log"):
+            mgr._wait_for_wake()
+        # Same notification should be deduped on next wake attempt
+        cache_file.write_text(json.dumps(slack_notif))
+        result = mgr._check_notifications()
+        assert len(result) == 0, "Same Slack unread count should not re-trigger wake"
 
 
 class TestWaitForWake:
