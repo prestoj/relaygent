@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 def format_chat(notifs: list) -> list[str]:
-    """Format chat notification messages. Chat is owner-only — no sandboxing."""
+    """Format chat and Slack notification messages."""
     parts = []
     for msg in notifs:
-        actual = msg.get("messages", [])
-        if actual:
-            lines = [m.get("content", "") for m in actual]
+        source = msg.get("source", "chat")
+        if source == "slack":
+            count = msg.get("count", 0)
+            channels = msg.get("channels", [])
+            ch_info = ", ".join(c.get("name", c.get("id", "?")) for c in channels)
+            parts.append(f"New Slack message(s) ({count}) in: {ch_info}. Check your Slack DMs.")
+        elif msg.get("messages"):
+            lines = [m.get("content", "") for m in msg["messages"]]
             parts.append("\n".join(lines))
         else:
             parts.append("New chat message (check unread to view)")

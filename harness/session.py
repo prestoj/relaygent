@@ -1,4 +1,10 @@
-"""Sleep/wake handling using unified notifications endpoint."""
+"""Sleep/wake handling using cached notifications file.
+
+The background notification-poller daemon maintains a cache file with
+merged fast (1s) + slow (30s, Slack/email) poll results. We read that
+file instead of hitting the notifications API directly, which avoids
+hammering the Slack API every second.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +19,7 @@ from config import SLEEP_POLL_INTERVAL, Timer, log, set_status
 from notify_format import format_notifications
 
 NOTIFICATIONS_PORT = os.environ.get("RELAYGENT_NOTIFICATIONS_PORT", "8083")
-NOTIFICATIONS_API = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/pending"
+NOTIFICATIONS_CACHE = "/tmp/relaygent-notifications-cache.json"
 
 
 @dataclass
@@ -23,33 +29,22 @@ class SleepResult:
     wake_message: str = ""
 
 
-MAX_NOTIF_FAILURES = 30  # Force wake after this many consecutive failures
+MAX_CACHE_STALE = 60  # Force wake if cache file hasn't updated in this many seconds
 
 
 class SleepManager:
-    """Handles sleep polling using unified notification service."""
+    """Handles sleep polling using cached notification file."""
 
     def __init__(self, timer: Timer):
         self.timer = timer
         self._seen_timestamps = set()
-        self._notif_error_logged = False
-        self._consecutive_failures = 0
 
     def _check_notifications(self) -> list:
-        """Check unified notifications endpoint. Returns list of NEW pending notifications."""
+        """Read cached notifications file. Returns list of NEW pending notifications."""
         try:
-            req = urllib.request.Request(NOTIFICATIONS_API, method="GET")
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                notifications = json.loads(resp.read().decode())
-            self._consecutive_failures = 0
-            if self._notif_error_logged:
-                log("Notifications service recovered")
-                self._notif_error_logged = False
-        except Exception as e:
-            self._consecutive_failures += 1
-            if not self._notif_error_logged:
-                log(f"WARNING: Notifications unreachable: {e}")
-                self._notif_error_logged = True
+            with open(NOTIFICATIONS_CACHE) as f:
+                notifications = json.loads(f.read())
+        except (FileNotFoundError, json.JSONDecodeError):
             return []
 
         new_notifications = []
@@ -72,10 +67,30 @@ class SleepManager:
 
         if notif.get("type") == "reminder":
             timestamps.add(f"reminder-{notif.get('id')}")
+
+        # Slack/email: include count in dedup key so new messages
+        # in the same channel still trigger a wake
+        source = notif.get("source", "")
+        for ch in notif.get("channels", []):
+            timestamps.add(f"{source}-{ch.get('id', '')}-{ch.get('unread', 0)}")
+
+        # Fallback: if no dedup keys found, use type+source as key
+        if not timestamps and notif.get("type"):
+            timestamps.add(f"{notif['type']}-{source}-{notif.get('count', 0)}")
+
         return timestamps
 
+    def _ack_slack(self) -> None:
+        """Tell notifications server to advance Slack read marker."""
+        try:
+            ack_url = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/ack-slack"
+            req = urllib.request.Request(ack_url, method="POST", data=b"")
+            urllib.request.urlopen(req, timeout=3)
+        except Exception:
+            pass  # Best-effort
+
     def _wait_for_wake(self) -> tuple[bool, list]:
-        """Poll for wake condition. Returns (woken, notifications)."""
+        """Poll cache file for wake condition. Returns (woken, notifications)."""
         set_status("sleeping")
         log("Sleeping, waiting for notifications...")
 
@@ -86,11 +101,15 @@ class SleepManager:
                 log(f"Notification: {first.get('type', '?')}")
                 return True, notifications
 
-            if self._consecutive_failures >= MAX_NOTIF_FAILURES:
-                log(f"Notifications down for {MAX_NOTIF_FAILURES} checks, force-waking agent")
-                self._consecutive_failures = 0
-                return True, [{"type": "system", "message":
-                    "Notification service unreachable — waking to check status."}]
+            # Force-wake if cache file is stale (poller may have died)
+            try:
+                age = time.time() - os.path.getmtime(NOTIFICATIONS_CACHE)
+                if age > MAX_CACHE_STALE:
+                    log(f"Notification cache stale ({int(age)}s), force-waking")
+                    return True, [{"type": "system", "message":
+                        "Notification cache stale — waking to check status."}]
+            except OSError:
+                pass
 
             if self.timer.is_expired():
                 log("Out of time")
@@ -106,6 +125,10 @@ class SleepManager:
         woken, notifications = self._wait_for_wake()
         if not woken:
             return SleepResult(woken=False)
+
+        # Ack Slack notifications so they don't re-trigger on next sleep
+        if any(n.get("source") == "slack" for n in notifications):
+            self._ack_slack()
 
         wake_message = format_notifications(notifications)
         current_time = datetime.now().strftime("%H:%M:%S %Z")

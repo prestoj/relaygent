@@ -30,13 +30,17 @@ export function getToken() {
 
 export async function slackApi(method, params = {}) {
 	const t = getToken();
+	const body = new URLSearchParams();
+	for (const [k, v] of Object.entries(params)) {
+		if (v != null) body.append(k, String(v));
+	}
 	const res = await fetch(`${BASE_URL}/${method}`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Bearer ${t}`,
-			"Content-Type": "application/json; charset=utf-8",
+			"Content-Type": "application/x-www-form-urlencoded",
 		},
-		body: JSON.stringify(params),
+		body: body.toString(),
 	});
 	if (res.status === 429) {
 		const retry = parseInt(res.headers.get("Retry-After") || "5", 10);
