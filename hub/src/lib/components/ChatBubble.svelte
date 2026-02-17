@@ -150,9 +150,11 @@
 	});
 	onDestroy(() => {
 		if (ws) ws.close();
-		document.removeEventListener('click', initAudio);
-		document.removeEventListener('keydown', initAudio);
-		if (browser) document.title = defaultTitle;
+		if (browser) {
+			document.removeEventListener('click', initAudio);
+			document.removeEventListener('keydown', initAudio);
+			document.title = defaultTitle;
+		}
 	});
 </script>
 
