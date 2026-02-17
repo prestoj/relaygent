@@ -3,9 +3,12 @@
  * Hub Chat MCP Server — lets Claude interact with the hub chat.
  * Talks to the hub's HTTP API on the configured port.
  */
+import { writeFileSync } from "node:fs";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+
+const NOTIF_CACHE = "/tmp/relaygent-notifications-cache.json";
 
 const HUB_PORT = process.env.HUB_PORT || "8080";
 const API = `http://127.0.0.1:${HUB_PORT}/api/chat`;
@@ -75,6 +78,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 					if (!data.count) return text("No unread messages.");
 					const lines = data.messages.map(m => m.content);
 					await api("", "PATCH", { ids: data.messages.map(m => m.id) });
+					try { writeFileSync(NOTIF_CACHE, "[]"); } catch {}
 					return text(`${data.count} unread message(s):\n${lines.join("\n")}`);
 				}
 				const limit = args?.limit || 20;
@@ -90,6 +94,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			}
 			case "mark_read": {
 				await api("", "PATCH", { ids: args.ids });
+				try { writeFileSync(NOTIF_CACHE, "[]"); } catch {}
 				return text(`Marked ${args.ids.length} message(s) as read.`);
 			}
 			default:
