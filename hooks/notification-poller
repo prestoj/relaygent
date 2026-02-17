@@ -11,21 +11,36 @@ NOTIFY_API="http://localhost:${NOTIFICATIONS_PORT}/notifications/pending"
 POLL_INTERVAL=1
 SLOW_POLL_EVERY=30  # Full poll (including Slack, email) every N seconds
 slow_counter=0
+SLOW_CACHE="/tmp/relaygent-slow-cache.json"
 
-# Write empty cache on start
+# Write empty caches on start
 echo '[]' > "$CACHE_FILE"
+echo '[]' > "$SLOW_CACHE"
 
 while true; do
     slow_counter=$((slow_counter + 1))
     if [ "$slow_counter" -ge "$SLOW_POLL_EVERY" ]; then
         # Full poll — includes slow collectors (Slack, email, etc.)
-        RESULT=$(curl -sf --max-time 10 "${NOTIFY_API}" 2>/dev/null)
+        if SLOW_RESULT=$(curl -sf --max-time 15 "${NOTIFY_API}" 2>/dev/null); then
+            if echo "$SLOW_RESULT" | python3 -c "import sys,json;json.load(sys.stdin)" 2>/dev/null; then
+                echo "$SLOW_RESULT" > "${SLOW_CACHE}.tmp" && mv "${SLOW_CACHE}.tmp" "$SLOW_CACHE"
+            fi
+        fi
         slow_counter=0
-    else
-        # Fast poll — DB reminders + hub chat only
-        RESULT=$(curl -sf --max-time 3 "${NOTIFY_API}?fast=1" 2>/dev/null)
     fi
-    if [[ -n "$RESULT" ]] && echo "$RESULT" | python3 -c "import sys,json;json.load(sys.stdin)" 2>/dev/null; then
+    # Fast poll — DB reminders + hub chat only
+    FAST_RESULT=$(curl -sf --max-time 3 "${NOTIFY_API}?fast=1" 2>/dev/null)
+    # Merge: fast results + cached slow results (deduped by source)
+    RESULT=$(python3 -c "
+import json,sys
+fast = json.loads('''${FAST_RESULT:-[]}''')
+try: slow = json.load(open('$SLOW_CACHE'))
+except: slow = []
+sources = {n.get('source','') for n in fast if n.get('type')=='message'}
+merged = fast + [n for n in slow if n.get('type')=='message' and n.get('source','') not in sources]
+print(json.dumps(merged))
+" 2>/dev/null)
+    if [[ -n "$RESULT" ]]; then
         echo "$RESULT" > "${CACHE_FILE}.tmp" && mv "${CACHE_FILE}.tmp" "$CACHE_FILE"
     fi
     sleep "$POLL_INTERVAL"
