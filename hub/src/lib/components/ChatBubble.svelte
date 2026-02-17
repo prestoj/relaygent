@@ -7,7 +7,6 @@
 	let messages = $state([]);
 	let input = $state('');
 	let sending = $state(false);
-	let unread = $state(0);
 	let tabUnread = $state(0);
 	let hasMore = $state(true);
 	let loadingOlder = $state(false);
@@ -54,7 +53,6 @@
 	}
 
 	function clearUnread() {
-		unread = 0;
 		tabUnread = 0;
 		updateTabTitle();
 	}
@@ -98,11 +96,11 @@
 			if (msg.type !== 'message') return;
 			messages = [...messages, msg.data];
 			if (msg.data.role === 'assistant') {
-				if (!open) { open = true; unread = 0; }
-				else if (!autoScroll) unread++;
+				const wasHidden = !open || !autoScroll;
+				if (!open) open = true;
 				tabUnread++;
 				updateTabTitle();
-				playChime();
+				if (wasHidden) playChime();
 			}
 			await tick();
 			if (autoScroll || msg.data.role === 'assistant') scrollBottom();
