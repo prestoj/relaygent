@@ -9,17 +9,24 @@ NOTIFICATIONS_PORT="${RELAYGENT_NOTIFICATIONS_PORT:-$(python3 -c "import json,os
 CACHE_FILE="/tmp/relaygent-notifications-cache.json"
 NOTIFY_API="http://localhost:${NOTIFICATIONS_PORT}/notifications/pending"
 POLL_INTERVAL=1
+SLOW_POLL_EVERY=30  # Full poll (including Slack, email) every N seconds
+slow_counter=0
 
 # Write empty cache on start
 echo '[]' > "$CACHE_FILE"
 
 while true; do
-    # Poll notifications (fast mode — DB only, skip slow checks)
-    if RESULT=$(curl -sf --max-time 3 "${NOTIFY_API}?fast=1" 2>/dev/null); then
-        # Only update cache on successful HTTP response with valid JSON
-        if [[ -n "$RESULT" ]] && echo "$RESULT" | python3 -c "import sys,json;json.load(sys.stdin)" 2>/dev/null; then
-            echo "$RESULT" > "${CACHE_FILE}.tmp" && mv "${CACHE_FILE}.tmp" "$CACHE_FILE"
-        fi
+    slow_counter=$((slow_counter + 1))
+    if [ "$slow_counter" -ge "$SLOW_POLL_EVERY" ]; then
+        # Full poll — includes slow collectors (Slack, email, etc.)
+        RESULT=$(curl -sf --max-time 10 "${NOTIFY_API}" 2>/dev/null)
+        slow_counter=0
+    else
+        # Fast poll — DB reminders + hub chat only
+        RESULT=$(curl -sf --max-time 3 "${NOTIFY_API}?fast=1" 2>/dev/null)
+    fi
+    if [[ -n "$RESULT" ]] && echo "$RESULT" | python3 -c "import sys,json;json.load(sys.stdin)" 2>/dev/null; then
+        echo "$RESULT" > "${CACHE_FILE}.tmp" && mv "${CACHE_FILE}.tmp" "$CACHE_FILE"
     fi
     sleep "$POLL_INTERVAL"
 done
