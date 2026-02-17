@@ -23,10 +23,24 @@ _LAST_CHECK_FILE = os.path.join(
 )
 
 
+_SELF_UID = None
+
+
+def _get_self_uid(token):
+    """Get our own Slack user ID (cached)."""
+    global _SELF_UID
+    if _SELF_UID:
+        return _SELF_UID
+    result = _slack_api(token, "auth.test")
+    if result:
+        _SELF_UID = result.get("user_id")
+    return _SELF_UID
+
+
 def _slack_api(token, method, params=None, _retries=2):
     """Call a Slack Web API method. Returns parsed JSON or None.
 
-    Retries on 429 (rate limit) up to _retries times.
+    Retries on 429 (rate limit) up to _retries times, capped at 10s.
     """
     url = f"https://slack.com/api/{method}"
     if params:
@@ -43,7 +57,7 @@ def _slack_api(token, method, params=None, _retries=2):
         return data if data.get("ok") else None
     except urllib.error.HTTPError as e:
         if e.code == 429 and _retries > 0:
-            retry_after = int(e.headers.get("Retry-After", "5"))
+            retry_after = min(int(e.headers.get("Retry-After", "5")), 10)
             logger.info("Slack rate limited, waiting %ds", retry_after)
             time.sleep(retry_after)
             return _slack_api(token, method, params, _retries - 1)
@@ -83,8 +97,9 @@ def collect(notifications):
     except OSError as e:
         logger.warning("Failed to read Slack last-check timestamp: %s", e)
 
+    self_uid = _get_self_uid(token)
     result = _slack_api(token, "conversations.list", {
-        "limit": 200,
+        "limit": 50,
         "types": "public_channel,private_channel,im,mpim",
         "exclude_archived": "true",
     })
@@ -95,12 +110,13 @@ def collect(notifications):
     unread_channels = []
     for ch in result.get("channels") or []:
         hist = _slack_api(token, "conversations.history", {
-            "channel": ch["id"], "limit": 1, "oldest": last_ts,
+            "channel": ch["id"], "limit": 10, "oldest": last_ts,
         })
         if not hist:
             continue
         msgs = [m for m in (hist.get("messages") or [])
-                if m.get("subtype") not in skip_subtypes]
+                if m.get("subtype") not in skip_subtypes
+                and m.get("user") != self_uid]
         if msgs and msgs[0].get("ts", "0") > last_ts:
             unread_channels.append({
                 "id": ch["id"],
