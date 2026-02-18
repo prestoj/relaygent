@@ -68,7 +68,9 @@ export async function getConnection() {
   if (_ws && _ws.readyState === 1) return { ws: _ws };
   const tabs = await cdpHttp("/json/list");
   if (!tabs) return null;
-  const page = tabs.find(t => t.type === "page" && t.webSocketDebuggerUrl);
+  // Prefer http/https pages over chrome:// internal pages (e.g. omnibox popup)
+  const page = tabs.find(t => t.type === "page" && t.webSocketDebuggerUrl && /^https?:/.test(t.url))
+    ?? tabs.find(t => t.type === "page" && t.webSocketDebuggerUrl);
   if (!page) return null;
   try {
     _ws = await connectTab(page.webSocketDebuggerUrl);
