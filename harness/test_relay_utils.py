@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from relay_utils import cleanup_context_file, rotate_log
+from relay_utils import cleanup_context_file, commit_kb, notify_crash, rotate_log
 
 
 class TestRotateLog:
@@ -68,3 +68,62 @@ class TestCleanupContextFile:
         pct_file = tmp_path / "nonexistent"
         with patch("relay_utils.Path", return_value=pct_file):
             cleanup_context_file()  # Should not raise
+
+
+class TestNotifyCrash:
+    def test_logs_crash_message(self, capsys):
+        with patch("relay_utils._send_chat_alert"):
+            notify_crash(3, 1)
+        out = capsys.readouterr().out
+        assert "3" in out
+        assert "1" in out
+
+    def test_sends_chat_alert(self):
+        with patch("relay_utils._send_chat_alert") as mock_alert:
+            notify_crash(2, 137)
+        mock_alert.assert_called_once()
+        msg = mock_alert.call_args[0][0]
+        assert "2" in msg
+        assert "137" in msg
+
+    def test_send_chat_alert_swallows_network_errors(self):
+        """_send_chat_alert catches URLError/OSError so hub being down won't crash relay."""
+        import urllib.error
+        with patch("urllib.request.urlopen",
+                   side_effect=urllib.error.URLError("connection refused")):
+            # Should not raise — hub being down is non-fatal
+            from relay_utils import _send_chat_alert
+            _send_chat_alert("test alert")
+
+
+class TestCommitKb:
+    def test_runs_commit_script_when_present(self, tmp_path, monkeypatch):
+        commit_script = tmp_path / "knowledge" / "commit.sh"
+        commit_script.parent.mkdir(parents=True)
+        commit_script.write_text("#!/bin/bash\nexit 0\n")
+        commit_script.chmod(0o755)
+        monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
+
+        with patch("relay_utils.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            commit_kb()
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert str(commit_script) in args[0]
+
+    def test_skips_if_script_missing(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
+        with patch("relay_utils.subprocess.run") as mock_run:
+            commit_kb()
+        mock_run.assert_not_called()
+
+    def test_skips_if_not_executable(self, tmp_path, monkeypatch):
+        commit_script = tmp_path / "knowledge" / "commit.sh"
+        commit_script.parent.mkdir(parents=True)
+        commit_script.write_text("#!/bin/bash\nexit 0\n")
+        commit_script.chmod(0o644)  # not executable
+        monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
+
+        with patch("relay_utils.subprocess.run") as mock_run:
+            commit_kb()
+        mock_run.assert_not_called()
