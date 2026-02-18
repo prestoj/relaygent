@@ -5,13 +5,13 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from relay_utils import cleanup_context_file, commit_kb, notify_crash, rotate_log
+from relay_utils import acquire_lock, cleanup_context_file, commit_kb, kill_orphaned_claudes, notify_crash, rotate_log
 
 
 class TestRotateLog:
@@ -127,3 +127,48 @@ class TestCommitKb:
         with patch("relay_utils.subprocess.run") as mock_run:
             commit_kb()
         mock_run.assert_not_called()
+
+
+class TestAcquireLock:
+    def test_acquires_lock_and_writes_pid(self, tmp_path, monkeypatch):
+        lock_file = tmp_path / ".relay.lock"
+        monkeypatch.setattr("relay_utils.LOCK_FILE", lock_file)
+        fd = acquire_lock()
+        assert fd >= 0
+        content = lock_file.read_text()
+        assert str(os.getpid()) in content
+        os.close(fd)
+
+    def test_exits_if_already_locked(self, tmp_path, monkeypatch):
+        lock_file = tmp_path / ".relay.lock"
+        monkeypatch.setattr("relay_utils.LOCK_FILE", lock_file)
+        fd1 = acquire_lock()
+        with pytest.raises(SystemExit):
+            acquire_lock()
+        os.close(fd1)
+
+
+class TestKillOrphanedClaudes:
+    def test_sends_sigterm_to_matched_pids(self, monkeypatch):
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = "12345\n"
+        monkeypatch.setattr("relay_utils.subprocess.run", lambda *a, **kw: mock_run)
+        with patch("relay_utils.os.kill") as mock_kill:
+            kill_orphaned_claudes()
+        mock_kill.assert_called_once_with(12345, __import__("signal").SIGTERM)
+
+    def test_no_error_when_no_orphans(self, monkeypatch):
+        mock_run = MagicMock()
+        mock_run.returncode = 1
+        mock_run.stdout = ""
+        monkeypatch.setattr("relay_utils.subprocess.run", lambda *a, **kw: mock_run)
+        kill_orphaned_claudes()  # Should not raise
+
+    def test_handles_vanished_process(self, monkeypatch):
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = "99999\n"
+        monkeypatch.setattr("relay_utils.subprocess.run", lambda *a, **kw: mock_run)
+        with patch("relay_utils.os.kill", side_effect=ProcessLookupError):
+            kill_orphaned_claudes()  # Should not raise

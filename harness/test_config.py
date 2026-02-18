@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import Timer, cleanup_old_workspaces, get_workspace_dir
+from config import Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status
 
 
 class TestTimer:
@@ -77,3 +77,50 @@ class TestCleanupOldWorkspaces:
         monkeypatch.setattr("config.RUNS_DIR", tmp_path / "nonexistent")
         # Should not raise
         cleanup_old_workspaces(days=7)
+
+
+class TestLog:
+    def test_prints_timestamped_message(self, capsys):
+        log("hello world")
+        output = capsys.readouterr().out
+        assert "hello world" in output
+        assert output.startswith("[")
+        assert "]" in output
+
+    def test_includes_bracket_format(self, capsys):
+        log("test msg")
+        output = capsys.readouterr().out
+        # Format: [Day Mon DD HH:MM:SS TZ YYYY] msg
+        assert output.strip().endswith("test msg")
+
+
+class TestSetStatus:
+    def test_writes_status_json(self, tmp_path, monkeypatch):
+        import json
+        status_file = tmp_path / "data" / "relay-status.json"
+        monkeypatch.setattr("config.STATUS_FILE", status_file)
+        set_status("working")
+        data = json.loads(status_file.read_text())
+        assert data["status"] == "working"
+        assert "updated" in data
+
+    def test_creates_parent_dirs(self, tmp_path, monkeypatch):
+        status_file = tmp_path / "deep" / "nested" / "status.json"
+        monkeypatch.setattr("config.STATUS_FILE", status_file)
+        set_status("off")
+        assert status_file.exists()
+
+    def test_atomic_write(self, tmp_path, monkeypatch):
+        import json
+        status_file = tmp_path / "data" / "relay-status.json"
+        monkeypatch.setattr("config.STATUS_FILE", status_file)
+        # Write twice — second should overwrite cleanly
+        set_status("working")
+        set_status("off")
+        data = json.loads(status_file.read_text())
+        assert data["status"] == "off"
+
+    def test_swallows_os_errors(self, tmp_path, monkeypatch):
+        # Point to a path that can't be created
+        monkeypatch.setattr("config.STATUS_FILE", Path("/proc/fake/status.json"))
+        set_status("working")  # Should not raise
