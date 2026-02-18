@@ -27,6 +27,7 @@ def get_notifications():
                  notification-poller daemon which polls every 1s.
     """
     fast_mode = request.args.get("fast") == "1"
+    skip_sources = set(request.args.get("skip", "").split(",")) - {""}
     notifications = []
     try:
         _collect_due_reminders(notifications)
@@ -37,16 +38,18 @@ def get_notifications():
     except Exception:
         logger.exception("Failed to collect chat messages")
     if not fast_mode:
-        for collector in _slow_collectors:
+        for name, collector in _slow_collectors:
+            if name in skip_sources:
+                continue
             try:
                 collector(notifications)
             except Exception:
-                logger.exception(f"Failed in {collector.__name__}")
+                logger.exception(f"Failed in {name}")
     return jsonify(notifications)
 
 
 # Slow collectors — external API calls, skipped in fast mode.
-# Append functions here (e.g., Slack, email) as integrations are added.
+# Each entry is (name, function). Use ?skip=name to skip specific collectors.
 _slow_collectors = []
 
 
@@ -122,7 +125,7 @@ def _collect_chat_messages(notifications):
 
 import slack_collector  # noqa: E402
 
-_slow_collectors.append(slack_collector.collect)
+_slow_collectors.append(("slack", slack_collector.collect))
 
 
 @app.route("/health", methods=["GET"])

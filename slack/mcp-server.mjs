@@ -7,8 +7,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import { slackApi } from "./slack-client.mjs";
 import { userName, dmName } from "./slack-helpers.mjs";
+
+const SOCKET_CACHE = "/tmp/relaygent-slack-socket-cache.json";
+const LAST_ACK = join(homedir(), ".relaygent", "slack", ".last_check_ts");
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
 const txt = (t) => ({ content: [{ type: "text", text: t }] });
@@ -148,39 +154,43 @@ server.tool("search_messages",
 	}
 );
 
-server.tool("unread",
-	"Check channels with unread messages.",
-	{},
+server.tool("unread", "Check channels with unread messages.", {},
 	async () => {
 		try {
-			// conversations.list doesn't return unread counts reliably;
-			// must call conversations.info per channel for accurate data.
+			if (existsSync(SOCKET_CACHE)) {
+				let ackTs = 0;
+				try { ackTs = parseFloat(readFileSync(LAST_ACK, "utf-8").trim()) || 0; } catch {}
+				const sock = JSON.parse(readFileSync(SOCKET_CACHE, "utf-8"));
+				const msgs = (sock.messages || []).filter(m => parseFloat(m.ts || "0") > ackTs);
+				if (msgs.length > 0) {
+					const byCh = {};
+					for (const m of msgs) {
+						const ch = m.channel || "?";
+						if (!byCh[ch]) byCh[ch] = { name: m.channel_name || ch, count: 0 };
+						byCh[ch].count++;
+					}
+					return txt(Object.values(byCh).map(c => `${c.name}: ${c.count} unread`).join("\n"));
+				}
+				return txt("No unread messages.");
+			}
 			const data = await slackApi("conversations.list", {
-				limit: 200, types: "public_channel,private_channel,mpim,im",
-				exclude_archived: true,
+				limit: 100, types: "public_channel,private_channel,mpim,im", exclude_archived: true,
 			});
-			const channels = data.channels || [];
-			if (!channels.length) return txt("No channels found.");
-			// Batch conversations.info calls (5 at a time) to avoid rate limits
-			const BATCH = 5;
+			const chs = (data.channels || []).slice(0, 15);
+			if (!chs.length) return txt("No channels found.");
 			const unread = [];
-			for (let i = 0; i < channels.length; i += BATCH) {
-				const batch = channels.slice(i, i + BATCH);
-				const results = await Promise.all(batch.map(async c => {
+			for (let i = 0; i < chs.length; i += 3) {
+				const res = await Promise.all(chs.slice(i, i + 3).map(async c => {
 					try {
 						const info = await slackApi("conversations.info", { channel: c.id });
-						const ch = info.channel;
-						if (ch.unread_count_display > 0) {
-							const label = await dmName(ch);
-							return `${label}: ${ch.unread_count_display} unread`;
-						}
+						if (info.channel.unread_count_display > 0)
+							return `${await dmName(info.channel)}: ${info.channel.unread_count_display} unread`;
 					} catch {}
 					return null;
 				}));
-				unread.push(...results.filter(Boolean));
+				unread.push(...res.filter(Boolean));
 			}
-			if (!unread.length) return txt("No unread messages.");
-			return txt(unread.join("\n"));
+			return txt(unread.length ? unread.join("\n") : "No unread messages.");
 		} catch (e) { return txt(`Slack unread error: ${e.message}`); }
 	}
 );
