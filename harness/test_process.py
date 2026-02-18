@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from config import Timer
-from process import ClaudeProcess, ClaudeResult
+from process import ClaudeProcess, ClaudeResult, _configured_model
 
 
 class TestClaudeResult:
@@ -151,3 +151,44 @@ class TestTerminate:
         p.process = mock_proc
         p._terminate()
         mock_proc.kill.assert_called_once()
+
+
+class TestConfiguredModel:
+    def test_reads_model_from_config(self, tmp_path, monkeypatch):
+        import json
+        config = tmp_path / ".relaygent" / "config.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"model": "claude-sonnet-4-6"}))
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        assert _configured_model() == "claude-sonnet-4-6"
+
+    def test_returns_none_when_no_config(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        assert _configured_model() is None
+
+    def test_returns_none_when_no_model_key(self, tmp_path, monkeypatch):
+        import json
+        config = tmp_path / ".relaygent" / "config.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"other": "value"}))
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        assert _configured_model() is None
+
+    def test_returns_none_on_malformed_json(self, tmp_path, monkeypatch):
+        config = tmp_path / ".relaygent" / "config.json"
+        config.parent.mkdir(parents=True)
+        config.write_text("NOT JSON")
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        assert _configured_model() is None
+
+
+class TestModelArgs:
+    def test_returns_model_args_when_set(self, tmp_path):
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        with patch("process._configured_model", return_value="claude-opus-4-6"):
+            assert p._model_args() == ["--model", "claude-opus-4-6"]
+
+    def test_returns_empty_when_no_model(self, tmp_path):
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        with patch("process._configured_model", return_value=None):
+            assert p._model_args() == []
