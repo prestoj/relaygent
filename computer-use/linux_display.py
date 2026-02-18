@@ -138,6 +138,14 @@ _ALIASES = {
     "firefox": ["firefox-esr"],
 }
 
+_CHROME_NAMES = {"google-chrome", "google-chrome-stable", "chromium-browser", "chromium"}
+_CHROME_ARGS = [
+    "--no-sandbox", "--no-first-run", "--start-maximized",
+    "--disable-default-apps", "--disable-sync",
+    "--disable-background-networking", "--disable-component-update",
+    "--disable-session-crashed-bubble", "--disable-infobars",
+]
+
 
 def launch(params: dict) -> tuple[dict, int]:
     app = params.get("app")
@@ -149,7 +157,8 @@ def launch(params: dict) -> tuple[dict, int]:
     candidates.extend(_ALIASES.get(base, []))
     for name in dict.fromkeys(candidates):  # dedup preserving order
         try:
-            subprocess.Popen([name], stdout=subprocess.DEVNULL,
+            extra = _CHROME_ARGS if name in _CHROME_NAMES else []
+            subprocess.Popen([name] + extra, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             return {"launched": name}, 200
         except FileNotFoundError:
