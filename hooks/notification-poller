@@ -22,8 +22,12 @@ echo '[]' > "$SLOW_CACHE"
 while true; do
     slow_counter=$((slow_counter + 1))
     if [ "$slow_counter" -ge "$SLOW_POLL_EVERY" ]; then
-        # Full poll — includes slow collectors (Slack, email, etc.)
-        if SLOW_RESULT=$(curl -sf --max-time 15 "${NOTIFY_API}" 2>/dev/null); then
+        # Full poll — but skip Slack collector if Socket Mode is active
+        SLOW_URL="${NOTIFY_API}"
+        if pgrep -f "slack-socket-listener" >/dev/null 2>&1; then
+            SLOW_URL="${NOTIFY_API}?skip=slack"
+        fi
+        if SLOW_RESULT=$(curl -sf --max-time 15 "${SLOW_URL}" 2>/dev/null); then
             if echo "$SLOW_RESULT" | python3 -c "import sys,json;json.load(sys.stdin)" 2>/dev/null; then
                 echo "$SLOW_RESULT" > "${SLOW_CACHE}.tmp" && mv "${SLOW_CACHE}.tmp" "$SLOW_CACHE"
             fi

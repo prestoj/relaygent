@@ -7,8 +7,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import { slackApi } from "./slack-client.mjs";
 import { userName, dmName } from "./slack-helpers.mjs";
+
+const SOCKET_CACHE = "/tmp/relaygent-slack-socket-cache.json";
+const LAST_ACK = join(homedir(), ".relaygent", "slack", ".last_check_ts");
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
 const txt = (t) => ({ content: [{ type: "text", text: t }] });
@@ -153,18 +159,35 @@ server.tool("unread",
 	{},
 	async () => {
 		try {
-			// conversations.list doesn't return unread counts reliably;
-			// must call conversations.info per channel for accurate data.
+			// Try Socket Mode cache first (zero API calls)
+			if (existsSync(SOCKET_CACHE)) {
+				let ackTs = 0;
+				try { ackTs = parseFloat(readFileSync(LAST_ACK, "utf-8").trim()) || 0; } catch {}
+				const sock = JSON.parse(readFileSync(SOCKET_CACHE, "utf-8"));
+				const msgs = (sock.messages || []).filter(m => parseFloat(m.ts || "0") > ackTs);
+				if (msgs.length > 0) {
+					const byCh = {};
+					for (const m of msgs) {
+						const ch = m.channel || "?";
+						if (!byCh[ch]) byCh[ch] = { name: m.channel_name || ch, count: 0 };
+						byCh[ch].count++;
+					}
+					const lines = Object.values(byCh).map(c => `${c.name}: ${c.count} unread`);
+					return txt(lines.join("\n"));
+				}
+				return txt("No unread messages.");
+			}
+			// Fallback: API call (single conversations.list, no per-channel info)
 			const data = await slackApi("conversations.list", {
-				limit: 200, types: "public_channel,private_channel,mpim,im",
+				limit: 100, types: "public_channel,private_channel,mpim,im",
 				exclude_archived: true,
 			});
 			const channels = data.channels || [];
 			if (!channels.length) return txt("No channels found.");
-			// Batch conversations.info calls (5 at a time) to avoid rate limits
-			const BATCH = 5;
+			// Only check channels that are likely active (have recent messages)
+			const BATCH = 3;
 			const unread = [];
-			for (let i = 0; i < channels.length; i += BATCH) {
+			for (let i = 0; i < Math.min(channels.length, 15); i += BATCH) {
 				const batch = channels.slice(i, i + BATCH);
 				const results = await Promise.all(batch.map(async c => {
 					try {

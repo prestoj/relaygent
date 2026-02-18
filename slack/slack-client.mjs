@@ -30,7 +30,26 @@ export function getToken() {
 
 const MAX_RETRIES = 3;
 
+// In-memory response cache for read-only methods
+const _cache = new Map();
+const CACHE_TTL = 5000; // 5s
+const CACHEABLE = new Set([
+	"conversations.history", "conversations.list", "conversations.info",
+	"users.info", "users.list",
+]);
+
+function _cacheKey(method, params) {
+	return method + "|" + JSON.stringify(params, Object.keys(params).sort());
+}
+
 export async function slackApi(method, params = {}, _retries = 0) {
+	// Check cache for read-only methods
+	if (CACHEABLE.has(method)) {
+		const key = _cacheKey(method, params);
+		const cached = _cache.get(key);
+		if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
+	}
+
 	const t = getToken();
 	const body = new URLSearchParams();
 	for (const [k, v] of Object.entries(params)) {
@@ -53,5 +72,11 @@ export async function slackApi(method, params = {}, _retries = 0) {
 	}
 	const data = await res.json();
 	if (!data.ok) throw new Error(`Slack ${method}: ${data.error}`);
+
+	// Store in cache
+	if (CACHEABLE.has(method)) {
+		const key = _cacheKey(method, params);
+		_cache.set(key, { data, ts: Date.now() });
+	}
 	return data;
 }
