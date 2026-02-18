@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { hsCall, takeScreenshot } from "./hammerspoon.mjs";
-import { cdpEval, cdpNavigate } from "./cdp.mjs";
+import { cdpEval, cdpNavigate, cdpClick } from "./cdp.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const actionRes = async (text, delay) => ({ content: [{ type: "text", text }, ...await takeScreenshot(delay ?? 1500)] });
@@ -64,6 +64,19 @@ export function registerBrowserTools(server, IS_LINUX) {
       const result = await cdpEval(TYPE_EXPR(selector, text));
       if (result === "not found") return jsonRes({ error: `Element not found: ${selector}` });
       return actionRes(`Typed into ${selector}: "${text}"`, 400);
+    }
+  );
+
+  server.tool("browser_click",
+    "Click a web element by CSS selector — finds coords and clicks via CDP in one step. Auto-returns screenshot.",
+    { selector: z.string().describe("CSS selector (e.g. 'button[type=submit]', 'a.nav-link', '#login')") },
+    async ({ selector }) => {
+      const raw = await cdpEval(COORD_EXPR(selector));
+      if (!raw) return jsonRes({ error: `Element not found: ${selector}` });
+      let coords;
+      try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
+      await cdpClick(coords.sx, coords.sy);
+      return actionRes(`Clicked ${selector} at (${coords.sx},${coords.sy})`, 400);
     }
   );
 }
