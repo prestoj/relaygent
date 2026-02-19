@@ -59,13 +59,10 @@ def _read_tail(jsonl: Path, bytes_count: int = 65536) -> list[str]:
 def check_incomplete_exit(session_id: str, workspace: Path) -> tuple[bool, str]:
     """Check if Claude exited mid-conversation. Returns (incomplete, last_tool)."""
     jsonl = find_jsonl_path(session_id, workspace)
-    if not jsonl:
-        return False, ""
+    if not jsonl: return False, ""
     try:
         lines = _read_tail(jsonl)
-        if not lines:
-            return False, ""
-
+        if not lines: return False, ""
         last_entry = json.loads(lines[-1])
         if last_entry.get("type") == "user":
             content = last_entry.get("message", {}).get("content", [])
@@ -75,8 +72,7 @@ def check_incomplete_exit(session_id: str, workspace: Path) -> tuple[bool, str]:
                         return True, item.get("tool_use_id", "unknown tool")
             return True, ""
         return False, ""
-    except (OSError, json.JSONDecodeError, KeyError):
-        return False, ""
+    except (OSError, json.JSONDecodeError, KeyError): return False, ""
 
 
 def should_sleep(session_id: str, workspace: Path) -> bool:
@@ -86,31 +82,25 @@ def should_sleep(session_id: str, workspace: Path) -> bool:
     This prevents sleeping when Claude crashes/exits mid-conversation.
     """
     jsonl = find_jsonl_path(session_id, workspace)
-    if not jsonl or not jsonl.exists():
-        log("Should sleep? No - JSONL not found")
-        return False
-
+    if not jsonl or not jsonl.exists(): log("Should sleep? No - JSONL not found"); return False
     try:
         lines = _read_tail(jsonl)
         for line in reversed(lines):
-            if not line.strip():
-                continue
-            try:
-                entry = json.loads(line)
-                if entry.get("type") == "assistant":
-                    content = entry.get("message", {}).get("content", [])
-                    if isinstance(content, list):
-                        for item in content:
-                            if isinstance(item, dict) and item.get("type") == "text":
-                                log("Should sleep? Yes - Claude wrote text output")
-                                return True
-                    log("Should sleep? No - last assistant message has no text")
-                    return False
-                if entry.get("type") == "user":
-                    log("Should sleep? No - last message is tool result")
-                    return False
-            except json.JSONDecodeError:
-                continue
+            if not line.strip(): continue
+            try: entry = json.loads(line)
+            except json.JSONDecodeError: continue
+            if entry.get("type") == "assistant":
+                content = entry.get("message", {}).get("content", [])
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            log("Should sleep? Yes - Claude wrote text output")
+                            return True
+                log("Should sleep? No - last assistant message has no text")
+                return False
+            if entry.get("type") == "user":
+                log("Should sleep? No - last message is tool result")
+                return False
         return False
     except Exception as e:
         log(f"WARNING: should_sleep check failed: {e}")
@@ -162,6 +152,24 @@ def strip_old_images(session_id: str, workspace: Path, keep_last: int = 5) -> in
         with open(jsonl, "w") as f: f.writelines(new_lines)
         return len(to_strip)
     except OSError: return 0
+
+
+def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) -> bool:
+    """True if Claude's last output was short text with no tool calls (idle/conversational)."""
+    jsonl = find_jsonl_path(session_id, workspace)
+    if not jsonl: return False
+    try:
+        for line in reversed(_read_tail(jsonl)):
+            if not line.strip(): continue
+            try: e = json.loads(line)
+            except json.JSONDecodeError: continue
+            if e.get("type") != "assistant": continue
+            c = e.get("message", {}).get("content") or []
+            has_tool = any(isinstance(x, dict) and x.get("type") == "tool_use" for x in c)
+            text = "".join(x.get("text", "") for x in c if isinstance(x, dict) and x.get("type") == "text")
+            return not has_tool and len(text.strip()) < max_chars
+    except Exception: pass
+    return False
 
 
 def get_context_fill_from_jsonl(session_id: str, workspace: Path) -> float:
