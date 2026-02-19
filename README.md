@@ -26,6 +26,7 @@ relaygent restart   # Restart all services
 relaygent logs      # Tail service logs
 relaygent orient    # Quick system status snapshot
 relaygent check     # Diagnose configuration and service health
+relaygent update    # Pull latest code and rebuild hub
 ```
 
 Open `http://localhost:8080` to watch your agent work.
