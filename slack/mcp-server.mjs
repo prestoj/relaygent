@@ -1,14 +1,10 @@
 #!/usr/bin/env node
-/**
- * Slack MCP server — channels, messages, reactions, users.
- * Uses user tokens (xoxp-) so agent acts as a real user.
- * Token from ~/.relaygent/slack/token.json.
- */
+// Slack MCP server — channels, messages, reactions, users (xoxp- user tokens)
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { join, dirname } from "path";
 import { homedir } from "os";
 import { slackApi } from "./slack-client.mjs";
 import { userName, dmName } from "./slack-helpers.mjs";
@@ -18,6 +14,9 @@ const LAST_ACK = join(homedir(), ".relaygent", "slack", ".last_check_ts");
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
 const txt = (t) => ({ content: [{ type: "text", text: t }] });
+function ackSlack() {
+	try { mkdirSync(dirname(LAST_ACK), { recursive: true }); writeFileSync(LAST_ACK, `${Date.now() / 1000}`); } catch {}
+}
 
 server.tool("channels",
 	"List Slack channels the user has joined.",
@@ -26,9 +25,7 @@ server.tool("channels",
 		.describe("Channel types (public_channel,private_channel,mpim,im)") },
 	async ({ limit, types }) => {
 		try {
-			const data = await slackApi("conversations.list", {
-				limit, types, exclude_archived: true,
-			});
+			const data = await slackApi("conversations.list", { limit, types, exclude_archived: true });
 			const lines = await Promise.all((data.channels || []).map(async c => {
 				const label = await dmName(c);
 				return `${label} (${c.id})` +
@@ -44,20 +41,24 @@ server.tool("channels",
 server.tool("read_messages",
 	"Read recent messages from a Slack channel.",
 	{ channel: z.string().describe("Channel ID (e.g. C0123456789)"),
-	  limit: z.number().default(20).describe("Number of messages") },
-	async ({ channel, limit }) => {
+	  limit: z.number().default(20).describe("Number of messages"),
+	  thread_ts: z.string().optional().describe("Thread timestamp to read replies in a thread") },
+	async ({ channel, limit, thread_ts }) => {
 		try {
-			const data = await slackApi("conversations.history", {
-				channel, limit,
-			});
+			const data = thread_ts
+				? await slackApi("conversations.replies", { channel, ts: thread_ts, limit })
+				: await slackApi("conversations.history", { channel, limit });
 			const msgs = data.messages || [];
-			if (!msgs.length) return txt("No messages in this channel.");
-			const lines = await Promise.all(msgs.reverse().map(async m => {
+			if (!msgs.length) return txt("No messages.");
+			if (!thread_ts) msgs.reverse();
+			const lines = await Promise.all(msgs.map(async m => {
 				const ts = new Date(parseFloat(m.ts) * 1000)
 					.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
 				const user = await userName(m.user || m.bot_id);
-				return `[${ts}] <${user}> ${m.text || ""}`;
+				const replies = m.reply_count ? ` [${m.reply_count} replies, thread_ts: ${m.ts}]` : "";
+				return `[${ts}] <${user}> ${m.text || ""}${replies}`;
 			}));
+			ackSlack();
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack read error: ${e.message}`); }
 	}
@@ -67,8 +68,7 @@ server.tool("send_message",
 	"Send a message to a Slack channel.",
 	{ channel: z.string().describe("Channel ID"),
 	  text: z.string().describe("Message text (supports Slack markdown)"),
-	  thread_ts: z.string().optional()
-		.describe("Thread timestamp to reply in a thread") },
+	  thread_ts: z.string().optional().describe("Thread timestamp to reply in a thread") },
 	async ({ channel, text, thread_ts }) => {
 		try {
 			const params = { channel, text };
@@ -98,8 +98,7 @@ server.tool("users",
 	async ({ limit }) => {
 		try {
 			const data = await slackApi("users.list", { limit });
-			const users = (data.members || [])
-				.filter(u => !u.deleted && !u.is_bot && u.id !== "USLACKBOT");
+			const users = (data.members || []).filter(u => !u.deleted && !u.is_bot && u.id !== "USLACKBOT");
 			const lines = users.map(u =>
 				`${u.real_name || u.name} (@${u.name}, ${u.id})` +
 				(u.profile?.status_text ? ` — ${u.profile.status_text}` : "")
@@ -140,9 +139,7 @@ server.tool("search_messages",
 	  count: z.number().default(10).describe("Max results") },
 	async ({ query, count }) => {
 		try {
-			const data = await slackApi("search.messages", {
-				query, count, sort: "timestamp", sort_dir: "desc",
-			});
+			const data = await slackApi("search.messages", { query, count, sort: "timestamp", sort_dir: "desc" });
 			const matches = data.messages?.matches || [];
 			if (!matches.length) return txt("No messages found.");
 			const lines = matches.map(m => {
@@ -163,12 +160,9 @@ server.tool("unread", "Check channels with unread messages.", {},
 				const sock = JSON.parse(readFileSync(SOCKET_CACHE, "utf-8"));
 				const msgs = (sock.messages || []).filter(m => parseFloat(m.ts || "0") > ackTs);
 				if (msgs.length > 0) {
-					const byCh = {};
-					for (const m of msgs) {
-						const ch = m.channel || "?";
-						if (!byCh[ch]) byCh[ch] = { name: m.channel_name || ch, count: 0 };
-						byCh[ch].count++;
-					}
+					const byCh = msgs.reduce((a, m) => {
+						const c = m.channel || "?"; a[c] = a[c] || { name: m.channel_name || c, count: 0 }; a[c].count++; return a;
+					}, {});
 					return txt(Object.values(byCh).map(c => `${c.name}: ${c.count} unread`).join("\n"));
 				}
 				return txt("No unread messages.");
@@ -178,18 +172,14 @@ server.tool("unread", "Check channels with unread messages.", {},
 			});
 			const chs = (data.channels || []).slice(0, 15);
 			if (!chs.length) return txt("No channels found.");
-			const unread = [];
-			for (let i = 0; i < chs.length; i += 3) {
-				const res = await Promise.all(chs.slice(i, i + 3).map(async c => {
-					try {
-						const info = await slackApi("conversations.info", { channel: c.id });
-						if (info.channel.unread_count_display > 0)
-							return `${await dmName(info.channel)}: ${info.channel.unread_count_display} unread`;
-					} catch {}
-					return null;
-				}));
-				unread.push(...res.filter(Boolean));
-			}
+			const unread = (await Promise.all(chs.map(async c => {
+				try {
+					const info = await slackApi("conversations.info", { channel: c.id });
+					if (info.channel.unread_count_display > 0)
+						return `${await dmName(info.channel)}: ${info.channel.unread_count_display} unread`;
+				} catch {}
+				return null;
+			}))).filter(Boolean);
 			return txt(unread.length ? unread.join("\n") : "No unread messages.");
 		} catch (e) { return txt(`Slack unread error: ${e.message}`); }
 	}
