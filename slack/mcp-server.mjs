@@ -117,17 +117,13 @@ server.tool("channel_info",
 			const data = await slackApi("conversations.info", { channel });
 			const c = data.channel;
 			const label = await dmName(c);
-			const lines = [
-				`Name: ${label}`, `ID: ${c.id}`,
-				`Type: ${c.is_im ? "DM" : c.is_mpim ? "Group DM" : c.is_private ? "Private" : "Public"}`,
+			const type = c.is_im ? "DM" : c.is_mpim ? "Group DM" : c.is_private ? "Private" : "Public";
+			const lines = [`Name: ${label}`, `ID: ${c.id}`, `Type: ${type}`,
+				...(!c.is_im ? [`Topic: ${c.topic?.value || "(none)"}`, `Purpose: ${c.purpose?.value || "(none)"}`] : []),
+				`Members: ${c.num_members || (c.is_im ? 2 : 0)}`,
+				`Created: ${new Date(c.created * 1000).toISOString()}`,
+				...(!c.is_im ? [`Archived: ${c.is_archived}`] : []),
 			];
-			if (!c.is_im) {
-				lines.push(`Topic: ${c.topic?.value || "(none)"}`);
-				lines.push(`Purpose: ${c.purpose?.value || "(none)"}`);
-			}
-			lines.push(`Members: ${c.num_members || (c.is_im ? 2 : 0)}`);
-			lines.push(`Created: ${new Date(c.created * 1000).toISOString()}`);
-			if (!c.is_im) lines.push(`Archived: ${c.is_archived}`);
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack channel_info error: ${e.message}`); }
 	}
