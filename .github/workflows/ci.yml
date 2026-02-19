@@ -18,7 +18,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest
       - name: Run harness tests
-        run: pytest harness/ -v
+        run: pytest harness/ computer-use/ -v
 
   lint-python:
     name: Python syntax check
