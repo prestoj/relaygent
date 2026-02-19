@@ -114,7 +114,7 @@ else
 fi
 
 # Slack
-if [ -f "$HOME/.relaygent/slack/user-token" ]; then
+if [ -f "$HOME/.relaygent/slack/token.json" ]; then
     ok "Slack" "user token configured"
 elif [ -f "$HOME/.relaygent/slack/app-token" ]; then
     warn "Slack" "only app token (messages sent as bot, not as user)"
