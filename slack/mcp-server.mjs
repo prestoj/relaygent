@@ -183,10 +183,10 @@ server.tool("dm", "Find a DM channel ID by user name (for use with send_message)
 	async ({ name }) => {
 		try {
 			const q = name.replace(/^@/, "").toLowerCase();
-			const { channels = [] } = await slackApi("conversations.list", { types: "im", exclude_archived: true, limit: 100 });
-			const resolved = await Promise.all(channels.map(async c => ({ id: c.id, user: await userName(c.user) })));
-			const match = resolved.filter(r => r.user.toLowerCase().includes(q));
-			return txt(match.length ? match.map(r => `${r.user}: ${r.id}`).join("\n") : `No DM found for "${name}"`);
+			const { channels = [] } = await slackApi("conversations.list", { types: "im,mpim", exclude_archived: true, limit: 100 });
+			const resolved = await Promise.all(channels.map(async c => ({ id: c.id, label: await dmName(c) })));
+			const match = resolved.filter(r => r.label.toLowerCase().includes(q));
+			return txt(match.length ? match.map(r => `${r.label}: ${r.id}`).join("\n") : `No DM found for "${name}"`);
 		} catch (e) { return txt(`Slack dm error: ${e.message}`); }
 	}
 );
