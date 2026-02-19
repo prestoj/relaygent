@@ -89,21 +89,33 @@ fi
 TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
     DUE_TASKS=$(python3 -c "
-import re, sys
+import re
 from datetime import datetime, timedelta
 now = datetime.now()
 freqs = {'6h': 0.25, '12h': 0.5, 'daily': 1, '2d': 2, '3d': 3, 'weekly': 7, 'monthly': 30}
 due = []
 for line in open('$TASKS_FILE'):
-    m = re.match(r'- \[ \] (.+?) \| type: (\w+) \| freq: (\w+) \| last: (.+)', line.strip())
+    m = re.match(r'- \[ \] (.+?)(?:\s*\|(.*))?$', line.strip())
     if not m: continue
-    desc, ttype, freq, last = m.groups()
-    try:
-        last_dt = datetime.strptime(last.strip(), '%Y-%m-%d %H:%M')
-        days = freqs.get(freq, 1)
-        if now - last_dt >= timedelta(days=days):
-            due.append(desc.strip())
-    except: pass
+    desc = m.group(1).strip()
+    meta = {}
+    for p in (m.group(2) or '').split('|'):
+        kv = re.match(r'\s*(\w+):\s*(.+)', p.strip())
+        if kv: meta[kv.group(1)] = kv.group(2).strip()
+    ttype = meta.get('type', 'one-off')
+    freq = meta.get('freq', '')
+    last = meta.get('last', '')
+    if ttype == 'one-off':
+        due.append(desc)
+    elif ttype == 'recurring' and freq:
+        if not last or last == 'never':
+            due.append(desc)
+        else:
+            try:
+                last_dt = datetime.strptime(last, '%Y-%m-%d %H:%M')
+                if now - last_dt >= timedelta(days=freqs.get(freq, 1)):
+                    due.append(desc)
+            except: pass
 if due:
     print('\n\033[1;33mTasks due:\033[0m')
     for d in due[:5]: print(f'  • {d}')
