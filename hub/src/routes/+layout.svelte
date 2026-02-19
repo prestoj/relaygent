@@ -39,6 +39,7 @@
 	<div class="links" class:open={menuOpen}>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
+		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/notifications" class:active={isActive('/notifications')} onclick={closeMenu}>Notifications</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
