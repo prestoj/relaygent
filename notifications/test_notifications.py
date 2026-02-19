@@ -115,12 +115,12 @@ class TestReminderCRUD:
 
     def test_fire_one_off(self, client):
         past = (datetime.now() - timedelta(minutes=1)).isoformat()
-        resp = client.post("/reminder", json={
-            "trigger_time": past, "message": "fire me",
-        })
-        rid = resp.get_json()["id"]
-        resp = client.post(f"/reminder/{rid}/fire")
-        assert resp.get_json()["status"] == "fired"
+        rid = client.post("/reminder", json={"trigger_time": past, "message": "fire me"}).get_json()["id"]
+        assert client.post(f"/reminder/{rid}/fire").get_json()["status"] == "fired"
+
+    def test_fire_nonexistent(self, client):
+        resp = client.post("/reminder/99999/fire")
+        assert resp.status_code == 404
 
     def test_create_recurring(self, client):
         resp = client.post("/reminder", json={
