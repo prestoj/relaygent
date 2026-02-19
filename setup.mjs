@@ -8,7 +8,7 @@ import { execSync, spawnSync } from 'child_process';
 import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, chmodSync, appendFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
-import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, envFromConfig } from './setup-helpers.mjs';
+import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, setupClaudeMd, envFromConfig } from './setup-helpers.mjs';
 
 const REPO_DIR = process.argv[2] || resolve('.');
 const HOME = homedir();
@@ -42,8 +42,7 @@ async function main() {
 
 	console.log(`Sets up a persistent AI agent with a web dashboard.\n`);
 
-	const agentName = 'relaygent';
-	const hubPort = 8080;
+	const agentName = 'relaygent'; const hubPort = 8080;
 
 	// Write config
 	console.log(`${C.yellow}Setting up directories...${C.reset}`);
@@ -139,6 +138,7 @@ async function main() {
 		rl.close(); process.exit(1);
 	}
 
+	setupClaudeMd(HOME, config, REPO_DIR, C);
 	// Create secrets file and store credentials
 	await setupSecrets(REPO_DIR, C);
 

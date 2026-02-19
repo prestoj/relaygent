@@ -1,6 +1,7 @@
 // Setup helper functions extracted from setup.mjs to stay under 200 lines
 import { spawnSync } from 'child_process';
-import { mkdirSync, writeFileSync, readFileSync, copyFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync } from 'fs';
+import { hostname } from 'os';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 
@@ -180,4 +181,15 @@ export function envFromConfig(config) {
 		RELAYGENT_DATA_DIR: config.paths.data,
 		RELAYGENT_KB_DIR: config.paths.kb,
 	};
+}
+
+export function setupClaudeMd(HOME, config, REPO_DIR, C) {
+	const claudeMdPath = join(HOME, 'CLAUDE.md');
+	if (existsSync(claudeMdPath)) { console.log(`  CLAUDE.md: ${C.green}exists${C.reset}`); return; }
+	const user = HOME.split('/').pop();
+	const [kb, data, repo] = [config.paths.kb, config.paths.data, REPO_DIR].map(p => p.replace(HOME, '~'));
+	const host = hostname();
+	/* eslint-disable max-len */
+	writeFileSync(claudeMdPath, `# Machine Context — ${host}\n\nThis file provides stable machine context for relay Claude instances.\nRead it once at session start, then proceed with handoff.md for current goals.\n\n## Identity\n\n- **Machine**: ${host} (${process.platform})\n- **User**: ${user} (home: ${HOME})\n\n## Key Paths\n\n| Path | Purpose |\n|------|---------|\n| \`${repo}/\` | Relaygent repo |\n| \`${kb}/\` | KB topics |\n| \`${data}/\` | Persistent data |\n| \`~/bin/relaygent\` | CLI |\n| \`~/.relaygent/config.json\` | Config |\n\n## Services\n\n| Service | Port |\n|---------|------|\n| Hub | ${config.hub.port} |\n| Notifications | ${config.services.notifications.port} |\n`);
+	console.log(`  CLAUDE.md: ${C.green}created${C.reset} (${claudeMdPath})`);
 }

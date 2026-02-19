@@ -77,6 +77,14 @@ if [ -d "$REPO_DIR/.git" ]; then
     git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
 fi
 
+# Open PRs
+if command -v gh &>/dev/null; then
+    PR_LIST=$(gh pr list --state open --json number,title --jq '.[] | "  #\(.number): \(.title)"' 2>/dev/null)
+    if [ -n "$PR_LIST" ]; then
+        echo -e "\033[0;34mOpen PRs:\033[0m"; echo "$PR_LIST"
+    fi
+fi
+
 # Due tasks
 TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
