@@ -6,12 +6,15 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const CDP_PORT = 9223;
 const CHROME_PREFS = `${process.env.HOME}/data/chrome-debug-profile/Default/Preferences`;
+const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
 
 let _ws = null;
 let _msgId = 0;
 let _pending = new Map();
 let _events = [];  // one-shot CDP event listeners [{method, cb}]
-let _currentTabId = null;  // track which tab CDP is connected to
+let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
+
+function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
 
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
 
@@ -92,7 +95,7 @@ export async function getConnection() {
     ?? pages.find(t => /^https?:/.test(t.url)) ?? pages[0];
   try {
     _ws = await connectTab(page.webSocketDebuggerUrl);
-    _currentTabId = page.id;
+    _saveTabId(page.id);
     log(`connected to ${page.url.substring(0, 60)}`);
     return { ws: _ws };
   } catch (e) { log(`connect failed: ${e.message}`); return null; }
@@ -151,7 +154,7 @@ export async function cdpNavigate(url) {
 /** Disconnect cached CDP WebSocket so next getConnection() re-queries /json/list */
 export function cdpDisconnect() {
   if (_ws) { try { _ws.close(); } catch {} _ws = null; }
-  _currentTabId = null;
+  _saveTabId(null);
 }
 
 /** After keyboard navigation, find and activate the tab Chrome just loaded. */
@@ -164,7 +167,7 @@ export async function cdpSyncToVisibleTab(url) {
   const target = pages.find(t => t.url === url || t.url.startsWith(url.replace(/\/$/, "")))
     ?? pages.find(t => /^https?:/.test(t.url)) ?? pages[0];
   if (!target) return;
-  _currentTabId = target.id;
+  _saveTabId(target.id);
   await cdpActivate(target.id);
   log(`synced to tab: ${target.url.substring(0, 60)}`);
 }
