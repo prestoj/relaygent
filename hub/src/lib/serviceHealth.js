@@ -8,10 +8,8 @@ import path from 'path';
 
 const NOTIFICATIONS_PORT = process.env.RELAYGENT_NOTIFICATIONS_PORT || '8083';
 const HS_PORT = process.env.HAMMERSPOON_PORT || '8097';
-const STATUS_FILE = path.join(
-	process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'relaygent', 'data'),
-	'relay-status.json'
-);
+const STATUS_FILE = process.env.RELAY_STATUS_FILE
+	|| path.join(process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'relaygent', 'data'), 'relay-status.json');
 
 const SERVICES = [
 	{ name: 'Notifications', url: `http://127.0.0.1:${NOTIFICATIONS_PORT}/health` },
