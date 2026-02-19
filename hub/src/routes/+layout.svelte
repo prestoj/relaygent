@@ -8,6 +8,7 @@
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let unreadChat = $state(data.unreadChat || 0);
+	let dueTasks = $state(data.dueTasks || 0);
 
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
@@ -55,7 +56,9 @@
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/notifications" class:active={isActive('/notifications')} onclick={closeMenu}>Notifications</a>
 		<a href="/digest" class:active={isActive('/digest')} onclick={closeMenu}>Digest</a>
-		<a href="/tasks" class:active={isActive('/tasks')} onclick={closeMenu}>Tasks</a>
+		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
+			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
+		</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">

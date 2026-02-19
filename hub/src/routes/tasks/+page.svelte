@@ -1,10 +1,25 @@
 <script>
+	import { onMount, onDestroy } from 'svelte';
 	let { data } = $props();
 	let recurring = $state(data.recurring || []);
 	let oneoff = $state(data.oneoff || []);
 	let newTask = $state('');
 	let adding = $state(false);
 	let error = $state('');
+	let pollInterval;
+
+	async function refreshTasks() {
+		try {
+			const res = await fetch('/api/tasks');
+			if (!res.ok) return;
+			const d = await res.json();
+			recurring = d.recurring || [];
+			oneoff = d.oneoff || [];
+		} catch { /* ignore */ }
+	}
+
+	onMount(() => { pollInterval = setInterval(refreshTasks, 30000); });
+	onDestroy(() => clearInterval(pollInterval));
 
 	function formatDue(task) {
 		if (!task.nextDue) return '—';
