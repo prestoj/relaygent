@@ -99,10 +99,9 @@ function startWatching() {
 			if (stat.size < lastSize) { lastSize = stat.size; incompleteLine = ''; }
 			if (stat.size <= lastSize) return;
 			const chunkSize = Math.min(stat.size - lastSize, 1024 * 1024); // Cap at 1MB
-			const fd = fs.openSync(sessionFile, 'r');
 			const buffer = Buffer.alloc(chunkSize);
-			fs.readSync(fd, buffer, 0, chunkSize, lastSize);
-			fs.closeSync(fd);
+			const fd = fs.openSync(sessionFile, 'r');
+			try { fs.readSync(fd, buffer, 0, chunkSize, lastSize); } finally { fs.closeSync(fd); }
 			lastSize += chunkSize;
 
 			const chunk = incompleteLine + buffer.toString('utf-8');
