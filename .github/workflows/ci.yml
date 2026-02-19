@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check syntax
-        run: python -m py_compile harness/session.py && python -m py_compile harness/config.py && python -m py_compile harness/relay.py && python -m py_compile harness/process.py && python -m py_compile harness/relay_utils.py && python -m py_compile harness/notify_format.py && python -m py_compile harness/jsonl_checks.py
+        run: find harness computer-use -name "*.py" -not -name "test_*" -not -path "*/__pycache__/*" | xargs python -m py_compile
 
   test-secrets:
     name: Secrets vault tests (JS)
@@ -52,10 +52,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Check syntax (secrets)
-        run: node --check secrets/vault.mjs && node --check secrets/cli.mjs && node --check secrets/mcp-server.mjs
-      - name: Check syntax (slack)
-        run: node --check slack/mcp-server.mjs && node --check slack/slack-helpers.mjs
+      - name: Check syntax (all .mjs files)
+        run: find secrets slack notifications -name "*.mjs" -not -path "*/node_modules/*" | xargs -I{} node --check {}
 
   check-line-limits:
     name: File line limit (200)
@@ -65,7 +63,7 @@ jobs:
       - name: Check files under 200 lines
         run: |
           status=0
-          for f in harness/*.py slack/*.mjs secrets/*.mjs notifications/*.py hub/src/routes/**/*.svelte; do
+          for f in harness/*.py computer-use/*.py slack/*.mjs secrets/*.mjs notifications/*.py hub/src/routes/**/*.svelte; do
             [ -f "$f" ] || continue
             lines=$(wc -l < "$f")
             if [ "$lines" -gt 200 ]; then
