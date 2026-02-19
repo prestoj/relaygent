@@ -71,6 +71,12 @@ if [ -d "$KB_DIR" ]; then
     echo -e "\033[0;34mKnowledge:\033[0m $TOPIC_COUNT topics"
 fi
 
+# Recent repo commits
+if [ -d "$REPO_DIR/.git" ]; then
+    echo -e "\033[0;34mRecent changes:\033[0m"
+    git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
+fi
+
 # Due tasks
 TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
