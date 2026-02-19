@@ -1,8 +1,4 @@
-"""Sleep/wake handling using cached notifications file.
-
-Reads the background notification-poller cache instead of hitting the
-Slack/email APIs directly (avoids hammering APIs every second).
-"""
+"""Sleep/wake handling using the notification-poller cache file."""
 
 from __future__ import annotations
 
@@ -152,6 +148,7 @@ class SleepManager:
 
     def run_wake_cycle(self, claude):
         """Sleep/wake loop with retry limits. Returns ClaudeResult if context-full."""
+        oserror_retries = 0
         while True:
             result = self.auto_sleep_and_wake()
             if not result or not result.woken:
@@ -160,7 +157,11 @@ class SleepManager:
             try:
                 log_start = claude.resume(result.wake_message)
             except OSError as e:
-                log(f"Resume failed on wake: {e}, retrying...")
+                oserror_retries += 1
+                if oserror_retries > MAX_INCOMPLETE_RETRIES:
+                    log(f"Resume failed too many times ({oserror_retries}): {e}")
+                    return None
+                log(f"Resume failed on wake ({oserror_retries}/{MAX_INCOMPLETE_RETRIES}): {e}, retrying...")
                 time.sleep(5)
                 continue
             claude_result = claude.monitor(log_start)
@@ -176,10 +177,8 @@ class SleepManager:
                     break
                 delay = min(INCOMPLETE_BASE_DELAY * (2 ** (wake_retries - 1)), 60)
                 kind, resume_msg = (
-                    ("Hung", "An API error was detected. Continue where you left off.")
-                    if claude_result.hung else
-                    ("Incomplete", "Continue where you left off.")
-                    if claude_result.incomplete else
+                    ("Hung", "An API error was detected. Continue where you left off.") if claude_result.hung else
+                    ("Incomplete", "Continue where you left off.") if claude_result.incomplete else
                     ("No output", "Your wake session exited without output. Continue where you left off.")
                 )
                 log(f"{kind} during wake ({wake_retries}/{MAX_INCOMPLETE_RETRIES}), resuming in {delay}s...")
