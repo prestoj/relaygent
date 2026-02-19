@@ -4,14 +4,15 @@ import contextlib
 import os
 import sqlite3
 
-from notif_config import DB_PATH
+import notif_config
 
 
 @contextlib.contextmanager
 def get_db():
     """Yield a SQLite connection that is closed when the context exits."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=5)
+    db_path = notif_config.DB_PATH
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    conn = sqlite3.connect(db_path, timeout=5)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
     try:
