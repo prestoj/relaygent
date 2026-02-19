@@ -8,7 +8,7 @@ import { execSync, spawnSync } from 'child_process';
 import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, chmodSync, appendFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
-import { setupHammerspoon, setupHooks, setupSecrets, envFromConfig } from './setup-helpers.mjs';
+import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, envFromConfig } from './setup-helpers.mjs';
 
 const REPO_DIR = process.argv[2] || resolve('.');
 const HOME = homedir();
@@ -129,6 +129,9 @@ async function main() {
 
 	// Create secrets file and store credentials
 	await setupSecrets(REPO_DIR, C);
+
+	// Check Slack token
+	await setupSlackToken(REPO_DIR, HOME, C);
 
 	// Set up Hammerspoon (computer-use)
 	await setupHammerspoon(config, REPO_DIR, HOME, C, ask);
