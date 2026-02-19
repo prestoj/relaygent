@@ -196,5 +196,5 @@ case "${1:-help}" in
     restart) do_stop; sleep 1; do_start ;;
     logs)    tail -f "$SCRIPT_DIR"/logs/relaygent*.log 2>/dev/null || echo -e "${RED}No logs found${NC}" ;;
     orient)  bash "$SCRIPT_DIR/harness/orient.sh" ;;
-    *)       echo "Usage: relaygent {start|stop|status|restart|logs|orient}" ;;
-esac
+    check)   bash "$SCRIPT_DIR/harness/check.sh" ;;
+    *)       echo "Usage: relaygent {start|stop|status|restart|logs|orient|check}" ;; esac
