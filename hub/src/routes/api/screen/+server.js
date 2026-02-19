@@ -14,7 +14,8 @@ export async function GET() {
 		await fetch(HAMMERSPOON_URL, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ path: SCREENSHOT_PATH })
+			body: JSON.stringify({ path: SCREENSHOT_PATH }),
+			signal: AbortSignal.timeout(8000),
 		});
 		let imgPath = SCREENSHOT_PATH;
 		const stat = fs.statSync(SCREENSHOT_PATH);
