@@ -137,6 +137,32 @@ export function setupHooks(config, REPO_DIR, HOME, C) {
 	console.log(`  MCP: hub-chat + notifications + computer-use + secrets + email + slack registered`);
 }
 
+export async function setupSlackToken(REPO_DIR, HOME, C) {
+	const tokenPath = join(HOME, '.relaygent', 'slack', 'token.json');
+	const { existsSync } = await import('fs');
+	if (existsSync(tokenPath)) {
+		try {
+			const { access_token } = JSON.parse(readFileSync(tokenPath, 'utf-8'));
+			const res = await fetch('https://slack.com/api/auth.test', {
+				method: 'POST',
+				headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: new URLSearchParams(),
+			});
+			const data = await res.json();
+			if (data.ok) {
+				console.log(`  Slack: ${C.green}token valid${C.reset} (${data.user} in ${data.team})`);
+				return;
+			}
+		} catch { /* fall through */ }
+		console.log(`  Slack: ${C.yellow}token found but invalid${C.reset}`);
+	} else {
+		console.log(`  Slack: ${C.yellow}no token${C.reset}`);
+	}
+	const setupScript = join(REPO_DIR, 'slack', 'setup-token.mjs');
+	console.log(`  Run to set up: ${C.bold}node ${setupScript} --token xoxp-...${C.reset}`);
+	console.log(`  ${C.dim}Or full OAuth flow: node ${setupScript}${C.reset}`);
+}
+
 export function envFromConfig(config) {
 	return {
 		RELAYGENT_HUB_PORT: String(config.hub.port),
