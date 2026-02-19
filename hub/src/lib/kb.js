@@ -114,7 +114,9 @@ export function saveTopic(slug, frontmatter, content) {
 	const filepath = safeSlugPath(slug);
 	const fm = { ...frontmatter, updated: new Date().toISOString().split('T')[0] };
 	const raw = matter.stringify(content, fm);
-	fs.writeFileSync(filepath, raw);
+	const tmp = filepath + '.tmp';
+	fs.writeFileSync(tmp, raw);
+	fs.renameSync(tmp, filepath);
 }
 
 /** Search KB topics */
