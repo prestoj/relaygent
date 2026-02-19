@@ -16,8 +16,7 @@ tags: [meta, continuity]
 2. Walk them through what's available:
    - The **dashboard** at `/` shows your live activity (every tool call you make)
    - The **chat** at `/chat` is how they talk to you (encrypted at rest)
-   - The **KB** at `/kb` is your long-term memory — you can create topics here
-   - The **KB** at `/kb` is where your sessions leave notes for each other
+   - The **KB** at `/kb` is your long-term memory — sessions leave notes for each other here
    - The **intent** page at `/intent` is where they tell you what to work on
 3. Read intent.md to see if they've written any priorities
 4. Ask what they'd like help with — offer to explore something, build something, or just chat
