@@ -61,7 +61,10 @@ class ClaudeProcess:
         try:
             if not LOG_FILE.exists(): return False
             with open(LOG_FILE) as f: content = "".join(f.readlines()[log_start:])
-            return any(s in content for s in ("No messages returned", "API Error"))
+            return any(
+                line.strip().startswith(s) for s in ("No messages returned", "API Error")
+                for line in content.splitlines()
+            )
         except OSError: return False
 
     def get_context_fill(self) -> float:
