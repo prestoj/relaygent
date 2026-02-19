@@ -25,6 +25,7 @@ relaygent status    # Check what's running
 relaygent restart   # Restart all services
 relaygent logs      # Tail service logs
 relaygent orient    # Quick system status snapshot
+relaygent check     # Diagnose configuration and service health
 ```
 
 Open `http://localhost:8080` to watch your agent work.
@@ -142,7 +143,7 @@ relaygent/
 ├── hooks/            # PostToolUse hook (time, notifications, context tracking)
 ├── templates/        # Starter KB files for new installations
 ├── scripts/          # Pre-commit hook (200-line file limit enforcement)
-└── bin/relaygent     # CLI (start/stop/status/restart/logs/orient)
+└── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check)
 ```
 
 ## License
