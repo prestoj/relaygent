@@ -22,7 +22,8 @@ export async function GET() {
 
 /** POST /api/notifications — create a reminder */
 export async function POST({ request }) {
-	const data = await request.json();
+	let data;
+	try { data = await request.json(); } catch { return json({ error: 'Invalid JSON' }, { status: 400 }); }
 	if (!data.trigger_time || !data.message) {
 		return json({ error: 'trigger_time and message required' }, { status: 400 });
 	}
