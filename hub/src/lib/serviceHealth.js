@@ -3,9 +3,15 @@
  * Quick HTTP pings with short timeouts — non-blocking.
  * Only checks services that are part of the Relaygent stack.
  */
+import fs from 'fs';
+import path from 'path';
 
 const NOTIFICATIONS_PORT = process.env.RELAYGENT_NOTIFICATIONS_PORT || '8083';
 const HS_PORT = process.env.HAMMERSPOON_PORT || '8097';
+const STATUS_FILE = path.join(
+	process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'relaygent', 'data'),
+	'relay-status.json'
+);
 
 const SERVICES = [
 	{ name: 'Notifications', url: `http://127.0.0.1:${NOTIFICATIONS_PORT}/health` },
@@ -32,7 +38,16 @@ async function checkService(svc) {
 	}
 }
 
+function checkRelayStatus() {
+	try {
+		const { status } = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
+		return { name: 'Relay', ok: status === 'working' || status === 'sleeping', detail: status };
+	} catch {
+		return { name: 'Relay', ok: false, detail: 'off' };
+	}
+}
+
 export async function getServiceHealth() {
 	const results = await Promise.all(SERVICES.map(checkService));
-	return results;
+	return [checkRelayStatus(), ...results];
 }
