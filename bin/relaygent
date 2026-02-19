@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+_SELF="${BASH_SOURCE[0]}"; while [[ -L "$_SELF" ]]; do _d="$(cd "$(dirname "$_SELF")" && pwd)"; _l="$(readlink "$_SELF")"; [[ "$_l" == /* ]] && _SELF="$_l" || _SELF="$_d/$_l"; done
+SCRIPT_DIR="$(cd "$(dirname "$_SELF")/.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 PID_DIR="$HOME/.relaygent"
 
