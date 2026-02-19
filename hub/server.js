@@ -95,6 +95,8 @@ function startWatching() {
 		if (eventType !== 'change') return;
 		try {
 			const stat = fs.statSync(sessionFile);
+			// File shrunk (strip_old_images rewrote it) — reset position, don't skip
+			if (stat.size < lastSize) { lastSize = stat.size; incompleteLine = ''; }
 			if (stat.size <= lastSize) return;
 			const chunkSize = Math.min(stat.size - lastSize, 1024 * 1024); // Cap at 1MB
 			const fd = fs.openSync(sessionFile, 'r');
