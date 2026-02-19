@@ -47,7 +47,10 @@ class Handler(BaseHTTPRequestHandler):
         }
         handler = routes.get(self.path)
         if handler:
-            body, code = handler({})
+            try:
+                body, code = handler({})
+            except Exception as e:
+                body, code = {"error": str(e)}, 500
             self._respond(body, code)
         else:
             self._respond({"error": "not found", "path": self.path}, 404)
