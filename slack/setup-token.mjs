@@ -6,7 +6,7 @@
  *
  * Prerequisites:
  *   1. Create a Slack app at https://api.slack.com/apps → "Create New App" → "From scratch"
- *   2. In "OAuth & Permissions" → "Redirect URLs", add: http://localhost:3333/callback
+ *   2. In "OAuth & Permissions" → "Redirect URLs", add: https://localhost:3333/callback
  *   3. In "OAuth & Permissions" → "User Token Scopes", add ALL of:
  *        channels:history  channels:read  channels:write
  *        chat:write
@@ -22,16 +22,28 @@
  *   node slack/setup-token.mjs --token xoxp-...   (manual paste, skips OAuth)
  */
 
-import { createServer } from "http";
+import { createServer as createHttpServer } from "http";
+import { createServer as createHttpsServer } from "https";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
-import { homedir } from "os";
+import { homedir, tmpdir } from "os";
 import { execSync } from "child_process";
 import { createInterface } from "readline";
 
 const CALLBACK_PORT = 3333;
-const REDIRECT_URI = `http://localhost:${CALLBACK_PORT}/callback`;
 const TOKEN_PATH = join(homedir(), ".relaygent", "slack", "token.json");
+
+/** Generate a self-signed cert for localhost. Returns {key, cert} or null. */
+function makeSelfSignedCert() {
+	const [k, c] = [join(tmpdir(), "rl-slack-key.pem"), join(tmpdir(), "rl-slack-cert.pem")];
+	try {
+		execSync(`openssl req -x509 -newkey rsa:2048 -keyout "${k}" -out "${c}" -days 1 -nodes -subj "/CN=localhost"`, { stdio: "ignore" });
+		return { key: readFileSync(k), cert: readFileSync(c) };
+	} catch { return null; }
+}
+
+const tlsCreds = makeSelfSignedCert();
+const REDIRECT_URI = `${tlsCreds ? "https" : "http"}://localhost:${CALLBACK_PORT}/callback`;
 
 const SCOPES = [
 	"channels:history", "channels:read", "channels:write",
@@ -75,8 +87,8 @@ async function exchangeCode(clientId, clientSecret, code) {
 
 async function runOAuthFlow(clientId, clientSecret) {
 	return new Promise((resolve, reject) => {
-		const server = createServer(async (req, res) => {
-			const url = new URL(req.url, `http://localhost:${CALLBACK_PORT}`);
+		const handler = async (req, res) => {
+			const url = new URL(req.url, `${tlsCreds ? "https" : "http"}://localhost:${CALLBACK_PORT}`);
 			if (url.pathname !== "/callback") {
 				res.writeHead(404); res.end("Not found"); return;
 			}
@@ -103,11 +115,15 @@ async function runOAuthFlow(clientId, clientSecret) {
 			const token = data.authed_user?.access_token;
 			if (!token) { reject(new Error("No user token in response")); return; }
 			resolve(token);
-		});
+		};
+		const server = tlsCreds
+			? createHttpsServer(tlsCreds, handler)
+			: createHttpServer(handler);
 
 		server.listen(CALLBACK_PORT, () => {
 			const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&user_scope=${encodeURIComponent(SCOPES)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
 			console.log(`\nOpening browser for Slack authorization...`);
+			if (tlsCreds) console.log("Note: browser may show an SSL warning — type 'thisisunsafe' to bypass.");
 			console.log(`If browser doesn't open, visit:\n  ${authUrl}\n`);
 			openBrowser(authUrl);
 		});
@@ -149,7 +165,7 @@ async function main() {
 	let clientId = args[args.indexOf("--client-id") + 1] || "";
 	if (!clientId) {
 		console.log("You need a Slack app. Create one at https://api.slack.com/apps");
-		console.log("Then add redirect URI: http://localhost:3333/callback");
+		console.log(`Then add redirect URI: ${REDIRECT_URI}`);
 		console.log("And add the User Token Scopes listed in this file's header.\n");
 		clientId = (await ask(rl, "Client ID: ")).trim();
 	}
