@@ -114,7 +114,9 @@ def fire_reminder(reminder_id):
             (reminder_id,),
         ).fetchone()
 
-        if row and row["recurrence"] and CRONITER_AVAILABLE:
+        if not row:
+            return jsonify({"error": "reminder not found"}), 404
+        if row["recurrence"] and CRONITER_AVAILABLE:
             cron = croniter(row["recurrence"], datetime.now())
             next_time = cron.get_next(datetime).isoformat()
             conn.execute(
