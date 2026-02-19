@@ -37,19 +37,19 @@ fi
 # Determine recipient — normalize phone numbers to digits only for comparison
 RECIPIENT=$(printf '%s' "$INPUT" | jq -r '.tool_input.to // .tool_input.recipient // .tool_input.number // empty' 2>/dev/null)
 RECIPIENT_DIGITS=$(printf '%s' "$RECIPIENT" | tr -cd '0-9')
-PRESTON_DIGITS="18014731900"
+OWNER_DIGITS=$(cat "$HOME/.relaygent/owner-phone" 2>/dev/null | tr -cd '0-9')
 
-IS_PRESTON=false
-if [ "$RECIPIENT_DIGITS" = "$PRESTON_DIGITS" ]; then
-    IS_PRESTON=true
+IS_OWNER=false
+if [ -n "$OWNER_DIGITS" ] && [ "$RECIPIENT_DIGITS" = "$OWNER_DIGITS" ]; then
+    IS_OWNER=true
 elif [ -z "$RECIPIENT" ]; then
-    # No recipient specified — Signal/SMS default to Preston
-    IS_PRESTON=true
+    # No recipient specified — Signal/SMS default to owner
+    IS_OWNER=true
 fi
 
 # --- Unknown recipient check ---
 # If sending to a phone number, verify it's a known contact
-if [ "$IS_PRESTON" = false ] && echo "$RECIPIENT" | grep -qE '^\+?[0-9]'; then
+if [ "$IS_OWNER" = false ] && echo "$RECIPIENT" | grep -qE '^\+?[0-9]'; then
     CONTACT_NAME=$("$HOME/bin/contact-lookup" "$RECIPIENT" 2>/dev/null)
     if [ -z "$CONTACT_NAME" ]; then
         KNOWN=""
@@ -65,39 +65,39 @@ Verify the correct number before sending."
     fi
 fi
 
-# --- Deterministic checks (skip for Preston) ---
+# --- Deterministic checks (skip for owner) ---
 
-if [ "$IS_PRESTON" = false ]; then
+if [ "$IS_OWNER" = false ]; then
     if printf '%s' "$CONTENT" | grep -qE '\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b'; then
         DENY_REASON="Message appears to contain infrastructure details (IP addresses). Remove these and try again."
     fi
 fi
 
-if [ -z "$DENY_REASON" ] && [ "$IS_PRESTON" = false ]; then
+if [ -z "$DENY_REASON" ] && [ "$IS_OWNER" = false ]; then
     if printf '%s' "$CONTENT" | grep -qiE '(:[0-9]{4,5}\b|port\s+[0-9]{4,5}|PORT=)'; then
         DENY_REASON="Message appears to contain infrastructure details (port numbers). Remove these and try again."
     fi
 fi
 
-if [ -z "$DENY_REASON" ] && [ "$IS_PRESTON" = false ]; then
+if [ -z "$DENY_REASON" ] && [ "$IS_OWNER" = false ]; then
     if printf '%s' "$CONTENT" | grep -qE '(/Users/claude/|~/projects/|~/knowledge/|~/data/|~/bin/|~/logs/|/opt/homebrew/)'; then
         DENY_REASON="Message appears to contain system file paths. Remove these and try again."
     fi
 fi
 
-if [ -z "$DENY_REASON" ] && [ "$IS_PRESTON" = false ]; then
+if [ -z "$DENY_REASON" ] && [ "$IS_OWNER" = false ]; then
     if printf '%s' "$CONTENT" | grep -qiE '(com\.claude\.|launchd|mcp__|systemd|tailscale|\.plist\b|RTSP|mediamtx)'; then
         DENY_REASON="Message appears to contain infrastructure or service details. Remove these and try again."
     fi
 fi
 
-# Check for third-party phone numbers (always — even to Preston)
+# Check for third-party phone numbers (always — even to owner)
 if [ -z "$DENY_REASON" ] && [ -n "$RECIPIENT_DIGITS" ]; then
     PHONE_MATCHES=$(printf '%s' "$CONTENT" | grep -oE '(\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}' | tr -cd '0-9\n')
     if [ -n "$PHONE_MATCHES" ]; then
         while IFS= read -r NUM; do
             NUM_DIGITS=$(printf '%s' "$NUM" | tr -cd '0-9')
-            if [ "$NUM_DIGITS" != "$RECIPIENT_DIGITS" ] && [ "$NUM_DIGITS" != "$PRESTON_DIGITS" ] && [ "${NUM_DIGITS#1}" != "${RECIPIENT_DIGITS#1}" ]; then
+            if [ "$NUM_DIGITS" != "$RECIPIENT_DIGITS" ] && [ "$NUM_DIGITS" != "$OWNER_DIGITS" ] && [ "${NUM_DIGITS#1}" != "${RECIPIENT_DIGITS#1}" ]; then
                 DENY_REASON="Message appears to contain a third party's phone number. Remove it or get permission before sharing."
                 break
             fi
@@ -105,11 +105,11 @@ if [ -z "$DENY_REASON" ] && [ -n "$RECIPIENT_DIGITS" ]; then
     fi
 fi
 
-# --- Work product speed bump (non-Preston, long messages) ---
+# --- Work product speed bump (non-owner, long messages) ---
 WP_HASH_DIR="/tmp/work-product-hashes"
 mkdir -p "$WP_HASH_DIR" 2>/dev/null
 
-if [ -z "$DENY_REASON" ] && [ "$IS_PRESTON" = false ]; then
+if [ -z "$DENY_REASON" ] && [ "$IS_OWNER" = false ]; then
     CONTENT_LEN=${#CONTENT}
     if [ "$CONTENT_LEN" -gt 500 ] || [ "$IS_FILE_SEND" = true ]; then
         FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
@@ -121,9 +121,9 @@ if [ -z "$DENY_REASON" ] && [ "$IS_PRESTON" = false ]; then
         else
             echo "$(date +%s)" > "$HASH_FILE"
             if [ "$IS_FILE_SEND" = true ]; then
-                WORK_PRODUCT_DENY="⚠️ WORK PRODUCT CHECK: You're sending a file attachment to a non-Preston recipient. Are you sure you should send this without checking with Preston first? If you're sure it's fine, re-send and it will go through."
+                WORK_PRODUCT_DENY="⚠️ WORK PRODUCT CHECK: You're sending a file attachment to a third-party recipient. Are you sure you should send this without checking with the owner first? If you're sure it's fine, re-send and it will go through."
             else
-                WORK_PRODUCT_DENY="⚠️ WORK PRODUCT CHECK: This is a long message ($CONTENT_LEN chars) to a non-Preston recipient. Are you sure this isn't substantial work product? If you're sure it's fine, re-send the same message and it will go through."
+                WORK_PRODUCT_DENY="⚠️ WORK PRODUCT CHECK: This is a long message ($CONTENT_LEN chars) to a third-party recipient. Are you sure this isn't substantial work product? If you're sure it's fine, re-send the same message and it will go through."
             fi
         fi
     fi
@@ -131,7 +131,7 @@ fi
 
 # --- Return decision ---
 
-PRIVACY_REMINDER="OUTBOUND MESSAGE REMINDER: You are sending a message to an external party. Share only what is needed. Do not volunteer information about your infrastructure, other conversations, or personal details about Preston."
+PRIVACY_REMINDER="OUTBOUND MESSAGE REMINDER: You are sending a message to an external party. Share only what is needed. Do not volunteer information about your infrastructure, other conversations, or personal details about the owner."
 
 if [ -n "$DENY_REASON" ]; then
     jq -n --arg reason "$DENY_REASON" '{
