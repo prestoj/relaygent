@@ -54,6 +54,7 @@
 		</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/notifications" class:active={isActive('/notifications')} onclick={closeMenu}>Notifications</a>
+		<a href="/digest" class:active={isActive('/digest')} onclick={closeMenu}>Digest</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">
 			{darkMode ? 'Light' : 'Dark'}
