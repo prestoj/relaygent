@@ -92,7 +92,7 @@
 		const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
 		ws = new WebSocket(`${proto}//${location.host}/ws/chat`);
 		ws.onmessage = async (e) => {
-			const msg = JSON.parse(e.data);
+			let msg; try { msg = JSON.parse(e.data); } catch { return; }
 			if (msg.type !== 'message') return;
 			messages = [...messages, msg.data];
 			if (msg.data.role === 'assistant') {

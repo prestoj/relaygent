@@ -55,7 +55,7 @@
 		ws.onopen = () => { connected = true; };
 		ws.onclose = () => { connected = false; setTimeout(connect, 3000); };
 		ws.onmessage = (event) => {
-			const msg = JSON.parse(event.data);
+			let msg; try { msg = JSON.parse(event.data); } catch { return; }
 			if (msg.type === 'activity') {
 				sessionStatus = 'found';
 				activities = [{ ...msg.data, isNew: true }, ...activities].slice(0, 100);
