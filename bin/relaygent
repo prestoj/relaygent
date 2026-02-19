@@ -147,6 +147,7 @@ do_start() {
     ensure_venv "$SCRIPT_DIR/notifications"
     start_service "Notifications (port $NOTIF_PORT)" "notifications" \
         "$SCRIPT_DIR/notifications/.venv/bin/python3" "$SCRIPT_DIR/notifications/server.py"
+    [ -f "$HOME/.relaygent/slack/app-token" ] && start_service "Slack socket" "slack-socket" node "$SCRIPT_DIR/notifications/slack-socket-listener.mjs"
     # Relay — verify Claude auth before starting
     if ! claude -p 'hi' >/dev/null 2>&1; then
         echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
@@ -163,7 +164,7 @@ do_stop() {
     stop_process "Relay" "relay"
     local claude_pids; claude_pids=$(pgrep -f "claude.*--print.*--session-id" 2>/dev/null) || true
     [ -n "$claude_pids" ] && kill -TERM $claude_pids 2>/dev/null && echo -e "  Claude: ${YELLOW}cleaned up${NC}" || true
-    for svc in Computer-use:computer-use Hub:hub Notifications:notifications; do
+    for svc in Computer-use:computer-use Hub:hub Notifications:notifications Slack-socket:slack-socket; do
         stop_process "${svc%%:*}" "${svc##*:}"
     done
     stop_process "Xvfb" "xvfb"
@@ -179,7 +180,7 @@ do_stop() {
 do_status() {
     load_config
     echo -e "${CYAN}Relaygent Status${NC}"
-    for svc in Relay:relay Hub:hub Notifications:notifications; do
+    for svc in Relay:relay Hub:hub Notifications:notifications Slack-socket:slack-socket; do
         check_process "${svc%%:*}" "${svc##*:}"
     done
     if [ "$(uname)" = "Darwin" ]; then
