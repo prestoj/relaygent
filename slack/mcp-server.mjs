@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { slackApi } from "./slack-client.mjs";
-import { userName, dmName } from "./slack-helpers.mjs";
+import { userName, dmName, formatText } from "./slack-helpers.mjs";
 
 const SOCKET_CACHE = "/tmp/relaygent-slack-socket-cache.json";
 const LAST_ACK = join(homedir(), ".relaygent", "slack", ".last_check_ts");
@@ -56,7 +56,7 @@ server.tool("read_messages",
 					.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
 				const user = await userName(m.user || m.bot_id);
 				const replies = m.reply_count ? ` [${m.reply_count} replies, thread_ts: ${m.ts}]` : "";
-				return `[${ts}] <${user}> ${m.text || ""}${replies}`;
+				return `[${ts}] <${user}> ${await formatText(m.text)}${replies}`;
 			}));
 			ackSlack();
 			return txt(lines.join("\n"));
