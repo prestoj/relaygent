@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { hsCall, takeScreenshot } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick } from "./cdp.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect } from "./cdp.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const actionRes = async (text, delay) => ({ content: [{ type: "text", text }, ...await takeScreenshot(delay ?? 1500)] });
@@ -97,6 +97,7 @@ export function registerBrowserTools(server, IS_LINUX) {
       await hsCall("POST", "/type", { text: url });
       await new Promise(r => setTimeout(r, 100));
       await hsCall("POST", "/type", { key: "return" });
+      if (new_tab) cdpDisconnect();  // force reconnect to new tab on next CDP call
       return actionRes(`Navigated to ${url}`, 1500);
     }
   );

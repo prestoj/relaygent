@@ -156,6 +156,11 @@ export async function cdpNavigate(url) {
   }
 }
 
+/** Disconnect cached CDP WebSocket so next getConnection() re-queries /json/list */
+export function cdpDisconnect() {
+  if (_ws) { try { _ws.close(); } catch {} _ws = null; }
+}
+
 export async function cdpAvailable() {
   const tabs = await cdpHttp("/json/list");
   return tabs !== null && Array.isArray(tabs);
