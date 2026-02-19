@@ -142,3 +142,48 @@ export function getRelayActivity() {
 		recentActivity: activity.slice(-15).reverse(),
 	};
 }
+
+/** List all relay sessions, newest first. Each entry: { id, displayTime, size }. */
+export function listSessions() {
+	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
+	const prefix = getRunsPrefix();
+	const sessions = [];
+	try {
+		for (const dir of fs.readdirSync(claudeProjects)) {
+			if (prefix && !dir.startsWith(prefix)) continue;
+			const fullPath = path.join(claudeProjects, dir);
+			try { if (!fs.statSync(fullPath).isDirectory()) continue; } catch { continue; }
+			let best = null, maxSize = 0;
+			for (const f of fs.readdirSync(fullPath)) {
+				if (!f.endsWith('.jsonl')) continue;
+				const fp = path.join(fullPath, f);
+				const sz = fs.statSync(fp).size;
+				if (sz > maxSize) { maxSize = sz; best = fp; }
+			}
+			if (!best || maxSize < 200) continue;
+			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
+			if (!m) continue;
+			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize });
+		}
+	} catch { /* ignore */ }
+	return sessions.sort((a, b) => b.id.localeCompare(a.id));
+}
+
+/** Load a session by id (timestamp suffix of run dir). Returns parsed activity array. */
+export function loadSession(id) {
+	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
+	const prefix = getRunsPrefix();
+	try {
+		for (const dir of fs.readdirSync(claudeProjects)) {
+			if (prefix && !dir.startsWith(prefix)) continue;
+			if (!dir.endsWith(id)) continue;
+			const fullPath = path.join(claudeProjects, dir);
+			for (const f of fs.readdirSync(fullPath)) {
+				if (!f.endsWith('.jsonl')) continue;
+				const fp = path.join(fullPath, f);
+				if (fs.statSync(fp).size > 200) return parseSession(fp, 500);
+			}
+		}
+	} catch { /* ignore */ }
+	return null;
+}
