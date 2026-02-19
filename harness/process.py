@@ -79,7 +79,12 @@ class ClaudeProcess:
         except subprocess.TimeoutExpired: pass
         self.process.kill()
         try: self.process.wait(timeout=10)
-        except subprocess.TimeoutExpired: log("WARNING: Process did not die"); self.process = None
+        except subprocess.TimeoutExpired:
+            log("WARNING: Process did not die")
+            for fd in (self.process.stdin, self.process.stdout, self.process.stderr):
+                try: fd.close() if fd and not fd.closed else None
+                except OSError: pass
+            self.process = None
 
     def _close_log(self):
         if self._log_file and not self._log_file.closed: self._log_file.close()
@@ -144,41 +149,26 @@ class ClaudeProcess:
             attempt_elapsed = time.time() - attempt_start
 
             if self.timer.is_expired():
-                log("Time limit reached, terminating...")
-                self._terminate()
-                timed_out = True
-                break
-
+                log("Time limit reached, terminating..."); self._terminate(); timed_out = True; break
             if (attempt_elapsed >= HANG_CHECK_DELAY
                     and attempt_elapsed - last_hang_check >= HANG_CHECK_DELAY):
                 last_hang_check = attempt_elapsed
                 if self._check_for_hang(log_start):
-                    log("Hang detected (error pattern), killing...")
-                    hung = True
-                    self._terminate()
-                    break
-
+                    log("Hang detected (error pattern), killing..."); hung = True; self._terminate(); break
             current_jsonl_size = get_jsonl_size(self.session_id, self.workspace)
             if current_jsonl_size > last_jsonl_size:
-                last_jsonl_size = current_jsonl_size
-                last_activity_time = time.time()
+                last_jsonl_size = current_jsonl_size; last_activity_time = time.time()
             elif time.time() - last_activity_time > SILENCE_TIMEOUT:
                 log(f"Hang detected (no activity for {SILENCE_TIMEOUT}s), killing...")
-                hung = True
-                self._terminate()
-                break
-
+                hung = True; self._terminate(); break
             if not self._context_warning_sent:
                 current_fill = self.get_context_fill()
                 if current_fill >= CONTEXT_THRESHOLD:
-                    log(f"Context at {current_fill:.0f}% (hook handling wrap-up warning)")
-                    self._context_warning_sent = True
-
+                    log(f"Context at {current_fill:.0f}% (hook handling wrap-up warning)"); self._context_warning_sent = True
             remaining = self.timer.remaining()
-            sleep_s = 1 if remaining <= 60 else (5 if remaining <= 300 else 30)
-            time.sleep(sleep_s)
+            time.sleep(1 if remaining <= 60 else (5 if remaining <= 300 else 30))
 
-        if self.process.poll() is None:
+        if self.process and self.process.poll() is None:
             try: self.process.wait(timeout=30)
             except subprocess.TimeoutExpired:
                 log("WARNING: Process stuck, force killing")
