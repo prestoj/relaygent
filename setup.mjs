@@ -151,15 +151,23 @@ async function main() {
 	// Set up Claude CLI hooks + MCP servers
 	setupHooks(config, REPO_DIR, HOME, C);
 
-	// Symlink CLI into PATH (or add to shell rc as fallback)
+	// Symlink CLI into PATH — try ~/bin, then /usr/local/bin, else modify shell rc.
 	const cliSrc = join(REPO_DIR, 'bin', 'relaygent');
-	const cliDst = '/usr/local/bin/relaygent';
+	const userBin = join(HOME, 'bin');
 	let cliOk = false;
 	try {
-		execSync(`ln -sf "${cliSrc}" "${cliDst}"`, { stdio: 'pipe' });
-		console.log(`  CLI: ${C.green}relaygent${C.reset} command available`);
+		mkdirSync(userBin, { recursive: true });
+		execSync(`ln -sf "${cliSrc}" "${join(userBin, 'relaygent')}"`, { stdio: 'pipe' });
+		console.log(`  CLI: ${C.green}relaygent${C.reset} command available (~/bin)`);
 		cliOk = true;
-	} catch { /* no write access to /usr/local/bin */ }
+	} catch { /* ~/bin not writable */ }
+	if (!cliOk) {
+		try {
+			execSync(`ln -sf "${cliSrc}" "/usr/local/bin/relaygent"`, { stdio: 'pipe' });
+			console.log(`  CLI: ${C.green}relaygent${C.reset} command available (/usr/local/bin)`);
+			cliOk = true;
+		} catch { /* no write access to /usr/local/bin */ }
+	}
 	if (!cliOk) {
 		const binDir = join(REPO_DIR, 'bin');
 		const rcFile = join(HOME, process.env.SHELL?.includes('zsh') ? '.zshrc' : '.bashrc');
