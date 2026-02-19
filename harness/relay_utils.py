@@ -75,8 +75,11 @@ def commit_kb() -> None:
         try:
             env = os.environ.copy()
             env["RELAY_RUN"] = "1"
-            subprocess.run([str(commit_script)], env=env, capture_output=True, timeout=30)
-            log("KB changes committed")
+            result = subprocess.run([str(commit_script)], env=env, capture_output=True, timeout=30)
+            if result.returncode == 0:
+                log("KB changes committed")
+            else:
+                log(f"KB commit failed (exit {result.returncode}): {result.stderr.decode(errors='replace').strip()}")
         except (subprocess.SubprocessError, OSError) as e:
             log(f"KB commit failed: {e}")
 
