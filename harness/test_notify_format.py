@@ -12,9 +12,9 @@ from notify_format import format_chat, format_email, format_notifications, forma
 
 class TestFormatChat:
     def test_formats_message_content(self):
-        notifs = [{"messages": [{"content": "Hello from Preston"}]}]
+        notifs = [{"messages": [{"content": "Hello from Alice"}]}]
         result = format_chat(notifs)
-        assert result == ["Hello from Preston"]
+        assert result == ["Hello from Alice"]
 
     def test_multiple_messages(self):
         notifs = [{"messages": [

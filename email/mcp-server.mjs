@@ -2,7 +2,6 @@
 /**
  * Gmail MCP server — search, read, send, draft, modify, list labels.
  * OAuth credentials from ~/.relaygent/gmail/ (keys + tokens).
- * Extracted from unsupervised-claude/comms-gateway.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
