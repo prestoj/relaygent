@@ -104,8 +104,14 @@ async function main() {
 	// Install Node.js dependencies
 	for (const sub of ['hub', 'notifications', 'computer-use', 'email', 'slack', 'secrets']) {
 		console.log(`  Installing ${sub} dependencies...`);
-		execSync('npm install', { cwd: join(REPO_DIR, sub), stdio: 'pipe' });
-		console.log(`  ${sub}: ${C.green}deps installed${C.reset}`);
+		try {
+			execSync('npm install', { cwd: join(REPO_DIR, sub), stdio: 'pipe' });
+			console.log(`  ${sub}: ${C.green}deps installed${C.reset}`);
+		} catch (e) {
+			console.log(`  ${sub}: ${C.red}npm install failed${C.reset} — ${e.stderr?.toString().trim() || e.message}`);
+			console.log(`  ${C.red}Fix the error above and re-run setup.${C.reset}`);
+			rl.close(); process.exit(1);
+		}
 	}
 	// Install Python dependencies (notifications Flask server)
 	for (const sub of ['notifications']) {
@@ -124,8 +130,14 @@ async function main() {
 		}
 	}
 	console.log(`  Building hub...`);
-	execSync('npm run build', { cwd: join(REPO_DIR, 'hub'), stdio: 'pipe' });
-	console.log(`  Hub: ${C.green}built${C.reset}`);
+	try {
+		execSync('npm run build', { cwd: join(REPO_DIR, 'hub'), stdio: 'pipe' });
+		console.log(`  Hub: ${C.green}built${C.reset}`);
+	} catch (e) {
+		console.log(`  Hub: ${C.red}build failed${C.reset} — ${e.stderr?.toString().trim() || e.message}`);
+		console.log(`  ${C.red}Fix the error above and re-run setup.${C.reset}`);
+		rl.close(); process.exit(1);
+	}
 
 	// Create secrets file and store credentials
 	await setupSecrets(REPO_DIR, C);
