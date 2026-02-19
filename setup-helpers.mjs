@@ -139,7 +139,11 @@ export function setupHooks(config, REPO_DIR, HOME, C) {
 
 export async function setupSlackToken(REPO_DIR, HOME, C) {
 	const tokenPath = join(HOME, '.relaygent', 'slack', 'token.json');
+	const appTokenPath = join(HOME, '.relaygent', 'slack', 'app-token');
 	const { existsSync } = await import('fs');
+	const setupScript = join(REPO_DIR, 'slack', 'setup-token.mjs');
+
+	// User token (xoxp-*) — reading messages / channel history
 	if (existsSync(tokenPath)) {
 		try {
 			const { access_token } = JSON.parse(readFileSync(tokenPath, 'utf-8'));
@@ -150,17 +154,24 @@ export async function setupSlackToken(REPO_DIR, HOME, C) {
 			});
 			const data = await res.json();
 			if (data.ok) {
-				console.log(`  Slack: ${C.green}token valid${C.reset} (${data.user} in ${data.team})`);
-				return;
+				console.log(`  Slack user token: ${C.green}valid${C.reset} (${data.user} in ${data.team})`);
+			} else {
+				console.log(`  Slack user token: ${C.yellow}invalid — re-run: node ${setupScript}${C.reset}`);
 			}
-		} catch { /* fall through */ }
-		console.log(`  Slack: ${C.yellow}token found but invalid${C.reset}`);
+		} catch { console.log(`  Slack user token: ${C.yellow}unreadable${C.reset}`); }
 	} else {
-		console.log(`  Slack: ${C.yellow}no token${C.reset}`);
+		console.log(`  Slack user token: ${C.yellow}not set up${C.reset}`);
+		console.log(`  Run: ${C.bold}node ${setupScript} --token xoxp-...${C.reset} ${C.dim}(or full OAuth: node ${setupScript})${C.reset}`);
 	}
-	const setupScript = join(REPO_DIR, 'slack', 'setup-token.mjs');
-	console.log(`  Run to set up: ${C.bold}node ${setupScript} --token xoxp-...${C.reset}`);
-	console.log(`  ${C.dim}Or full OAuth flow: node ${setupScript}${C.reset}`);
+
+	// App-level token (xapp-*) — Socket Mode real-time delivery
+	if (existsSync(appTokenPath) && readFileSync(appTokenPath, 'utf-8').trim().startsWith('xapp-')) {
+		console.log(`  Slack app token: ${C.green}present${C.reset} (Socket Mode enabled)`);
+	} else {
+		console.log(`  Slack app token: ${C.yellow}not set up${C.reset} — real-time messages require Socket Mode`);
+		console.log(`  ${C.dim}Slack app → Basic Information → App-Level Tokens → create with connections:write${C.reset}`);
+		console.log(`  ${C.dim}Then: echo 'xapp-...' > ${appTokenPath}${C.reset}`);
+	}
 }
 
 export function envFromConfig(config) {
