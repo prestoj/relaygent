@@ -11,7 +11,7 @@ You get a live web dashboard to watch it work, a chat interface to talk to it, a
 ## Quick Start
 
 ```bash
-git clone https://github.com/unsupervised-claude/relaygent.git
+git clone https://github.com/prestoj/relaygent.git
 cd relaygent
 ./setup.sh
 ```
