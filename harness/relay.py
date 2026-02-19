@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import (CONTEXT_THRESHOLD, HANG_CHECK_DELAY, INCOMPLETE_BASE_DELAY,
                      MAX_INCOMPLETE_RETRIES, MAX_RETRIES, SILENCE_TIMEOUT, Timer,
                      cleanup_old_workspaces, get_workspace_dir, log, set_status)
-from jsonl_checks import should_sleep
+from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
 from relay_utils import acquire_lock, cleanup_context_file, commit_kb, kill_orphaned_claudes, notify_crash, rotate_log
 from session import SleepManager
@@ -165,6 +165,11 @@ class RelayRunner:
                 crash_count = 0
                 continue
 
+            if (result.context_pct < CONTEXT_THRESHOLD
+                    and last_output_is_idle(self.claude.session_id, self.claude.workspace)):
+                session_established, resume_reason = True, (
+                    f"Context at {result.context_pct:.0f}% — keep doing useful work until 85%, then write your handoff.")
+                continue
             wake_result = self.sleep_mgr.run_wake_cycle(self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
