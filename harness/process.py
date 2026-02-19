@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, PROMPT_FILE, SILENCE_TIMEOUT, Timer, log
-from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size
+from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size, strip_old_images
 
 def _configured_model() -> str | None:
     """Read model from ~/.relaygent/config.json, or None for default."""
@@ -89,8 +89,7 @@ class ClaudeProcess:
         self._close_log(); LOG_FILE.parent.mkdir(parents=True, exist_ok=True); return open(LOG_FILE, "a")
 
     def _model_args(self) -> list[str]:
-        m = _configured_model()
-        return ["--model", m] if m else []
+        m = _configured_model(); return ["--model", m] if m else []
 
     def start_fresh(self) -> int:
         log_start = self._get_log_lines()
@@ -109,8 +108,9 @@ class ClaudeProcess:
         return log_start
 
     def resume(self, message: str) -> int:
-        self._terminate()
-        self._context_warning_sent = False
+        self._terminate(); self._context_warning_sent = False
+        stripped = strip_old_images(self.session_id, self.workspace)
+        if stripped: log(f"Stripped {stripped} old screenshots from JSONL before resume")
         log_start = self._get_log_lines()
         self._log_file = self._open_log()
         settings_file = str(_ensure_settings())
