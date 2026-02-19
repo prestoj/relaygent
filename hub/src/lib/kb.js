@@ -122,9 +122,8 @@ export function searchTopics(query) {
 	if (!query) return [];
 	const q = query.toLowerCase();
 	return listTopics().map(t => {
-		const filepath = safeSlugPath(t.slug);
 		let raw;
-		try { raw = fs.readFileSync(filepath, 'utf-8'); } catch { return null; }
+		try { raw = fs.readFileSync(safeSlugPath(t.slug), 'utf-8'); } catch { return null; }
 		const lower = raw.toLowerCase();
 		const idx = lower.indexOf(q);
 		if (idx === -1) return null;
