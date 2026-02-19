@@ -1,11 +1,13 @@
 <script>
 	import { browser } from '$app/environment';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 
-	let { children } = $props();
+	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
+	let unreadChat = $state(data.unreadChat || 0);
 
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
@@ -24,6 +26,14 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
+
+	let pollInterval;
+	async function pollUnread() {
+		if (isActive('/chat')) { unreadChat = 0; return; }
+		try { const d = await (await fetch('/api/chat?mode=unread')).json(); unreadChat = d.count || 0; } catch { /* ignore */ }
+	}
+	onMount(() => { pollInterval = setInterval(pollUnread, 30000); });
+	onDestroy(() => clearInterval(pollInterval));
 </script>
 
 <svelte:head><link rel="icon" href="/favicon.svg" /></svelte:head>
@@ -39,7 +49,9 @@
 	<div class="links" class:open={menuOpen}>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
-		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat</a>
+		<a href="/chat" class:active={isActive('/chat')} onclick={() => { unreadChat = 0; closeMenu(); }}>
+			Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}
+		</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/notifications" class:active={isActive('/notifications')} onclick={closeMenu}>Notifications</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
@@ -93,6 +105,7 @@
 	.links { display: flex; gap: 1.25em; align-items: center; }
 	.links a.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link); padding-bottom: 0.1em; text-decoration: none; }
 	.hamburger { display: none; }
+	.unread-badge { display: inline-block; background: #ef4444; color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
 
 	.theme-toggle {
 		background: none; border: 1px solid var(--border); cursor: pointer;
