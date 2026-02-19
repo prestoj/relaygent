@@ -31,6 +31,19 @@ jobs:
       - name: Check syntax
         run: python -m py_compile harness/session.py && python -m py_compile harness/config.py && python -m py_compile harness/relay.py && python -m py_compile harness/process.py && python -m py_compile harness/relay_utils.py && python -m py_compile harness/notify_format.py && python -m py_compile harness/jsonl_checks.py
 
+  test-secrets:
+    name: Secrets vault tests (JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install secrets dependencies
+        run: npm install --prefix secrets
+      - name: Run vault tests
+        run: node --test secrets/test_vault.mjs
+
   lint-js:
     name: JS syntax check
     runs-on: ubuntu-latest
