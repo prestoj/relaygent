@@ -169,6 +169,7 @@ server.tool("unread", "Check channels with unread messages.", {},
 						const ch = m.channel_name || m.channel || "?";
 						return `[${ts}] [#${ch}] <${user}> ${await formatText(m.text)}`;
 					}));
+					ackSlack();
 					return txt(lines.join("\n"));
 				}
 				return txt("No unread messages.");
