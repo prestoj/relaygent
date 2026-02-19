@@ -101,6 +101,15 @@ else
     warn "Git hooks" "not configured — run: git -C $REPO_DIR config core.hooksPath scripts"
 fi
 
+# Available updates
+git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
+BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
+if [ "${BEHIND:-0}" -gt 0 ] 2>/dev/null; then
+    warn "Updates" "$BEHIND commit(s) available — run: relaygent update"
+else
+    ok "Updates" "up to date"
+fi
+
 # Disk space
 echo ""
 DISK_PCT=$(df -h ~ 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $5}')
