@@ -7,14 +7,14 @@ async function proxy(path, method = 'GET', body = null) {
 	const opts = { method, headers: { 'Content-Type': 'application/json' } };
 	if (body) opts.body = JSON.stringify(body);
 	const res = await fetch(`${NOTIF_URL}${path}`, opts);
-	return res.json();
+	return { data: await res.json(), status: res.status };
 }
 
 /** GET /api/notifications — list upcoming reminders */
 export async function GET() {
 	try {
-		const reminders = await proxy('/upcoming');
-		return json({ reminders });
+		const { data } = await proxy('/upcoming');
+		return json({ reminders: data });
 	} catch (e) {
 		return json({ reminders: [], error: 'Notifications service unreachable' });
 	}
@@ -27,8 +27,8 @@ export async function POST({ request }) {
 		return json({ error: 'trigger_time and message required' }, { status: 400 });
 	}
 	try {
-		const result = await proxy('/reminder', 'POST', data);
-		return json(result, { status: 201 });
+		const { data: result, status } = await proxy('/reminder', 'POST', data);
+		return json(result, { status });
 	} catch (e) {
 		return json({ error: 'Notifications service unreachable' }, { status: 502 });
 	}
@@ -39,8 +39,8 @@ export async function DELETE({ url }) {
 	const id = url.searchParams.get('id');
 	if (!id || !/^\d+$/.test(id)) return json({ error: 'valid numeric id required' }, { status: 400 });
 	try {
-		const result = await proxy(`/reminder/${id}`, 'DELETE');
-		return json(result);
+		const { data: result, status } = await proxy(`/reminder/${id}`, 'DELETE');
+		return json(result, { status });
 	} catch (e) {
 		return json({ error: 'Notifications service unreachable' }, { status: 502 });
 	}
