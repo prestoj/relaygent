@@ -42,7 +42,7 @@
 				newMessage = '';
 				newTime = '';
 				await refresh();
-			}
+			} else { error = (await res.json().catch(() => ({}))).error || `HTTP ${res.status}`; }
 		} catch (e) { error = e.message; }
 		creating = false;
 	}
