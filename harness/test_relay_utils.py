@@ -128,6 +128,21 @@ class TestCommitKb:
             commit_kb()
         mock_run.assert_not_called()
 
+    def test_logs_failure_on_nonzero_exit(self, tmp_path, monkeypatch):
+        commit_script = tmp_path / "knowledge" / "commit.sh"
+        commit_script.parent.mkdir(parents=True)
+        commit_script.write_text("#!/bin/bash\nexit 1\n")
+        commit_script.chmod(0o755)
+        monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
+
+        with patch("relay_utils.subprocess.run") as mock_run, \
+             patch("relay_utils.log") as mock_log:
+            mock_run.return_value.returncode = 1
+            mock_run.return_value.stderr = b"push failed"
+            commit_kb()
+        logged = " ".join(str(c) for c in mock_log.call_args_list)
+        assert "failed" in logged.lower()
+
 
 class TestAcquireLock:
     def test_acquires_lock_and_writes_pid(self, tmp_path, monkeypatch):
