@@ -20,6 +20,7 @@ function readConfig() {
 }
 
 function writeConfig(config) {
+	fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
 	fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
 }
 
@@ -29,7 +30,8 @@ export function GET() {
 }
 
 export async function POST({ request }) {
-	const { model } = await request.json();
+	let model;
+	try { ({ model } = await request.json()); } catch { return json({ error: 'Invalid JSON' }, { status: 400 }); }
 	if (!VALID_MODELS.includes(model)) {
 		return json({ error: `Invalid model. Valid: ${VALID_MODELS.join(', ')}` }, { status: 400 });
 	}
