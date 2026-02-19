@@ -38,8 +38,14 @@ async function checkService(svc) {
 
 function checkRelayStatus() {
 	try {
-		const { status } = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
-		return { name: 'Relay', ok: status === 'working' || status === 'sleeping', detail: status };
+		const { status, updated } = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
+		const ok = status === 'working' || status === 'sleeping';
+		let detail = status;
+		if (updated) {
+			const ageMin = Math.round((Date.now() - new Date(updated).getTime()) / 60000);
+			if (ageMin >= 1) detail = `${status} (${ageMin}m)`;
+		}
+		return { name: 'Relay', ok, detail };
 	} catch {
 		return { name: 'Relay', ok: false, detail: 'off' };
 	}

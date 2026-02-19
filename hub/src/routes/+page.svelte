@@ -114,7 +114,7 @@
 	<div class="svc-row">
 		{#each data.services as svc}
 			<span class="svc" class:up={svc.ok} class:down={!svc.ok} title={svc.detail || ''}>
-				<span class="dot"></span>{svc.name}
+				<span class="dot"></span>{svc.name}{#if svc.name === 'Relay' && svc.detail && svc.detail !== 'working'}<span class="relay-detail">{svc.detail}</span>{/if}
 			</span>
 		{/each}
 	</div>
@@ -176,7 +176,7 @@
 	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }
 	.svc { display: flex; align-items: center; gap: 0.3em; font-size: 0.78em; color: var(--text-muted); }
 	.svc .dot { width: 5px; height: 5px; border-radius: 50%; }
-	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; }
+	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; } .relay-detail { opacity: 0.7; font-size: 0.9em; margin-left: 0.1em; }
 	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
 	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }
 	.gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
