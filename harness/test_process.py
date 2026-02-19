@@ -55,38 +55,35 @@ class TestGetLogLines:
 
 
 class TestCheckForHang:
-    def test_detects_no_messages_returned(self, tmp_path, monkeypatch):
+    @pytest.fixture(autouse=True)
+    def log_file(self, tmp_path, monkeypatch):
         import process as proc_mod
-        log_file = tmp_path / "test.log"
+        f = tmp_path / "test.log"
+        monkeypatch.setattr(proc_mod, "LOG_FILE", f)
+        self._tmp = tmp_path
+        return f
+
+    def _proc(self): return ClaudeProcess("s", Timer(), self._tmp)
+
+    def test_detects_no_messages_returned(self, log_file):
         log_file.write_text("Starting...\nNo messages returned\n")
-        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        assert p._check_for_hang(0) is True
+        assert self._proc()._check_for_hang(0) is True
 
-    def test_detects_api_error(self, tmp_path, monkeypatch):
-        import process as proc_mod
-        log_file = tmp_path / "test.log"
+    def test_detects_api_error(self, log_file):
         log_file.write_text("Starting...\nAPI Error: 500\n")
-        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        assert p._check_for_hang(0) is True
+        assert self._proc()._check_for_hang(0) is True
 
-    def test_no_hang_for_normal_output(self, tmp_path, monkeypatch):
-        import process as proc_mod
-        log_file = tmp_path / "test.log"
+    def test_no_hang_for_normal_output(self, log_file):
         log_file.write_text("Starting...\nProcessing...\nDone\n")
-        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        assert p._check_for_hang(0) is False
+        assert self._proc()._check_for_hang(0) is False
 
-    def test_respects_log_start_offset(self, tmp_path, monkeypatch):
-        import process as proc_mod
-        log_file = tmp_path / "test.log"
+    def test_respects_log_start_offset(self, log_file):
         log_file.write_text("No messages returned\nOK\n")
-        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        # Start from line 1 — should skip the hang pattern on line 0
-        assert p._check_for_hang(1) is False
+        assert self._proc()._check_for_hang(1) is False  # skip line 0
+
+    def test_no_false_positive_when_pattern_mid_line(self, log_file):
+        log_file.write_text('Claude said "No messages returned from the server"\n')
+        assert self._proc()._check_for_hang(0) is False
 
 
 class TestGetContextFill:
