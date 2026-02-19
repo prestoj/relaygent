@@ -101,8 +101,9 @@ try:
                 parts.append(f'{count} unread chat message(s) — check with read_messages')
     if parts:
         print(' | '.join(parts))
-except: pass
-" 2>/dev/null)
+except Exception as e:
+    import sys; print(f'WARNING: notification cache parse error: {e}', file=sys.stderr)
+" 2>>/tmp/relaygent-hook-errors.log)
 if [[ -n "$NOTIF_INFO" ]]; then
     CTX="$CTX | $NOTIF_INFO"
 fi

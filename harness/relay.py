@@ -41,6 +41,7 @@ class RelayRunner:
     def run(self) -> int:
         """Main entry point. Returns exit code."""
         rotate_log()
+        cleanup_context_file()
         workspace = get_workspace_dir()
         log(f"Workspace: {workspace}")
         cleanup_old_workspaces(days=7)
