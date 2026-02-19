@@ -188,6 +188,6 @@ class ClaudeProcess:
                 context_too_large = True
                 log('Context too large or bad image — will start fresh')
         except OSError: pass
-        return ClaudeResult(exit_code=self.process.returncode or 0, hung=hung, timed_out=timed_out,
+        return ClaudeResult(exit_code=(self.process.returncode if self.process else 0) or 0, hung=hung, timed_out=timed_out,
             no_output=no_output, incomplete=incomplete, context_too_large=context_too_large,
             context_pct=self.get_context_fill())
