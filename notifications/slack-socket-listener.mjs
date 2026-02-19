@@ -35,7 +35,9 @@ function loadUserToken() {
 
 function readCache() {
   try {
-    return JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+    if (!Array.isArray(data.messages)) data.messages = [];
+    return data;
   } catch {
     return { messages: [], updated: 0 };
   }
@@ -192,7 +194,6 @@ async function start() {
   await client.start();
   log("Slack Socket Mode listener started");
 }
-
 start().catch((e) => {
   console.error("Fatal:", e.message);
   process.exit(1);
