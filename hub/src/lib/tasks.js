@@ -64,7 +64,7 @@ export function addTask(kbDir, description) {
 			raw += `\n${newLine}\n`;
 		}
 		raw = raw.replace(/^updated:.*$/m, `updated: ${today}`);
-		fs.writeFileSync(file, raw, 'utf-8');
+		const tmp = file + '.tmp'; fs.writeFileSync(tmp, raw, 'utf-8'); fs.renameSync(tmp, file);
 		return true;
 	} catch { return false; }
 }
@@ -79,7 +79,7 @@ export function removeTask(kbDir, description) {
 			return !(t && t.description === description && t.type !== 'recurring');
 		});
 		raw = lines.join('\n').replace(/^updated:.*$/m, `updated: ${today}`);
-		fs.writeFileSync(file, raw, 'utf-8');
+		const tmp = file + '.tmp'; fs.writeFileSync(tmp, raw, 'utf-8'); fs.renameSync(tmp, file);
 		return true;
 	} catch { return false; }
 }
