@@ -52,7 +52,6 @@ server.tool("read_messages",
 				const replies = m.reply_count ? ` [${m.reply_count} replies, thread_ts: ${m.ts}]` : "";
 				return `[${ts}] (ts:${m.ts}) <${user}> ${await formatText(m.text)}${replies}`;
 			}));
-			ackSlack();
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack read error: ${e.message}`); }
 	}
