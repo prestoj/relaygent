@@ -22,7 +22,8 @@ const MAX_CONTENT_LENGTH = 10000;
 
 /** POST /api/chat — send a message */
 export async function POST({ request }) {
-	const { content, role } = await request.json();
+	let content, role;
+	try { ({ content, role } = await request.json()); } catch { return json({ error: 'Invalid JSON' }, { status: 400 }); }
 	if (!content?.trim()) {
 		return json({ error: 'Content is required' }, { status: 400 });
 	}
@@ -41,7 +42,8 @@ const MAX_MARK_READ = 100;
 
 /** PATCH /api/chat — mark messages as read */
 export async function PATCH({ request }) {
-	const { ids } = await request.json();
+	let ids;
+	try { ({ ids } = await request.json()); } catch { return json({ error: 'Invalid JSON' }, { status: 400 }); }
 	if (!Array.isArray(ids) || !ids.length) {
 		return json({ error: 'ids must be a non-empty array' }, { status: 400 });
 	}
