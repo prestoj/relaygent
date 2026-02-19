@@ -177,14 +177,13 @@ class SleepManager:
                     log(f"Too many wake retries ({wake_retries}), giving up on this wake cycle")
                     break
                 delay = min(INCOMPLETE_BASE_DELAY * (2 ** (wake_retries - 1)), 60)
-                kind, resume_msg = (
-                    ("Hung", "An API error was detected. Continue where you left off.") if claude_result.hung else
-                    ("Incomplete", "Continue where you left off.") if claude_result.incomplete else
-                    ("No output", "Your wake session exited without output. Continue where you left off.")
-                )
+                kind = "Hung" if claude_result.hung else ("Incomplete" if claude_result.incomplete else "No output")
+                resume_msg = ("An API error was detected. Continue where you left off." if claude_result.hung
+                              else "Continue where you left off.")
                 log(f"{kind} during wake ({wake_retries}/{MAX_INCOMPLETE_RETRIES}), resuming in {delay}s...")
                 time.sleep(delay)
-                log_start = claude.resume(resume_msg)
+                try: log_start = claude.resume(resume_msg)
+                except OSError as e: log(f"Resume failed in wake retry: {e}"); break
                 claude_result = claude.monitor(log_start)
                 if claude_result.timed_out:
                     return None
