@@ -66,13 +66,14 @@ class SleepManager:
 
         if notif.get("type") == "reminder":
             timestamps.add(f"reminder-{notif.get('id')}")
-
-        # Slack/email: include count in dedup key so new messages
-        # in the same channel still trigger a wake
+        # Slack: use individual message ts values so each message wakes once
         source = notif.get("source", "")
         for ch in notif.get("channels", []):
-            timestamps.add(f"{source}-{ch.get('id', '')}-{ch.get('unread', 0)}")
-
+            msgs = ch.get("messages", [])
+            if msgs:
+                timestamps.update(f"{source}-{m['ts']}" for m in msgs if m.get("ts"))
+            else:
+                timestamps.add(f"{source}-{ch.get('id', '')}-{ch.get('unread', 0)}")
         # Fallback: if no dedup keys found, use type+source as key
         if not timestamps and notif.get("type"):
             timestamps.add(f"{notif['type']}-{source}-{notif.get('count', 0)}")
