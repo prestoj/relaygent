@@ -21,7 +21,9 @@ function readConfig() {
 
 function writeConfig(config) {
 	fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-	fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
+	const tmp = CONFIG_PATH + '.tmp';
+	fs.writeFileSync(tmp, JSON.stringify(config, null, 2) + '\n');
+	fs.renameSync(tmp, CONFIG_PATH);
 }
 
 export function GET() {

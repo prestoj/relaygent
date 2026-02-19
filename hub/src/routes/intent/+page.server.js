@@ -31,7 +31,9 @@ export const actions = {
 		const { data: frontmatter } = matter(raw);
 		frontmatter.updated = new Date().toISOString().split('T')[0];
 		const output = matter.stringify(content, frontmatter);
-		fs.writeFileSync(INTENT_PATH, output);
+		const tmp = INTENT_PATH + '.tmp';
+		fs.writeFileSync(tmp, output);
+		fs.renameSync(tmp, INTENT_PATH);
 
 		return { success: true };
 	}
