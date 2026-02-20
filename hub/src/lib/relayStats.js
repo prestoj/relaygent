@@ -6,6 +6,19 @@ const CACHE_TTL = 5 * 60 * 1000;
 let cached = null;
 let cacheTime = 0;
 
+function extractMainGoal(content) {
+	const lines = content.split('\n');
+	for (let i = 0; i < lines.length; i++) {
+		if (lines[i].toUpperCase().includes('MAIN GOAL')) {
+			for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+				const s = lines[j].trim().replace(/^[*#\- ]+/, '').replace(/\*+/g, '');
+				if (s) return s.slice(0, 120);
+			}
+		}
+	}
+	return null;
+}
+
 export function parseSessionStats(jsonlPath) {
 	try {
 		const stat = fs.statSync(jsonlPath);
@@ -17,7 +30,7 @@ export function parseSessionStats(jsonlPath) {
 
 		let startTs = null, endTs = null, totalTokens = 0, outputTokens = 0;
 		const tools = {};
-		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null;
+		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null, handoffGoal = null;
 
 		for (const line of lines) {
 			try {
@@ -43,6 +56,9 @@ export function parseSessionStats(jsonlPath) {
 								const name = item.name || 'unknown';
 								tools[name] = (tools[name] || 0) + 1;
 								toolCalls++;
+								if (name === 'Write' && /handoff/i.test(item.input?.file_path || '')) {
+									handoffGoal = extractMainGoal(item.input?.content || '');
+								}
 							} else if (item?.type === 'text' && item.text?.length > 5) {
 								textBlocks++;
 								if (!firstText) firstText = item.text.split('\n')[0].slice(0, 100);
@@ -61,7 +77,7 @@ export function parseSessionStats(jsonlPath) {
 
 		return {
 			start: startTs, durationMin, totalTokens, outputTokens,
-			toolCalls, textBlocks, turns, tools, firstText,
+			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
 			contextPct: Math.round(totalTokens / 2000),
 		};
 	} catch { return null; }
