@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { getMessages, sendHumanMessage, sendAssistantMessage, getUnreadHumanMessages, markAsRead } from '$lib/chat.js';
 import fs from 'fs';
 
-const TRIGGER_FILE = '/tmp/hub-chat-new.json';
+const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
 
 /** GET /api/chat — message history or unread check */
 export function GET({ url }) {
