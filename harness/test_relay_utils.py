@@ -72,19 +72,23 @@ class TestCleanupContextFile:
 
 class TestNotifyCrash:
     def test_logs_crash_message(self, capsys):
-        with patch("relay_utils._send_chat_alert"):
+        with patch("relay_utils._send_chat_alert"), patch("relay_utils._send_slack_alert"):
             notify_crash(3, 1)
         out = capsys.readouterr().out
         assert "3" in out
         assert "1" in out
 
-    def test_sends_chat_alert(self):
-        with patch("relay_utils._send_chat_alert") as mock_alert:
+    def test_sends_chat_and_slack_alerts(self):
+        with patch("relay_utils._send_chat_alert") as mc, patch("relay_utils._send_slack_alert") as ms:
             notify_crash(2, 137)
-        mock_alert.assert_called_once()
-        msg = mock_alert.call_args[0][0]
-        assert "2" in msg
-        assert "137" in msg
+        mc.assert_called_once(); ms.assert_called_once()
+        assert "2" in mc.call_args[0][0] and "137" in mc.call_args[0][0]
+
+    def test_send_slack_alert_swallows_network_errors(self):
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("refused")):
+            from relay_utils import _send_slack_alert
+            _send_slack_alert("test")  # Should not raise
 
     def test_send_chat_alert_swallows_network_errors(self):
         """_send_chat_alert catches URLError/OSError so hub being down won't crash relay."""

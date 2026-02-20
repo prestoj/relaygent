@@ -63,11 +63,12 @@ def kill_orphaned_claudes() -> None:
 
 
 def notify_crash(crash_count: int, exit_code: int) -> None:
-    """Alert owner about repeated crashes via hub chat + log."""
+    """Alert owner about repeated crashes via hub chat + Slack + log."""
     msg = (f"Relay crashed {crash_count} times (exit code {exit_code}). "
            f"Manual intervention may be needed.")
     log(f"CRASH ALERT: {msg}")
     _send_chat_alert(msg)
+    _send_slack_alert(f":rotating_light: *Relay crash alert*: {msg}")
 
 
 def _send_chat_alert(message: str) -> None:
@@ -79,12 +80,32 @@ def _send_chat_alert(message: str) -> None:
     url = f"http://127.0.0.1:{hub_port}/api/chat"
     try:
         data = json.dumps({"content": message, "role": "assistant"}).encode()
-        req = urllib.request.Request(
-            url, data=data, headers={"Content-Type": "application/json"},
-        )
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         urllib.request.urlopen(req, timeout=5)
     except (urllib.error.URLError, OSError) as e:
         log(f"Chat alert failed (hub may be down): {e}")
+
+
+def _send_slack_alert(message: str) -> None:
+    """Best-effort alert via Slack — posts to channel from config, or #general."""
+    import json
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    token_file = Path.home() / ".relaygent" / "slack" / "token.json"
+    config_file = Path.home() / ".relaygent" / "config.json"
+    try:
+        token = json.loads(token_file.read_text()).get("token", "")
+        if not token:
+            return
+        config = json.loads(config_file.read_text()) if config_file.exists() else {}
+        channel = config.get("slack", {}).get("alert_channel", "general")
+        params = urllib.parse.urlencode({"token": token, "channel": channel, "text": message}).encode()
+        req = urllib.request.Request("https://slack.com/api/chat.postMessage", data=params,
+                                     headers={"Content-Type": "application/x-www-form-urlencoded"})
+        urllib.request.urlopen(req, timeout=5)
+    except (urllib.error.URLError, OSError):
+        log("Slack alert failed (token or network issue)")
 
 
 def commit_kb() -> None:
