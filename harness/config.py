@@ -12,6 +12,7 @@ HANG_CHECK_DELAY = 90           # Seconds before checking for hang patterns
 SILENCE_TIMEOUT = 300           # Seconds of no output before considering hung
 MAX_RETRIES = 2                 # 3 total attempts
 MAX_INCOMPLETE_RETRIES = 5      # Start fresh after 5 consecutive incomplete exits
+MAX_IDLE_CONTINUATIONS = 3      # Max times to resume due to short/idle output before sleeping
 INCOMPLETE_BASE_DELAY = 5       # Base delay for incomplete exit backoff (seconds)
 CONTEXT_THRESHOLD = 85          # % context fill to trigger wrap-up warning
 MIN_SUCCESSOR_TIME = 10 * 60    # Don't spawn successor with <10 min remaining

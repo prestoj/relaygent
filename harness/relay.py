@@ -10,8 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (CONTEXT_THRESHOLD, HANG_CHECK_DELAY, INCOMPLETE_BASE_DELAY,
-                    MAX_INCOMPLETE_RETRIES, MAX_RETRIES, SILENCE_TIMEOUT, Timer,
-                    cleanup_old_workspaces, get_workspace_dir, log, set_status)
+                    MAX_IDLE_CONTINUATIONS, MAX_INCOMPLETE_RETRIES, MAX_RETRIES,
+                    SILENCE_TIMEOUT, Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
 from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, notify_crash, rotate_log, startup_init  # noqa: E501
@@ -61,8 +61,7 @@ class RelayRunner:
         signal.signal(signal.SIGINT, _shutdown)
         session_established = False
         resume_reason = ""
-        crash_count = 0
-        incomplete_count = 0
+        crash_count = incomplete_count = idle_continuation_count = 0
 
         while not self.timer.is_expired():
             set_status("working")
@@ -159,14 +158,18 @@ class RelayRunner:
                 session_id = self._spawn_successor(
                     workspace, f"Context at {result.context_pct:.0f}%, spawning successor")
                 session_established = False
-                crash_count = 0
+                crash_count = idle_continuation_count = 0
                 continue
 
             if (result.context_pct < CONTEXT_THRESHOLD
                     and last_output_is_idle(self.claude.session_id, self.claude.workspace)):
-                session_established, resume_reason = True, (
-                    f"Context at {result.context_pct:.0f}% — keep doing useful work until 85%, then write your handoff.")
-                continue
+                idle_continuation_count += 1
+                if idle_continuation_count <= MAX_IDLE_CONTINUATIONS:
+                    session_established, resume_reason = True, (
+                        f"Context at {result.context_pct:.0f}% — keep doing useful work until 85%, then write your handoff.")
+                    continue
+                log(f"Idle output {idle_continuation_count} times in a row, going to sleep cycle")
+            idle_continuation_count = 0  # reset when going to sleep (idle limit or non-idle)
             wake_result = self.sleep_mgr.run_wake_cycle(self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
