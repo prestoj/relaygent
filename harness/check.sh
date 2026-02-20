@@ -183,7 +183,7 @@ else
 fi
 # Email MCP (optional)
 [ -d "$REPO_DIR/email/node_modules" ] || warn "Email MCP" "deps missing — run: npm install --prefix $REPO_DIR/email"
-[ -f "$HOME/.relaygent/gmail/credentials.json" ] || warn "Gmail" "not configured (optional — run: gmail-reauth-auto)"
+[ -f "$HOME/.relaygent/gmail/credentials.json" ] || warn "Gmail" "not configured (optional — run: node $REPO_DIR/email/setup-gmail.mjs)"
 
 # Summary
 echo ""
