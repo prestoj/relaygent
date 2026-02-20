@@ -13,11 +13,13 @@ def _configured_model() -> str | None:
         return None
 
 def _build_prompt() -> bytes:
-    """Return PROMPT.md bytes, with KB MEMORY.md appended if present."""
+    """Return PROMPT.md bytes, with {KB_DIR} substituted and KB MEMORY.md appended if present."""
     prompt = PROMPT_FILE.read_bytes()
     try:
         cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
-        mem = (Path(cfg["paths"]["kb"]) / "MEMORY.md").read_text().strip()
+        kb = Path(cfg["paths"]["kb"])
+        prompt = prompt.replace(b"{KB_DIR}", str(kb).encode())
+        mem = (kb / "MEMORY.md").read_text().strip()
         if mem:
             prompt += b"\n\n<memory>\n" + mem.encode() + b"\n</memory>\n"
     except (OSError, json.JSONDecodeError, KeyError):
