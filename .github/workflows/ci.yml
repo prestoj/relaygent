@@ -68,6 +68,19 @@ jobs:
       - name: Check syntax (all .mjs files)
         run: find secrets slack notifications -name "*.mjs" -not -path "*/node_modules/*" | xargs -I{} node --check {}
 
+  build-hub:
+    name: Hub build (Svelte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install hub dependencies
+        run: npm install --prefix hub
+      - name: Build hub
+        run: npm run build --prefix hub
+
   test-hub:
     name: Hub tests (JS)
     runs-on: ubuntu-latest
