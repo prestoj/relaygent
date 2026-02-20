@@ -108,6 +108,22 @@ def _send_slack_alert(message: str) -> None:
         log("Slack alert failed (token or network issue)")
 
 
+def startup_init() -> None:
+    """Run all startup tasks: pid file, orphan cleanup, hub check, Slack ack."""
+    write_pid_file()
+    kill_orphaned_claudes()
+    check_and_rebuild_hub()
+    # Ack Slack so stale unreads from while we were offline don't re-trigger
+    try:
+        import urllib.request
+        notifications_port = os.environ.get("RELAYGENT_NOTIFICATIONS_PORT", "8083")
+        url = f"http://127.0.0.1:{notifications_port}/notifications/ack-slack"
+        urllib.request.urlopen(urllib.request.Request(url, method="POST", data=b""), timeout=3)
+        log("Slack acked at startup")
+    except Exception:
+        pass  # Best-effort
+
+
 def commit_kb() -> None:
     """Commit knowledge base changes."""
     commit_script = REPO_DIR / "knowledge" / "commit.sh"

@@ -14,8 +14,7 @@ from config import (CONTEXT_THRESHOLD, HANG_CHECK_DELAY, INCOMPLETE_BASE_DELAY,
                     cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
-from relay_hub import check_and_rebuild_hub
-from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, kill_orphaned_claudes, notify_crash, rotate_log, write_pid_file  # noqa: E501
+from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, notify_crash, rotate_log, startup_init  # noqa: E501
 from session import SleepManager
 
 
@@ -186,9 +185,7 @@ class RelayRunner:
 
 def main() -> int:
     lock_fd = acquire_lock()  # Must keep fd open or lock releases
-    write_pid_file()
-    kill_orphaned_claudes()
-    check_and_rebuild_hub()
+    startup_init()
     try:
         return RelayRunner().run()
     finally:

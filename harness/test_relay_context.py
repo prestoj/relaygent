@@ -24,7 +24,7 @@ def _result(**kwargs) -> ClaudeResult:
 def runner(tmp_path):
     with (
         patch("relay.acquire_lock", return_value=3),
-        patch("relay.kill_orphaned_claudes"),
+        patch("relay.startup_init"),
         patch("relay.commit_kb"),
         patch("relay.cleanup_context_file"),
         patch("relay.notify_crash"),
