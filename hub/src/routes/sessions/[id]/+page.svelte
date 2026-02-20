@@ -23,6 +23,12 @@
 		if (name.startsWith('mcp__')) return '🔌';
 		return '🔧';
 	}
+
+	const act = data.activity || [];
+	const toolCalls = act.filter(a => a.type === 'tool').length;
+	const textBlocks = act.filter(a => a.type === 'text').length;
+	const times = act.map(a => a.time).filter(Boolean);
+	const durationMin = times.length >= 2 ? Math.round((new Date(times[times.length-1]) - new Date(times[0])) / 60000) : null;
 </script>
 
 <svelte:head><title>Session {data.displayTime} — Relaygent</title></svelte:head>
@@ -31,6 +37,15 @@
 	<a href="/sessions" class="back">← Sessions</a>
 	<h1>Session {data.displayTime}</h1>
 </div>
+
+{#if act.length > 0}
+<div class="stats-row">
+	{#if durationMin != null}<span class="stat"><strong>{durationMin}m</strong></span><span class="sep">·</span>{/if}
+	<span class="stat"><strong>{toolCalls}</strong> tools</span>
+	<span class="sep">·</span>
+	<span class="stat"><strong>{textBlocks}</strong> text blocks</span>
+</div>
+{/if}
 
 {#if !data.activity || data.activity.length === 0}
 	<p style="color: var(--text-muted)">No activity recorded for this session.</p>
@@ -65,6 +80,9 @@
 	.header { display: flex; align-items: baseline; gap: 1em; margin-bottom: 0.5em; }
 	h1 { margin: 0; font-size: 1.4em; }
 	.back { font-size: 0.9em; color: var(--text-muted); white-space: nowrap; }
+	.stats-row { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.75em; font-size: 0.85em; color: var(--text-muted); }
+	.stats-row strong { color: var(--text); }
+	.sep { color: var(--border); }
 	.count { color: var(--text-muted); font-size: 0.85em; margin: 0 0 1em; }
 	.feed { display: flex; flex-direction: column; gap: 2px; }
 	.entry { border-radius: 4px; overflow: hidden; }
