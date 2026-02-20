@@ -43,5 +43,12 @@ export const actions = {
 
 		saveTopic(params.slug, frontmatter, content);
 		return { success: true };
+	},
+
+	delete: async ({ params }) => {
+		const filepath = validateSlug(params.slug);
+		if (!fs.existsSync(filepath)) throw error(404, 'Topic not found');
+		fs.unlinkSync(filepath);
+		return { deleted: true };
 	}
 };

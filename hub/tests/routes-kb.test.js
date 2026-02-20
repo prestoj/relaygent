@@ -82,3 +82,24 @@ test('save action: rejects path traversal', async () => {
 		{ status: 400 }
 	);
 });
+
+test('delete action: removes existing topic', async () => {
+	writeTopic('to-delete.md', '---\ntitle: To Delete\n---\n\nBye.\n');
+	const result = await actions.delete({ params: { slug: 'to-delete' } });
+	assert.deepEqual(result, { deleted: true });
+	assert.equal(getTopic('to-delete'), null);
+});
+
+test('delete action: returns 404 for missing topic', async () => {
+	await assert.rejects(
+		() => actions.delete({ params: { slug: 'does-not-exist-del' } }),
+		{ status: 404 }
+	);
+});
+
+test('delete action: rejects path traversal', async () => {
+	await assert.rejects(
+		() => actions.delete({ params: { slug: '../../../evil' } }),
+		{ status: 400 }
+	);
+});

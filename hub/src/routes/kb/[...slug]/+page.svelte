@@ -11,6 +11,7 @@
 
 	$effect(() => {
 		if (form?.success) editing = false;
+		if (form?.deleted) window.location.href = '/kb';
 	});
 </script>
 
@@ -32,10 +33,14 @@
 {:else}
 	<div class="header">
 		<h1>{data.topic.title || data.topic.slug}</h1>
-		<!-- svelte-ignore event_directive_deprecated -->
-		<button on:click={toggleEdit} class="edit-btn">
-			{editing ? 'View' : 'Edit'}
-		</button>
+		<div class="header-actions">
+			<!-- svelte-ignore event_directive_deprecated -->
+			<button on:click={toggleEdit} class="edit-btn">{editing ? 'View' : 'Edit'}</button>
+			<form method="POST" action="?/delete" style="display:inline"
+				onsubmit={(e) => { if (!confirm('Delete this topic?')) e.preventDefault(); }}>
+				<button type="submit" class="del-btn">Delete</button>
+			</form>
+		</div>
 	</div>
 
 	{#if data.topic.tags?.length}
@@ -89,10 +94,12 @@
 	}
 	.cancel-link { color: var(--text-muted); font-size: 0.9em; align-self: center; }
 	.header { display: flex; align-items: center; justify-content: space-between; }
-	.edit-btn {
+	.header-actions { display: flex; gap: 0.4em; }
+	.edit-btn, .del-btn {
 		padding: 0.4em 0.8em; border: 1px solid var(--border);
 		border-radius: 6px; background: var(--bg-surface); cursor: pointer; color: var(--text);
 	}
+	.del-btn { color: var(--danger, #dc2626); }
 	.tags { display: flex; gap: 0.4em; margin-bottom: 0.5em; }
 	.tag {
 		font-size: 0.8em; padding: 0.2em 0.6em;
