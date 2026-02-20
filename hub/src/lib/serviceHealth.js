@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Repo root is 3 levels up from hub/src/lib/
@@ -56,7 +57,21 @@ function checkRelayStatus() {
 	}
 }
 
+function checkDisk() {
+	try {
+		const out = execFileSync('df', ['-h', '/'], { timeout: 2000 }).toString();
+		const dataLine = out.trim().split('\n').pop();
+		const m = dataLine.match(/(\d+)%/);
+		if (!m) return null;
+		const used = parseInt(m[1], 10);
+		return { name: `Disk ${m[1]}%`, ok: used < 90, detail: '' };
+	} catch { return null; }
+}
+
 export async function getServiceHealth() {
 	const results = await Promise.all(SERVICES.map(checkService));
-	return [checkRelayStatus(), ...results];
+	const disk = checkDisk();
+	const all = [checkRelayStatus(), ...results];
+	if (disk) all.push(disk);
+	return all;
 }
