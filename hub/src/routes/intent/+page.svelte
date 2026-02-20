@@ -17,8 +17,7 @@
 
 <div class="header">
 	<h1>{data.title}</h1>
-	<!-- svelte-ignore event_directive_deprecated -->
-	<button on:click={toggleEdit} class="edit-btn">
+	<button onclick={toggleEdit} class="edit-btn">
 		{editing ? 'View' : 'Edit'}
 	</button>
 </div>
@@ -34,8 +33,7 @@
 		<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
 		<div class="actions">
 			<button type="submit" class="save-btn">Save</button>
-			<!-- svelte-ignore event_directive_deprecated -->
-			<button type="button" on:click={() => editing = false}>Cancel</button>
+			<button type="button" onclick={() => editing = false}>Cancel</button>
 		</div>
 	</form>
 	{#if form?.success}<p class="saved">Saved.</p>{/if}
