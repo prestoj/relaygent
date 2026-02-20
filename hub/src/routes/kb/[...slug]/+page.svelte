@@ -2,6 +2,7 @@
 	let { data, form } = $props();
 	let editing = $state(false);
 	let editContent = $state('');
+	let newTitle = $state(data.slug || '');
 
 	function toggleEdit() {
 		editing = !editing;
@@ -13,56 +14,80 @@
 	});
 </script>
 
-<svelte:head><title>{data.topic.title || data.topic.slug}</title></svelte:head>
+<svelte:head><title>{data.topic?.title || data.slug}</title></svelte:head>
 
-<div class="header">
-	<h1>{data.topic.title || data.topic.slug}</h1>
-	<!-- svelte-ignore event_directive_deprecated -->
-	<button on:click={toggleEdit} class="edit-btn">
-		{editing ? 'View' : 'Edit'}
-	</button>
-</div>
-
-{#if data.topic.tags?.length}
-	<div class="tags">
-		{#each data.topic.tags as tag}
-			<a href="/kb?tag={tag}" class="tag">{tag}</a>
-		{/each}
-	</div>
-{/if}
-
-{#if data.topic.updated}
-	<p class="meta">Updated {data.topic.updated}</p>
-{/if}
-
-{#if editing}
+{#if !data.topic}
+	<h1>New topic: <em>{data.slug}</em></h1>
+	<p class="not-found">This topic doesn't exist yet. Create it below.</p>
 	<form method="POST" action="?/save">
-		<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
+		<label class="field-label">Title
+			<input type="text" name="title" bind:value={newTitle} class="title-input" placeholder={data.slug} />
+		</label>
+		<textarea name="content" rows="12" class="editor" placeholder="Write in markdown..."></textarea>
 		<div class="actions">
-			<button type="submit" class="save-btn">Save</button>
-			<!-- svelte-ignore event_directive_deprecated -->
-			<button type="button" on:click={() => editing = false}>Cancel</button>
+			<button type="submit" class="save-btn">Create topic</button>
+			<a href="/kb" class="cancel-link">Cancel</a>
 		</div>
 	</form>
-	{#if form?.success}<p class="saved">Saved.</p>{/if}
 {:else}
-	<article class="content">
-		{@html data.topic.html}
-	</article>
-{/if}
+	<div class="header">
+		<h1>{data.topic.title || data.topic.slug}</h1>
+		<!-- svelte-ignore event_directive_deprecated -->
+		<button on:click={toggleEdit} class="edit-btn">
+			{editing ? 'View' : 'Edit'}
+		</button>
+	</div>
 
-{#if data.topic.backlinks?.length}
-	<section class="backlinks">
-		<h3>Backlinks</h3>
-		<ul>
-			{#each data.topic.backlinks as bl}
-				<li><a href="/kb/{bl.slug}">{bl.title}</a></li>
+	{#if data.topic.tags?.length}
+		<div class="tags">
+			{#each data.topic.tags as tag}
+				<a href="/kb?tag={tag}" class="tag">{tag}</a>
 			{/each}
-		</ul>
-	</section>
+		</div>
+	{/if}
+
+	{#if data.topic.updated}
+		<p class="meta">Updated {data.topic.updated}</p>
+	{/if}
+
+	{#if editing}
+		<form method="POST" action="?/save">
+			<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
+			<div class="actions">
+				<button type="submit" class="save-btn">Save</button>
+				<!-- svelte-ignore event_directive_deprecated -->
+				<button type="button" on:click={() => editing = false}>Cancel</button>
+			</div>
+		</form>
+		{#if form?.success}<p class="saved">Saved.</p>{/if}
+	{:else}
+		<article class="content">
+			{@html data.topic.html}
+		</article>
+	{/if}
+
+	{#if data.topic.backlinks?.length}
+		<section class="backlinks">
+			<h3>Backlinks</h3>
+			<ul>
+				{#each data.topic.backlinks as bl}
+					<li><a href="/kb/{bl.slug}">{bl.title}</a></li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 {/if}
 
 <style>
+	.not-found { color: var(--text-muted); margin-bottom: 1em; }
+	.field-label { display: block; font-size: 0.9em; color: var(--text-muted); margin-bottom: 0.5em; }
+	.title-input {
+		display: block; width: 100%; margin-top: 0.25em;
+		padding: 0.5em 0.75em; border: 1px solid var(--border);
+		border-radius: 6px; font-size: 1em; background: var(--bg-surface); color: var(--text);
+		box-sizing: border-box;
+	}
+	.cancel-link { color: var(--text-muted); font-size: 0.9em; align-self: center; }
 	.header { display: flex; align-items: center; justify-content: space-between; }
 	.edit-btn {
 		padding: 0.4em 0.8em; border: 1px solid var(--border);
