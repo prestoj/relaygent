@@ -13,18 +13,18 @@
 	let contextPct = $state(data.contextPct);
 	let attentionItems = $state(data.attentionItems || []);
 	let sessionStatus = $state(data.relayActivity?.length > 0 ? 'found' : 'waiting');
-	let ws = null;
+	let ws = null, svcInterval;
 	let loading = $state(false), hasMore = $state(true);
 	let currentModel = $state(data.currentModel || '');
 	let modelSaving = $state(false);
 	let hookCtx = $state('');
+	let services = $state(data.services || []);
 
 	const MODEL_OPTIONS = [
-		{ id: 'claude-opus-4-6', label: 'Opus 4.6' },
-		{ id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
-		{ id: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' },
-		{ id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+		{ id: 'claude-opus-4-6', label: 'Opus 4.6' }, { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
+		{ id: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' }, { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
 	];
+	async function refreshServices() { try { const d = await (await fetch('/api/services')).json(); services = d.services || []; } catch { /* ignore */ } }
 
 	async function setModel(e) {
 		const model = e.target.value;
@@ -87,8 +87,8 @@
 		if (scrollTop + clientHeight >= scrollHeight - 200) loadMore();
 	}
 
-	onMount(() => { connect(); if (browser) window.addEventListener('scroll', handleScroll); });
-	onDestroy(() => { if (ws) ws.close(); if (browser) window.removeEventListener('scroll', handleScroll); });
+	onMount(() => { connect(); if (browser) { window.addEventListener('scroll', handleScroll); svcInterval = setInterval(refreshServices, 30000); } });
+	onDestroy(() => { if (ws) ws.close(); clearInterval(svcInterval); if (browser) window.removeEventListener('scroll', handleScroll); });
 
 	function clearAttentionItem(index) { attentionItems = attentionItems.filter((_, i) => i !== index); }
 	function clearAllAttention() { attentionItems = []; }
@@ -110,9 +110,9 @@
 			{/each}
 		</select>
 	</div>
-	{#if data.services?.length}
+	{#if services?.length}
 	<div class="svc-row">
-		{#each data.services as svc}
+		{#each services as svc}
 			<span class="svc" class:up={svc.ok} class:down={!svc.ok} title={svc.detail || ''}>
 				<span class="dot"></span>{svc.name}{#if svc.name === 'Relay' && svc.detail && svc.detail !== 'working'}<span class="relay-detail">{svc.detail}</span>{/if}
 			</span>
