@@ -64,6 +64,18 @@ def format_slack(notifs: list) -> list[str]:
     return format_chat(tagged)
 
 
+def format_tasks(notifs: list) -> list[str]:
+    """Format overdue task notifications."""
+    parts = []
+    for n in notifs:
+        desc = n.get("description", "?")
+        overdue = n.get("overdue", "overdue")
+        freq = n.get("freq", "")
+        freq_str = f" [{freq}]" if freq else ""
+        parts.append(f"Task due{freq_str}: {desc} — {overdue}")
+    return parts
+
+
 def format_unknown(notifs: list) -> list[str]:
     """Format unrecognized notification types."""
     parts = []
@@ -79,6 +91,7 @@ FORMATTERS = {
     "reminder": format_reminders,
     "email": format_email,
     "slack": format_slack,
+    "task": format_tasks,
 }
 
 
