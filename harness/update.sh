@@ -31,10 +31,12 @@ else
     exit 1
 fi
 
-# Read hub port from config
+# Read hub port and KB dir from config
 HUB_PORT=8080
+KB_DIR="$SCRIPT_DIR/knowledge/topics"
 if [ -f "$CONFIG_FILE" ]; then
     HUB_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['hub']['port'])" 2>/dev/null || echo 8080)
+    KB_DIR=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['paths']['kb'])" 2>/dev/null || echo "$SCRIPT_DIR/knowledge/topics")
 fi
 
 # Stop running hub
@@ -50,7 +52,7 @@ rm -f "$HUB_PID_FILE"
 
 # Start hub with new build
 mkdir -p "$SCRIPT_DIR/logs"
-PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" \
+PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" \
     node "$SCRIPT_DIR/hub/server.js" >> "$SCRIPT_DIR/logs/relaygent-hub.log" 2>&1 &
 echo $! > "$HUB_PID_FILE"
 
