@@ -39,7 +39,7 @@ if [ -f "$CONFIG_FILE" ]; then
     KB_DIR=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['paths']['kb'])" 2>/dev/null || echo "$SCRIPT_DIR/knowledge/topics")
 fi
 
-# Stop running hub
+# Stop running hub (pid file first, then port-based fallback)
 HUB_PID_FILE="$PID_DIR/hub.pid"
 if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
     HUB_PID=$(cat "$HUB_PID_FILE")
@@ -49,6 +49,13 @@ if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
     kill -0 "$HUB_PID" 2>/dev/null && kill -9 "$HUB_PID" 2>/dev/null || true
 fi
 rm -f "$HUB_PID_FILE"
+# Fallback: kill any process still on the hub port (catches stale pid file case)
+PORT_PIDS=$(lsof -iTCP:"$HUB_PORT" -sTCP:LISTEN -t 2>/dev/null || ss -tlnp "sport = :$HUB_PORT" 2>/dev/null | awk 'NR>1{match($0,/pid=([0-9]+)/,a); if(a[1]) print a[1]}')
+if [ -n "$PORT_PIDS" ]; then
+    kill -TERM $PORT_PIDS 2>/dev/null || true
+    sleep 1
+    kill -9 $PORT_PIDS 2>/dev/null || true
+fi
 
 # Start hub with new build
 mkdir -p "$SCRIPT_DIR/logs"
