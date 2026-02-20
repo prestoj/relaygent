@@ -21,11 +21,11 @@ def _configured_model() -> str | None:
 CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
 _HARNESS = Path(__file__).parent
 
+_CLAUDE_INTERNAL = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE"}
 
 def _clean_env() -> dict:
-    """Return env without CLAUDECODE so nested claude launches don't fail."""
-    return {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-
+    """Return env without Claude Code internals so nested launches don't fail."""
+    return {k: v for k, v in os.environ.items() if k not in _CLAUDE_INTERNAL}
 
 def _ensure_settings() -> Path:
     """Generate settings.json from template, substituting RELAYGENT_DIR."""
