@@ -123,10 +123,14 @@ else
 fi
 
 # Slack
-if [ -f "$HOME/.relaygent/slack/token.json" ]; then
-    ok "Slack" "user token configured"
-elif [ -f "$HOME/.relaygent/slack/app-token" ]; then
-    warn "Slack" "only app token (messages sent as bot, not as user)"
+SLACK_USER="$HOME/.relaygent/slack/token.json"
+SLACK_APP="$HOME/.relaygent/slack/app-token"
+if [ -f "$SLACK_USER" ] && [ -f "$SLACK_APP" ]; then
+    ok "Slack" "user token + app token (Socket Mode enabled)"
+elif [ -f "$SLACK_USER" ]; then
+    warn "Slack" "user token OK but no app token — real-time DMs won't work (add xapp-* token to $SLACK_APP)"
+elif [ -f "$SLACK_APP" ]; then
+    warn "Slack" "only app token — messages sent as bot, not as user"
 else
     warn "Slack" "not configured (optional — run ./setup.sh to configure)"
 fi
