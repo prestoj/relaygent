@@ -83,3 +83,15 @@ test('searchSessions: respects maxResults limit', () => {
 	const results = searchSessions('limit_tok_xyz', 3);
 	assert.ok(results.length <= 3);
 });
+
+test('searchSessions: finds match in malformed JSONL line (fallback snippet path)', () => {
+	// A line that is not valid JSON but contains the query — exercises extractSnippet fallback (lines 28-30)
+	const dir = path.join(tmpHome, '.claude', 'projects', '2026-02-05-12-00-00');
+	fs.mkdirSync(dir, { recursive: true });
+	const pad = JSON.stringify({ type: 'padding', data: 'x'.repeat(300) });
+	const badLine = 'not-json but contains fallback_unique_tok_xyz here';
+	fs.writeFileSync(path.join(dir, 'session.jsonl'), [pad, badLine].join('\n') + '\n', 'utf-8');
+	const results = searchSessions('fallback_unique_tok_xyz');
+	assert.ok(results.length >= 1);
+	assert.ok(results[0].snippet.includes('fallback_unique_tok_xyz'));
+});

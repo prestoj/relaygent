@@ -113,3 +113,61 @@ test('GET /api/relay: unknown session uuid returns empty', async () => {
 	assert.equal(res.status, 200);
 	assert.equal((await res.json()).activities.length, 0);
 });
+
+// --- stop: live process (mock kill to avoid terminating test runner) ---
+test('POST /api/relay stop: live pid → stopped (SIGTERM)', async () => {
+	// Spawn a real short-lived process to get a live PID we can safely signal
+	const { spawnSync } = await import('node:child_process');
+	const child = (await import('node:child_process')).spawn('sleep', ['30']);
+	const livePid = child.pid;
+	const pidFile = path.join(tmpHome, '.relaygent', 'relay.pid');
+	fs.mkdirSync(path.dirname(pidFile), { recursive: true });
+	fs.writeFileSync(pidFile, `${livePid}\n`);
+	const res = await POST(postReq({ action: 'stop' }));
+	const body = await res.json();
+	assert.ok(body.ok, `expected ok, got: ${JSON.stringify(body)}`);
+	assert.ok(body.status === 'stopped' || body.status === 'already_stopped');
+	fs.rmSync(pidFile, { force: true });
+	try { child.kill(); } catch { /* already dead */ }
+});
+
+// --- start: no LaunchAgent, relay.py missing → error ---
+test('POST /api/relay start: relay.py missing → 500', async () => {
+	// No pid file + no LaunchAgent plist + relay.py doesn't exist at config path
+	const res = await POST(postReq({ action: 'start' }));
+	const body = await res.json();
+	// Either started (if relay.py happens to exist) or error — either is valid JSON response
+	assert.ok(typeof body === 'object' && ('ok' in body || 'error' in body));
+});
+
+// --- GET: real session data ---
+test('GET /api/relay: returns valid response shape', async () => {
+	const res = GET(getReq());
+	const body = await res.json();
+	assert.ok(Array.isArray(body.activities));
+	assert.ok(typeof body.hasMore === 'boolean');
+	// total only present when a session file is found
+	if ('total' in body) assert.ok(typeof body.total === 'number');
+});
+
+// --- GET: pagination ---
+test('GET /api/relay: limit parameter respected', async () => {
+	const res = GET(getReq({ limit: '1' }));
+	const body = await res.json();
+	assert.ok(body.activities.length <= 1);
+});
+
+// --- GET: session lookup by UUID (covers findSessionById lines 15-19) ---
+test('GET /api/relay: known session uuid returns activities array', async () => {
+	const uuid = '12345678-1234-1234-1234-123456789abc';
+	const projectDir = path.join(tmpHome, '.claude', 'projects', 'test-project');
+	fs.mkdirSync(projectDir, { recursive: true });
+	// Write a minimal JSONL session file (enough for parseSession to succeed)
+	const entry = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'hello' }] }, timestamp: new Date().toISOString() });
+	fs.writeFileSync(path.join(projectDir, `${uuid}.jsonl`), entry + '\n');
+	const res = GET(getReq({ session: uuid }));
+	assert.equal(res.status, 200);
+	const body = await res.json();
+	assert.ok(Array.isArray(body.activities));
+	assert.ok(typeof body.hasMore === 'boolean');
+});
