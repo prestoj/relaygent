@@ -18,6 +18,19 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Relaygent Health Check"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Node.js version
+if command -v node &>/dev/null; then
+    NODE_VER=$(node --version 2>/dev/null)
+    NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
+    if [ "${NODE_MAJOR:-0}" -ge 20 ] 2>/dev/null; then
+        ok "Node.js" "$NODE_VER"
+    else
+        warn "Node.js" "$NODE_VER (20+ required) — upgrade: https://nodejs.org"
+    fi
+else
+    fail "Node.js" "not found — install from https://nodejs.org (20+)"
+fi
+
 # Claude Code + auth
 if command -v claude &>/dev/null; then
     VER=$(claude --version 2>/dev/null | head -1 | tr -d '\n')
@@ -99,6 +112,15 @@ if [ -n "$KB_DIR" ] && [ -d "$KB_DIR" ]; then
     done
 else
     fail "KB" "directory not found at ${KB_DIR:-unknown} — run: ./setup.sh"
+fi
+
+# Python venv (notifications)
+NOTIF_VENV="$REPO_DIR/notifications/.venv"
+if [ -d "$NOTIF_VENV" ] && [ -x "$NOTIF_VENV/bin/python3" ]; then
+    VENV_VER=$("$NOTIF_VENV/bin/python3" --version 2>/dev/null | awk '{print $2}')
+    ok "Python venv" "notifications venv ready ($VENV_VER)"
+else
+    warn "Python venv" "notifications/.venv missing — run: ./setup.sh"
 fi
 
 # Git hooks
