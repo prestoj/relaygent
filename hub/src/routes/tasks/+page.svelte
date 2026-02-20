@@ -1,6 +1,5 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import Reminders from '$lib/components/Reminders.svelte';
 	let { data } = $props();
 	let recurring = $state(data.recurring || []);
 	let oneoff = $state(data.oneoff || []);
@@ -11,7 +10,6 @@
 	let error = $state('');
 	let editingDesc = $state(null);
 	let editValue = $state('');
-	let remindersRef = $state(null);
 	let pollInterval;
 	const post = (body) => fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 	const patch = (body) => fetch('/api/tasks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -21,7 +19,7 @@
 	async function refreshTasks() {
 		try { const d = await (await fetch('/api/tasks')).json(); recurring = d.recurring || []; oneoff = d.oneoff || []; } catch { /* ignore */ }
 	}
-	onMount(() => { pollInterval = setInterval(() => { refreshTasks(); remindersRef?.poll(); }, 30000); });
+	onMount(() => { pollInterval = setInterval(() => { refreshTasks(); }, 30000); });
 	onDestroy(() => clearInterval(pollInterval));
 
 	function formatDue(task) {
@@ -116,11 +114,6 @@
 			{/each}
 		</div>
 	{/if}
-</section>
-
-<section class="section">
-	<h2>Reminders</h2>
-	<Reminders bind:this={remindersRef} initial={data.reminders || []} />
 </section>
 
 <style>
