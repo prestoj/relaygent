@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { parseSession, findLatestSession } from '$lib/relayActivity.js';
 
 // Session IDs are UUIDs — reject anything else to prevent path traversal
@@ -23,6 +23,8 @@ function findSessionById(sessionId) {
 
 const RELAY_PID_FILE = path.join(process.env.HOME, '.relaygent', 'relay.pid');
 const CONFIG_FILE = path.join(process.env.HOME, '.relaygent', 'config.json');
+// macOS LaunchAgent — KeepAlive:true means SIGTERM alone won't stop the relay (launchd restarts it)
+const LAUNCH_AGENT_PLIST = path.join(process.env.HOME, 'Library', 'LaunchAgents', 'com.claude.relay.plist.relaygent');
 
 function getRepoDir() {
 	try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')).paths?.repo; } catch { /* ignore */ }
@@ -45,6 +47,12 @@ function isRelayRunning(pid) {
 	try { process.kill(pid, 0); return true; } catch { return false; }
 }
 
+/** Run launchctl and return true on success. Falls back gracefully if not on macOS. */
+function launchctl(...args) {
+	const r = spawnSync('launchctl', args, { timeout: 8000 });
+	return r.status === 0;
+}
+
 export async function POST({ request }) {
 	let action;
 	try { ({ action } = await request.json()); } catch { return json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -52,6 +60,13 @@ export async function POST({ request }) {
 	if (action === 'stop') {
 		const pid = getRelayPid();
 		if (!pid || !isRelayRunning(pid)) return json({ ok: true, status: 'already_stopped' });
+		// On macOS with KeepAlive LaunchAgent, must use launchctl bootout — SIGTERM alone causes immediate restart
+		if (fs.existsSync(LAUNCH_AGENT_PLIST)) {
+			const uid = process.getuid?.() ?? '';
+			if (launchctl('bootout', `gui/${uid}`, LAUNCH_AGENT_PLIST)) {
+				return json({ ok: true, status: 'stopped' });
+			}
+		}
 		try {
 			process.kill(pid, 'SIGTERM');
 			return json({ ok: true, status: 'stopped' });
@@ -63,6 +78,13 @@ export async function POST({ request }) {
 	if (action === 'start') {
 		const pid = getRelayPid();
 		if (pid && isRelayRunning(pid)) return json({ ok: true, status: 'already_running' });
+		// On macOS, bootstrap the LaunchAgent so launchd manages it (KeepAlive, env vars, logging)
+		if (fs.existsSync(LAUNCH_AGENT_PLIST)) {
+			const uid = process.getuid?.() ?? '';
+			if (launchctl('bootstrap', `gui/${uid}`, LAUNCH_AGENT_PLIST)) {
+				return json({ ok: true, status: 'started' });
+			}
+		}
 		try {
 			fs.mkdirSync(path.dirname(RELAY_LOG), { recursive: true });
 			const logFd = fs.openSync(RELAY_LOG, 'a');
