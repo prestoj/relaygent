@@ -9,9 +9,13 @@ GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 
 echo -e "${CYAN}Updating Relaygent...${NC}"
 
-# Pull latest
+# Pull latest — ff-only preferred, fall back to fetch+reset if diverged
 BEFORE=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
-git -C "$SCRIPT_DIR" pull --ff-only
+if ! git -C "$SCRIPT_DIR" pull --ff-only 2>/dev/null; then
+    echo -e "  ${YELLOW}Local commits diverged from origin/main — resetting to origin/main${NC}"
+    git -C "$SCRIPT_DIR" fetch origin main
+    git -C "$SCRIPT_DIR" reset --hard origin/main
+fi
 AFTER=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
 
 if [ "$BEFORE" = "$AFTER" ]; then
