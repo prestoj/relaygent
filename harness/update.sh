@@ -64,7 +64,7 @@ fi
 # Start hub with new build
 mkdir -p "$SCRIPT_DIR/logs"
 PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" \
-    node "$SCRIPT_DIR/hub/server.js" >> "$SCRIPT_DIR/logs/relaygent-hub.log" 2>&1 &
+    node "$SCRIPT_DIR/hub/build/index.js" >> "$SCRIPT_DIR/logs/relaygent-hub.log" 2>&1 &
 echo $! > "$HUB_PID_FILE"
 
 echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
