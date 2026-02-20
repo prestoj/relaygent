@@ -4,6 +4,17 @@ import { getServiceHealth } from '$lib/serviceHealth.js';
 import fs from 'fs';
 import path from 'path';
 
+const RELAY_PID_FILE = path.join(process.env.HOME, '.relaygent', 'relay.pid');
+
+function isRelayRunning() {
+	try {
+		const pid = parseInt(fs.readFileSync(RELAY_PID_FILE, 'utf8').trim(), 10);
+		if (isNaN(pid)) return false;
+		process.kill(pid, 0);
+		return true;
+	} catch { return false; }
+}
+
 const CONFIG_PATH = path.join(process.env.HOME, '.relaygent', 'config.json');
 
 function getModel() {
@@ -66,5 +77,6 @@ export async function load() {
 		contextPct: getContextPct(),
 		services,
 		currentModel: getModel(),
+		relayRunning: isRelayRunning(),
 	};
 }
