@@ -7,7 +7,6 @@
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
 	let { data } = $props();
-	let recentTopics = $state(data.recentTopics || []);
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
 	let connected = $state(false);
@@ -126,15 +125,6 @@
 </section>
 {/if}
 
-{#if recentTopics.length > 0}
-<section class="recent-kb">
-	<span class="rk-label">KB</span>
-	{#each recentTopics as t}
-		<a class="rk-topic" href="/kb/{t.slug}">{t.title}</a>
-	{/each}
-	<a class="rk-more" href="/kb">all →</a>
-</section>
-{/if}
 
 <ContextBar pct={contextPct} />
 <SessionTimer />
@@ -191,9 +181,7 @@
 	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; animation: pulse 2s infinite; }
 	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
 	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
-	.recent-kb { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 0.6em; padding: 0.4em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; font-size: 0.8em; }  .rk-label { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.25em; }
-	.rk-topic { color: var(--link); text-decoration: none; padding: 0.1em 0.4em; background: var(--code-bg); border-radius: 4px; }  .rk-topic:hover { text-decoration: underline; }  .rk-more { color: var(--text-muted); text-decoration: none; margin-left: auto; }  .rk-more:hover { color: var(--text); }
-	@media (max-width: 768px) {
+@media (max-width: 768px) {
 		.goal { flex-direction: column; gap: 0.25em; }
 	}
 </style>

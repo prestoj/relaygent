@@ -71,7 +71,6 @@ export async function load() {
 
 	return {
 		topicCount: topics.length,
-		recentTopics: topics.slice(0, 5).map(t => ({ slug: t.slug, title: t.title || t.slug, updated: t.updated || null })),
 		attentionItems: getAttentionItems(),
 		mainGoal: getMainGoal(),
 		relayActivity: clockActivity?.recentActivity || [],
