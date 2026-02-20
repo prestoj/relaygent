@@ -25,6 +25,7 @@ fi
 echo -e "  Rebuilding hub..."
 if npm install -q --prefix "$SCRIPT_DIR/hub" && npm run build --prefix "$SCRIPT_DIR/hub" >/dev/null 2>&1; then
     echo -e "  Hub: ${GREEN}built${NC}"
+    git -C "$SCRIPT_DIR" rev-parse HEAD > "$SCRIPT_DIR/data/hub-build-commit" 2>/dev/null || true
 else
     echo -e "  Hub: ${RED}build failed — check logs${NC}"
     exit 1
