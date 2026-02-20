@@ -17,7 +17,7 @@ export function parseSessionStats(jsonlPath) {
 
 		let startTs = null, endTs = null, totalTokens = 0, outputTokens = 0;
 		const tools = {};
-		let toolCalls = 0, textBlocks = 0, turns = 0;
+		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null;
 
 		for (const line of lines) {
 			try {
@@ -45,6 +45,7 @@ export function parseSessionStats(jsonlPath) {
 								toolCalls++;
 							} else if (item?.type === 'text' && item.text?.length > 5) {
 								textBlocks++;
+								if (!firstText) firstText = item.text.split('\n')[0].slice(0, 100);
 							}
 						}
 					}
@@ -60,7 +61,7 @@ export function parseSessionStats(jsonlPath) {
 
 		return {
 			start: startTs, durationMin, totalTokens, outputTokens,
-			toolCalls, textBlocks, turns, tools,
+			toolCalls, textBlocks, turns, tools, firstText,
 			contextPct: Math.round(totalTokens / 2000),
 		};
 	} catch { return null; }
