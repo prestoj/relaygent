@@ -9,11 +9,14 @@ __pycache__/
 *.pid
 package-lock.json
 harness/settings.json
+knowledge
 knowledge/
 data/
 data-*/
+/logs
 /logs/
 harness/.last_run_timestamp
+harness/.relay.lock
 
 # Secrets and credentials
 .env
