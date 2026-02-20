@@ -17,6 +17,7 @@ import notif_config as config  # noqa: E402
 import db as notif_db  # noqa: E402
 import reminders as rem_mod  # noqa: E402
 import routes as routes_mod  # noqa: E402
+import tasks_collector as tc_mod  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -137,3 +138,62 @@ class TestSlackCollectorHelpers:
         notifications = []
         slack_collector.collect(notifications)
         assert notifications == []
+
+
+class TestTasksCollector:
+    def test_parse_recurring(self):
+        t = tc_mod._parse_task_line("- [ ] Check it | type: recurring | freq: daily | last: 2026-02-01 00:00")
+        assert t["description"] == "Check it" and t["freq"] == "daily"
+
+    def test_parse_invalid(self):
+        assert tc_mod._parse_task_line("## Section header") is None
+
+    def test_collect_overdue(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(tc_mod, "NOTIFIED_FILE", tmp_path / "n.json")
+        monkeypatch.setenv("RELAYGENT_KB_DIR", str(tmp_path))
+        (tmp_path / "tasks.md").write_text(
+            "- [ ] Old task | type: recurring | freq: daily | last: 2026-01-01 00:00\n"
+        )
+        notifications = []
+        tc_mod.collect(notifications)
+        assert any(n["type"] == "task" for n in notifications)
+
+    def test_collect_not_yet_due(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(tc_mod, "NOTIFIED_FILE", tmp_path / "n.json")
+        monkeypatch.setenv("RELAYGENT_KB_DIR", str(tmp_path))
+        future = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
+        (tmp_path / "tasks.md").write_text(
+            f"- [ ] Future task | type: recurring | freq: daily | last: {future}\n"
+        )
+        notifications = []
+        tc_mod.collect(notifications)
+        assert not any(n["type"] == "task" for n in notifications)
+
+
+class TestRoutesEdgeCases:
+    def test_stale_reminder_excluded(self, client):
+        stale = (datetime.now() - timedelta(hours=2)).isoformat()
+        client.post("/reminder", json={"trigger_time": stale, "message": "too old"})
+        data = client.get("/notifications/pending?fast=1").get_json()
+        assert all(n.get("message") != "too old" for n in data if n["type"] == "reminder")
+
+    def test_ack_slack_endpoint(self, client):
+        assert client.post("/notifications/ack-slack").get_json()["status"] == "ok"
+
+
+class TestReminderRecurrence:
+    def test_create_with_recurrence(self, client):
+        resp = client.post("/reminder", json={
+            "trigger_time": "2026-12-31T00:00:00",
+            "message": "weekly check",
+            "recurrence": "0 9 * * 1",
+        })
+        assert resp.status_code == 201 and resp.get_json().get("recurrence") == "0 9 * * 1"
+
+    def test_create_invalid_recurrence(self, client):
+        resp = client.post("/reminder", json={
+            "trigger_time": "2026-12-31T00:00:00",
+            "message": "bad cron",
+            "recurrence": "not-a-cron",
+        })
+        assert resp.status_code == 400
