@@ -1,24 +1,31 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
+	import Reminders from '$lib/components/Reminders.svelte';
 	let { data } = $props();
 	let recurring = $state(data.recurring || []);
 	let oneoff = $state(data.oneoff || []);
 	let newTask = $state('');
 	let adding = $state(false);
 	let error = $state('');
+	let editingDesc = $state(null);
+	let editValue = $state('');
+	let remindersRef = $state(null);
 	let pollInterval;
 
 	async function refreshTasks() {
 		try {
-			const res = await fetch('/api/tasks');
-			if (!res.ok) return;
-			const d = await res.json();
+			const d = await (await fetch('/api/tasks')).json();
 			recurring = d.recurring || [];
 			oneoff = d.oneoff || [];
 		} catch { /* ignore */ }
 	}
 
-	onMount(() => { pollInterval = setInterval(refreshTasks, 30000); });
+	onMount(() => {
+		pollInterval = setInterval(() => {
+			refreshTasks();
+			remindersRef?.poll();
+		}, 30000);
+	});
 	onDestroy(() => clearInterval(pollInterval));
 
 	function formatDue(task) {
@@ -28,8 +35,7 @@
 		if (m === null) {
 			const diff = new Date(task.nextDue) - new Date();
 			const h = Math.round(diff / 3600000);
-			if (h < 24) return `in ${h}h`;
-			return `in ${Math.round(h / 24)}d`;
+			return h < 24 ? `in ${h}h` : `in ${Math.round(h / 24)}d`;
 		}
 		if (m < 60) return `${m}m overdue`;
 		if (m < 1440) return `${Math.round(m / 60)}h overdue`;
@@ -53,6 +59,25 @@
 		adding = false;
 	}
 
+	function startEdit(desc) { editingDesc = desc; editValue = desc; }
+	function cancelEdit() { editingDesc = null; editValue = ''; }
+
+	async function saveEdit(oldDesc) {
+		const newDesc = editValue.trim();
+		if (!newDesc || newDesc === oldDesc) { cancelEdit(); return; }
+		try {
+			const res = await fetch('/api/tasks', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ oldDescription: oldDesc, newDescription: newDesc }),
+			});
+			if (res.ok) {
+				oneoff = oneoff.map(t => t.description === oldDesc ? { ...t, description: newDesc } : t);
+				cancelEdit();
+			} else { error = 'Failed to save'; }
+		} catch { error = 'Network error'; }
+	}
+
 	async function removeTask(desc) {
 		try {
 			const res = await fetch('/api/tasks', {
@@ -65,6 +90,10 @@
 	}
 
 	function handleKey(e) { if (e.key === 'Enter') addTask(); }
+	function handleEditKey(e, desc) {
+		if (e.key === 'Enter') saveEdit(desc);
+		else if (e.key === 'Escape') cancelEdit();
+	}
 </script>
 
 <svelte:head><title>Tasks — Relaygent</title></svelte:head>
@@ -93,13 +122,7 @@
 <section class="section">
 	<h2>One-off</h2>
 	<div class="add-row">
-		<input
-			type="text"
-			placeholder="Add a task for the agent..."
-			bind:value={newTask}
-			onkeydown={handleKey}
-			disabled={adding}
-		/>
+		<input type="text" placeholder="Add a task for the agent..." bind:value={newTask} onkeydown={handleKey} disabled={adding} />
 		<button onclick={addTask} disabled={adding || !newTask.trim()}>Add</button>
 	</div>
 	{#if error}<p class="error">{error}</p>{/if}
@@ -109,12 +132,28 @@
 		<div class="task-list">
 			{#each oneoff as t}
 				<div class="task oneoff">
-					<div class="task-desc">{t.description}</div>
-					<button class="done-btn" onclick={() => removeTask(t.description)} title="Mark done">✓</button>
+					{#if editingDesc === t.description}
+						<input class="edit-input" bind:value={editValue} onkeydown={(e) => handleEditKey(e, t.description)} autofocus />
+						<div class="task-actions">
+							<button class="save-btn" onclick={() => saveEdit(t.description)}>Save</button>
+							<button class="cancel-btn" onclick={cancelEdit}>Cancel</button>
+						</div>
+					{:else}
+						<div class="task-desc">{t.description}</div>
+						<div class="task-actions">
+							<button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button>
+							<button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
 	{/if}
+</section>
+
+<section class="section">
+	<h2>Reminders</h2>
+	<Reminders bind:this={remindersRef} initial={data.reminders || []} />
 </section>
 
 <style>
@@ -134,8 +173,13 @@
 	.add-row input:focus { outline: none; border-color: var(--link); }
 	.add-row button { padding: 0.45em 1em; background: var(--link); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
 	.add-row button:disabled { opacity: 0.5; cursor: not-allowed; }
-	.done-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; color: #22c55e; font-size: 0.9em; }
-	.done-btn:hover { background: var(--code-bg); }
+	.task-actions { display: flex; gap: 0.3em; align-items: center; }
+	.edit-btn, .del-btn, .save-btn, .cancel-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; }
+	.edit-btn { color: var(--text-muted); } .edit-btn:hover { color: var(--link); border-color: var(--link); }
+	.del-btn { color: var(--text-muted); } .del-btn:hover { color: #ef4444; border-color: #ef4444; }
+	.save-btn { color: #16a34a; border-color: #16a34a; } .save-btn:hover { background: #dcfce7; }
+	.cancel-btn { color: var(--text-muted); } .cancel-btn:hover { color: var(--text); }
+	.edit-input { flex: 1; padding: 0.3em 0.5em; border: 1px solid var(--link); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.9em; outline: none; }
 	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; }
 	.error { color: #ef4444; font-size: 0.85em; margin: 0.25em 0; }
 	.oneoff { background: var(--bg); }

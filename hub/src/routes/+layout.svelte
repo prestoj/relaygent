@@ -54,8 +54,7 @@
 			Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}
 		</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
-		<a href="/notifications" class:active={isActive('/notifications')} onclick={closeMenu}>Notifications</a>
-<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
+		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>

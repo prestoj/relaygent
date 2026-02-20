@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { loadTasks, addTask, removeTask } from '$lib/tasks.js';
+import { loadTasks, addTask, removeTask, editTask } from '$lib/tasks.js';
 import { getKbDir } from '$lib/kb.js';
 
 export function GET() {
@@ -24,6 +24,19 @@ export async function POST({ request }) {
 			return json({ error: 'description required' }, { status: 400 });
 		}
 		const ok = addTask(getKbDir(), description.trim());
+		return json({ ok });
+	} catch (e) {
+		return json({ error: String(e) }, { status: 500 });
+	}
+}
+
+export async function PATCH({ request }) {
+	try {
+		const { oldDescription, newDescription } = await request.json();
+		if (!oldDescription || !newDescription || typeof oldDescription !== 'string' || typeof newDescription !== 'string') {
+			return json({ error: 'oldDescription and newDescription required' }, { status: 400 });
+		}
+		const ok = editTask(getKbDir(), oldDescription.trim(), newDescription.trim());
 		return json({ ok });
 	} catch (e) {
 		return json({ error: String(e) }, { status: 500 });
