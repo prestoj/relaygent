@@ -112,6 +112,21 @@ if command -v gh &>/dev/null; then
     fi
 fi
 
+# Agent work status
+TASKS_FILE="$KB_DIR/tasks.md"
+if [ -f "$TASKS_FILE" ]; then
+    python3 - "$TASKS_FILE" <<'PYEOF' 2>/dev/null
+import re, sys
+content = open(sys.argv[1]).read()
+m = re.search(r'## Agent Work\n(.*?)(?=\n##|\Z)', content, re.DOTALL)
+if m:
+    lines = [l.strip() for l in m.group(1).strip().split('\n') if l.startswith('-')]
+    if lines:
+        print('\n\033[0;34mAgent Work:\033[0m')
+        for l in lines: print(f'  {l}')
+PYEOF
+fi
+
 # Due tasks
 TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
