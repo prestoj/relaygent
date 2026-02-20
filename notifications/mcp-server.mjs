@@ -43,31 +43,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "set_reminder": {
-        const body = { trigger_time: args.trigger_time, message: args.message };
-        if (args.recurrence) body.recurrence = args.recurrence;
-        const result = await apiCall("/reminder", "POST", body);
-        const recur = args.recurrence ? ` (recurring: ${args.recurrence})` : "";
-        return text(`Reminder set (ID: ${result.id}). Will trigger at ${args.trigger_time}${recur}: "${args.message}"`);
-      }
-      case "list_reminders": {
-        const reminders = await apiCall("/upcoming");
-        if (reminders.length === 0) return text("No pending reminders.");
-        const list = reminders.map(r => {
-          const recur = r.recurrence ? ` [${r.recurrence}]` : "";
-          return `- [${r.id}] ${r.trigger_time}${recur}: ${r.message}`;
-        }).join("\n");
-        return text(`Pending reminders:\n${list}`);
-      }
-      case "cancel_reminder":
-        await apiCall(`/reminder/${args.id}`, "DELETE");
-        return text(`Reminder ${args.id} cancelled.`);
-      case "get_pending_triggers": {
-        const pending = await apiCall("/pending");
-        if (pending.length === 0) return text("No triggers due.");
-        const list = pending.map(r => `- [${r.id}] ${r.message}`).join("\n");
-        return text(`Due now:\n${list}`);
-      }
       case "sleep": {
         let timeMsg = "indefinitely (until a notification arrives)";
         if (args.max_minutes) {
