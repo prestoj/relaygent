@@ -39,13 +39,10 @@
 				<form method="POST" action="?/delete" style="display:inline">
 					<button type="submit" class="del-confirm-btn">Yes, delete</button>
 				</form>
-				<!-- svelte-ignore event_directive_deprecated -->
-				<button type="button" class="cancel-del-btn" on:click={() => confirmDelete = false}>Cancel</button>
+				<button type="button" class="cancel-del-btn" onclick={() => confirmDelete = false}>Cancel</button>
 			{:else}
-				<!-- svelte-ignore event_directive_deprecated -->
-				<button on:click={toggleEdit} class="edit-btn">{editing ? 'View' : 'Edit'}</button>
-				<!-- svelte-ignore event_directive_deprecated -->
-				<button on:click={() => { editing = false; confirmDelete = true; }} class="del-btn">Delete</button>
+				<button onclick={toggleEdit} class="edit-btn">{editing ? 'View' : 'Edit'}</button>
+				<button onclick={() => { editing = false; confirmDelete = true; }} class="del-btn">Delete</button>
 			{/if}
 		</div>
 	</div>
@@ -67,8 +64,7 @@
 			<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
 			<div class="actions">
 				<button type="submit" class="save-btn">Save</button>
-				<!-- svelte-ignore event_directive_deprecated -->
-				<button type="button" on:click={() => editing = false}>Cancel</button>
+				<button type="button" onclick={() => editing = false}>Cancel</button>
 			</div>
 		</form>
 		{#if form?.success}<p class="saved">Saved.</p>{/if}
