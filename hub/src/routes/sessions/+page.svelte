@@ -6,6 +6,19 @@
 		if (n >= 1000) return `${(n/1000).toFixed(0)}K`;
 		return String(n);
 	}
+	function fmtRelative(id) {
+		try {
+			const m = id.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
+			if (!m) return '';
+			const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+			const diffMin = Math.round((Date.now() - d) / 60000);
+			if (diffMin < 2) return 'just now';
+			if (diffMin < 60) return `${diffMin}m ago`;
+			const diffH = Math.round(diffMin / 60);
+			if (diffH < 24) return `${diffH}h ago`;
+			return `${Math.round(diffH / 24)}d ago`;
+		} catch { return ''; }
+	}
 	const st = data.stats;
 </script>
 
@@ -33,6 +46,7 @@
 			<li class:current={i === 0}>
 				<div class="row">
 					<a href="/sessions/{s.id}">{s.displayTime}</a>
+					{#if fmtRelative(s.id)}<span class="rel">{fmtRelative(s.id)}</span>{/if}
 					<span class="meta">
 						{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
 					</span>
@@ -53,6 +67,7 @@
 	.session-list li { display: flex; flex-direction: column; gap: 0.1em; }
 	.row { display: flex; align-items: baseline; gap: 0.75em; }
 	.session-list a { font-family: monospace; font-size: 1.05em; }
+	.rel { font-size: 0.75em; color: var(--text-muted); opacity: 0.7; }
 	.meta { font-size: 0.8em; color: var(--text-muted); }
 	.sum { margin: 0; font-size: 0.75em; color: var(--text-muted); padding-left: 0.2em; }
 	.current a { font-weight: 600; }
