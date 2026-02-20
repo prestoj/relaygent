@@ -126,3 +126,7 @@ def cleanup_context_file() -> None:
     pct_file = Path("/tmp/relaygent-context-pct")
     if pct_file.exists():
         pct_file.unlink()
+
+
+# Re-export for callers that import from relay_utils
+from relay_hub import check_and_rebuild_hub  # noqa: E402, F401

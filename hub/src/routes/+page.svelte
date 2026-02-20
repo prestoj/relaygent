@@ -19,6 +19,15 @@
 	let modelSaving = $state(false);
 	let hookCtx = $state('');
 	let services = $state(data.services || []);
+	let relayRunning = $state(data.relayRunning ?? true);
+	let relayActionPending = $state(false);
+	async function toggleRelay() {
+		if (relayActionPending) return;
+		relayActionPending = true;
+		const action = relayRunning ? 'stop' : 'start';
+		try { const r = await fetch('/api/relay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); if (r.ok) relayRunning = !relayRunning; } catch { /* ignore */ }
+		relayActionPending = false;
+	}
 
 	const MODEL_OPTIONS = [
 		{ id: 'claude-opus-4-6', label: 'Opus 4.6' }, { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
@@ -27,25 +36,13 @@
 	async function refreshServices() { try { const d = await (await fetch('/api/services')).json(); services = d.services || []; } catch { /* ignore */ } }
 
 	async function setModel(e) {
-		const model = e.target.value;
-		modelSaving = true;
-		try {
-			const res = await fetch('/api/model', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ model }),
-			});
-			if (res.ok) currentModel = model;
-		} catch { /* ignore */ }
+		const model = e.target.value; modelSaving = true;
+		try { const r = await fetch('/api/model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) }); if (r.ok) currentModel = model; } catch { /* ignore */ }
 		modelSaving = false;
 	}
 
 	async function reloadPageData() {
-		try {
-			const res = await fetch(`/api/relay?offset=0&limit=50`);
-			const d = await res.json();
-			if (d.activities?.length > 0) activities = d.activities;
-		} catch { /* ignore */ }
+		try { const d = await (await fetch(`/api/relay?offset=0&limit=50`)).json(); if (d.activities?.length > 0) activities = d.activities; } catch { /* ignore */ }
 	}
 
 	function connect() {
@@ -82,14 +79,9 @@
 		loading = false;
 	}
 
-	function handleScroll() {
-		const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-		if (scrollTop + clientHeight >= scrollHeight - 200) loadMore();
-	}
-
+	function handleScroll() { const { scrollTop, scrollHeight, clientHeight } = document.documentElement; if (scrollTop + clientHeight >= scrollHeight - 200) loadMore(); }
 	onMount(() => { connect(); if (browser) { window.addEventListener('scroll', handleScroll); svcInterval = setInterval(refreshServices, 30000); } });
 	onDestroy(() => { if (ws) ws.close(); clearInterval(svcInterval); if (browser) window.removeEventListener('scroll', handleScroll); });
-
 	function clearAttentionItem(index) { attentionItems = attentionItems.filter((_, i) => i !== index); }
 	function clearAllAttention() { attentionItems = []; }
 </script>
@@ -102,6 +94,7 @@
 		<span class="relay-label">Relay</span>
 		<span class="badge" class:on={connected}>{connected ? 'Live' : 'Offline'}</span>
 	</div>
+	<button class="relay-toggle" class:stopping={relayRunning} class:starting={!relayRunning} onclick={toggleRelay} disabled={relayActionPending} title={relayRunning ? 'Stop relay' : 'Start relay'}>{relayActionPending ? '…' : relayRunning ? 'Stop' : 'Start'}</button>
 	<div class="model-picker">
 		<select value={currentModel} onchange={setModel} disabled={modelSaving}>
 			<option value="" disabled>Model...</option>
@@ -171,6 +164,13 @@
 	@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 	.badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 10px; background: #fee2e2; color: #dc2626; }  .badge.on { background: #dcfce7; color: #16a34a; }
 	.hook-ctx { font-size: 0.72em; color: var(--text-muted); padding: 0.3em 1em; background: var(--code-bg); border-radius: 6px; margin-bottom: 0.75em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.relay-toggle { font-size: 0.78em; padding: 0.2em 0.6em; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; background: var(--bg-surface); color: var(--text-muted); }
+	.relay-toggle:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+	.relay-toggle.stopping { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+	.relay-toggle.stopping:hover:not(:disabled) { background: #fee2e2; }
+	.relay-toggle.starting { border-color: #86efac; color: #16a34a; background: #f0fdf4; }
+	.relay-toggle.starting:hover:not(:disabled) { background: #dcfce7; }
+	.relay-toggle:disabled { opacity: 0.5; cursor: wait; }
 	.model-picker select { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.4em; font-size: 0.78em; cursor: pointer; }
 	.model-picker select:hover { border-color: var(--text-muted); }  .model-picker select:disabled { opacity: 0.5; cursor: wait; }
 	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }
