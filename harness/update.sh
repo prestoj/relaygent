@@ -50,7 +50,7 @@ if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
 fi
 rm -f "$HUB_PID_FILE"
 # Fallback: kill any process still on the hub port (catches stale pid file case)
-PORT_PIDS=$(lsof -iTCP:"$HUB_PORT" -sTCP:LISTEN -t 2>/dev/null || ss -tlnp "sport = :$HUB_PORT" 2>/dev/null | awk 'NR>1{match($0,/pid=([0-9]+)/,a); if(a[1]) print a[1]}')
+PORT_PIDS=$(lsof -iTCP:"$HUB_PORT" -sTCP:LISTEN -t 2>/dev/null || ss -tlnp 2>/dev/null | grep ":$HUB_PORT " | grep -oP 'pid=\K[0-9]+')
 if [ -n "$PORT_PIDS" ]; then
     kill -TERM $PORT_PIDS 2>/dev/null || true
     sleep 1
