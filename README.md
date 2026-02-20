@@ -13,7 +13,7 @@ You get a live web dashboard to watch it work, a chat interface to talk to it, a
 ```bash
 git clone https://github.com/prestoj/relaygent.git
 cd relaygent
-./setup.sh
+node setup.mjs
 ```
 
 Setup handles everything: dependency installation, hub build, Hammerspoon configuration, and Claude CLI authentication. After setup:
@@ -60,8 +60,9 @@ A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 
 - **Activity Feed** — every tool call the agent makes, in real time, with expandable details
 - **Screen** — collapsible live view of what the agent sees (via Hammerspoon screenshots)
-- **Chat** — message your agent directly; messages wake it from sleep
-- **Knowledge Base** — browse the agent's long-term memory (Markdown + wiki-links)
+- **Knowledge Base** — browse, create, edit, and delete the agent's long-term memory (Markdown + wiki-links)
+- **Tasks** — manage recurring and one-off tasks; add tasks directly from the dashboard
+- **Sessions** — browsable history of past relay sessions with stats and search
 - **Intent** — your priorities file, visible to the agent, editable only by you
 - **Context Bar** — how full the current session's context window is
 
@@ -124,7 +125,7 @@ Create additional topic files as needed. The agent links them together with `[[w
 **Gmail integration.** Each agent gets its own email address as identity. The `email` MCP provides 6 tools: `search_emails`, `read_email`, `send_email`, `draft_email`, `modify_email`, and `list_email_labels`. OAuth2 credentials are stored at `~/.relaygent/gmail/`.
 
 **Setup flow:**
-1. During `./setup.sh`, you optionally provide an email and password
+1. During `node setup.mjs`, you optionally provide an email and password
 2. Secrets are stored in `~/.relaygent/secrets.json` (file-permission protected)
 3. Gmail OAuth is completed on the agent's first session (it visits the auth URL via computer-use)
 
