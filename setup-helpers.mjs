@@ -189,7 +189,10 @@ export function setupClaudeMd(HOME, config, REPO_DIR, C) {
 	const user = HOME.split('/').pop();
 	const [kb, data, repo] = [config.paths.kb, config.paths.data, REPO_DIR].map(p => p.replace(HOME, '~'));
 	const host = hostname();
-	/* eslint-disable max-len */
-	writeFileSync(claudeMdPath, `# Machine Context — ${host}\n\nThis file provides stable machine context for relay Claude instances.\nRead it once at session start, then proceed with handoff.md for current goals.\n\n## Identity\n\n- **Machine**: ${host} (${process.platform})\n- **User**: ${user} (home: ${HOME})\n\n## Key Paths\n\n| Path | Purpose |\n|------|---------|\n| \`${repo}/\` | Relaygent repo |\n| \`${kb}/\` | KB topics |\n| \`${data}/\` | Persistent data |\n| \`~/bin/relaygent\` | CLI |\n| \`~/.relaygent/config.json\` | Config |\n\n## Services\n\n| Service | Port |\n|---------|------|\n| Hub | ${config.hub.port} |\n| Notifications | ${config.services.notifications.port} |\n`);
+	const vars = { HOST: host, PLATFORM: process.platform, USER: user, HOME, REPO: repo, KB: kb, DATA: data,
+		HUB_PORT: config.hub.port, NOTIF_PORT: config.services.notifications.port };
+	let content = readFileSync(join(REPO_DIR, 'templates', 'CLAUDE.md'), 'utf-8');
+	for (const [k, v] of Object.entries(vars)) content = content.replaceAll(`{{${k}}}`, v);
+	writeFileSync(claudeMdPath, content);
 	console.log(`  CLAUDE.md: ${C.green}created${C.reset} (${claudeMdPath})`);
 }
