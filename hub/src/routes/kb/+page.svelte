@@ -39,17 +39,14 @@
 
 <div class="heading-row">
 	<h1>Knowledge Base <span class="count">({data.topics.length})</span></h1>
-	<!-- svelte-ignore event_directive_deprecated -->
 	{#if showNewForm}
-		<form class="new-form" on:submit={goCreate}>
+		<form class="new-form" onsubmit={goCreate}>
 			<input type="text" bind:value={newTitle} placeholder="Topic title..." class="new-input" autofocus />
 			<button type="submit" class="new-submit">Create</button>
-			<!-- svelte-ignore event_directive_deprecated -->
-			<button type="button" class="new-cancel" on:click={() => { showNewForm = false; newTitle = ''; }}>✕</button>
+			<button type="button" class="new-cancel" onclick={() => { showNewForm = false; newTitle = ''; }}>✕</button>
 		</form>
 	{:else}
-		<!-- svelte-ignore event_directive_deprecated -->
-		<button class="new-btn" on:click={() => showNewForm = true}>+ New</button>
+		<button class="new-btn" onclick={() => showNewForm = true}>+ New</button>
 		<button class="commit-btn" onclick={commitKb} disabled={committing}>{committing ? '…' : commitDone ? '✓ Committed' : 'Commit KB'}</button>
 	{/if}
 </div>
@@ -57,9 +54,8 @@
 <input type="search" placeholder="Filter topics or tags..." bind:value={search} class="search" />
 
 {#if data.deadLinks.length > 0}
-	<!-- svelte-ignore event_directive_deprecated -->
 	<div class="dead-links-notice">
-		<button class="dead-links-toggle" on:click={() => showDeadLinks = !showDeadLinks}>
+		<button class="dead-links-toggle" onclick={() => showDeadLinks = !showDeadLinks}>
 			⚠ {data.deadLinks.length} broken wiki-link{data.deadLinks.length !== 1 ? 's' : ''}
 			{showDeadLinks ? '▲' : '▼'}
 		</button>
@@ -81,8 +77,7 @@
 		Filtered by <strong>{data.activeTag}</strong> &middot; <a href="/kb">clear</a>
 	</div>
 {:else}
-	<!-- svelte-ignore event_directive_deprecated -->
-	<button class="toggle-tags" on:click={() => showTags = !showTags}>
+	<button class="toggle-tags" onclick={() => showTags = !showTags}>
 		{showTags ? 'Hide' : 'Show'} tags ({data.allTags.length})
 	</button>
 {/if}
