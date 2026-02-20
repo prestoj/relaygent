@@ -83,8 +83,8 @@
 				body: JSON.stringify({ oldDescription: oldDesc, newDescription: newDesc }),
 			});
 			if (res.ok) {
-				oneoff = oneoff.map(t => t.description === oldDesc ? { ...t, description: newDesc } : t);
-				cancelEdit();
+				const upd = t => t.description === oldDesc ? { ...t, description: newDesc } : t;
+				oneoff = oneoff.map(upd); recurring = recurring.map(upd); cancelEdit();
 			} else { error = 'Failed to save'; }
 		} catch { error = 'Network error'; }
 	}
@@ -96,7 +96,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ description: desc }),
 			});
-			if (res.ok) oneoff = oneoff.filter(t => t.description !== desc);
+			if (res.ok) { oneoff = oneoff.filter(t => t.description !== desc); recurring = recurring.filter(t => t.description !== desc); }
 		} catch { /* ignore */ }
 	}
 
@@ -119,12 +119,13 @@
 		<div class="task-list">
 			{#each recurring as t}
 				<div class="task" class:due={t.due}>
-					<div class="task-desc">{t.description}</div>
-					<div class="task-meta">
-						<span class="freq">{t.freq}</span>
-						<span class="due-label" class:overdue={t.due}>{formatDue(t)}</span>
-						<button class="done-btn" onclick={() => completeRecurring(t.description)} title="Mark done">✓</button>
-					</div>
+					{#if editingDesc === t.description}
+						<input class="edit-input" bind:value={editValue} onkeydown={(e) => handleEditKey(e, t.description)} autofocus />
+						<div class="task-actions"><button class="save-btn" onclick={() => saveEdit(t.description)}>Save</button><button class="cancel-btn" onclick={cancelEdit}>Cancel</button></div>
+					{:else}
+						<div class="task-desc">{t.description}</div>
+						<div class="task-meta"><span class="freq">{t.freq}</span><span class="due-label" class:overdue={t.due}>{formatDue(t)}</span><button class="done-btn" onclick={() => completeRecurring(t.description)} title="Mark done">✓</button><button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button><button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button></div>
+					{/if}
 				</div>
 			{/each}
 		</div>

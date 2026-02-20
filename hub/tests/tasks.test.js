@@ -98,13 +98,13 @@ test('removeTask: removes one-off task', () => {
 	assert(raw.includes('Other task'));
 });
 
-test('removeTask: does not remove recurring tasks', () => {
+test('removeTask: removes recurring tasks', () => {
 	const dir = makeTempDir();
 	writeTasks(dir, '- [ ] Commit KB | type: recurring | freq: 12h | last: never\n');
 	const ok = removeTask(dir, 'Commit KB');
-	assert.equal(ok, true); // returns true (no error) but shouldn't remove
+	assert.equal(ok, true);
 	const raw = readTasks(dir);
-	assert(raw.includes('Commit KB'));
+	assert(!raw.includes('Commit KB'));
 });
 
 test('editTask: renames one-off task', () => {
@@ -124,13 +124,14 @@ test('editTask: returns false for nonexistent task', () => {
 	assert.equal(ok, false);
 });
 
-test('editTask: does not rename recurring tasks', () => {
+test('editTask: renames recurring tasks', () => {
 	const dir = makeTempDir();
 	writeTasks(dir, '- [ ] Commit KB | type: recurring | freq: 12h | last: never\n');
 	const ok = editTask(dir, 'Commit KB', 'New name');
-	assert.equal(ok, false);
+	assert.equal(ok, true);
 	const raw = readTasks(dir);
-	assert(raw.includes('Commit KB'));
+	assert(raw.includes('New name'));
+	assert(!raw.includes('Commit KB'));
 });
 
 test('completeTask: updates last: timestamp on recurring task', () => {
