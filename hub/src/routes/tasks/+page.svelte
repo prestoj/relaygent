@@ -5,106 +5,61 @@
 	let recurring = $state(data.recurring || []);
 	let oneoff = $state(data.oneoff || []);
 	let newTask = $state('');
+	let newRecurring = $state('');
+	let newFreq = $state('daily');
 	let adding = $state(false);
 	let error = $state('');
 	let editingDesc = $state(null);
 	let editValue = $state('');
 	let remindersRef = $state(null);
 	let pollInterval;
+	const post = (body) => fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const patch = (body) => fetch('/api/tasks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const del = (body) => fetch('/api/tasks', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const put = (body) => fetch('/api/tasks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 	async function refreshTasks() {
-		try {
-			const d = await (await fetch('/api/tasks')).json();
-			recurring = d.recurring || [];
-			oneoff = d.oneoff || [];
-		} catch { /* ignore */ }
+		try { const d = await (await fetch('/api/tasks')).json(); recurring = d.recurring || []; oneoff = d.oneoff || []; } catch { /* ignore */ }
 	}
-
-	onMount(() => {
-		pollInterval = setInterval(() => {
-			refreshTasks();
-			remindersRef?.poll();
-		}, 30000);
-	});
+	onMount(() => { pollInterval = setInterval(() => { refreshTasks(); remindersRef?.poll(); }, 30000); });
 	onDestroy(() => clearInterval(pollInterval));
 
 	function formatDue(task) {
 		if (!task.nextDue) return '—';
 		if (task.last === 'never' || !task.last) return 'overdue (never done)';
 		const m = task.minsLate;
-		if (m === null) {
-			const diff = new Date(task.nextDue) - new Date();
-			const h = Math.round(diff / 3600000);
-			return h < 24 ? `in ${h}h` : `in ${Math.round(h / 24)}d`;
-		}
+		if (m === null) { const diff = new Date(task.nextDue) - new Date(); const h = Math.round(diff / 3600000); return h < 24 ? `in ${h}h` : `in ${Math.round(h / 24)}d`; }
 		if (m < 60) return `${m}m overdue`;
 		if (m < 1440) return `${Math.round(m / 60)}h overdue`;
 		return `${Math.round(m / 1440)}d overdue`;
 	}
-
 	async function completeRecurring(desc) {
-		try {
-			const res = await fetch('/api/tasks', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ description: desc }),
-			});
-			if (res.ok) await refreshTasks();
-		} catch { /* ignore */ }
+		try { const res = await put({ description: desc }); if (res.ok) await refreshTasks(); } catch { /* ignore */ }
 	}
-
 	async function addTask() {
 		if (!newTask.trim() || adding) return;
 		adding = true; error = '';
-		try {
-			const res = await fetch('/api/tasks', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ description: newTask.trim() }),
-			});
-			if (res.ok) {
-				oneoff = [...oneoff, { description: newTask.trim(), type: 'one-off', checked: false, due: false }];
-				newTask = '';
-			} else { error = 'Failed to add task'; }
-		} catch { error = 'Network error'; }
+		try { const res = await post({ description: newTask.trim() }); if (res.ok) { oneoff = [...oneoff, { description: newTask.trim(), type: 'one-off', checked: false, due: false }]; newTask = ''; } else { error = 'Failed to add task'; } } catch { error = 'Network error'; }
 		adding = false;
 	}
-
+	async function addRecurring() {
+		if (!newRecurring.trim() || adding) return;
+		adding = true; error = '';
+		try { const res = await post({ description: newRecurring.trim(), freq: newFreq }); if (res.ok) { await refreshTasks(); newRecurring = ''; } else { error = 'Failed to add'; } } catch { error = 'Network error'; }
+		adding = false;
+	}
 	function startEdit(desc) { editingDesc = desc; editValue = desc; }
 	function cancelEdit() { editingDesc = null; editValue = ''; }
-
 	async function saveEdit(oldDesc) {
 		const newDesc = editValue.trim();
 		if (!newDesc || newDesc === oldDesc) { cancelEdit(); return; }
-		try {
-			const res = await fetch('/api/tasks', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ oldDescription: oldDesc, newDescription: newDesc }),
-			});
-			if (res.ok) {
-				const upd = t => t.description === oldDesc ? { ...t, description: newDesc } : t;
-				oneoff = oneoff.map(upd); recurring = recurring.map(upd); cancelEdit();
-			} else { error = 'Failed to save'; }
-		} catch { error = 'Network error'; }
+		try { const res = await patch({ oldDescription: oldDesc, newDescription: newDesc }); if (res.ok) { const upd = t => t.description === oldDesc ? { ...t, description: newDesc } : t; oneoff = oneoff.map(upd); recurring = recurring.map(upd); cancelEdit(); } else { error = 'Failed to save'; } } catch { error = 'Network error'; }
 	}
-
 	async function removeTask(desc) {
-		try {
-			const res = await fetch('/api/tasks', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ description: desc }),
-			});
-			if (res.ok) { oneoff = oneoff.filter(t => t.description !== desc); recurring = recurring.filter(t => t.description !== desc); }
-		} catch { /* ignore */ }
+		try { const res = await del({ description: desc }); if (res.ok) { oneoff = oneoff.filter(t => t.description !== desc); recurring = recurring.filter(t => t.description !== desc); } } catch { /* ignore */ }
 	}
-
 	function handleKey(e) { if (e.key === 'Enter') addTask(); }
-	function handleEditKey(e, desc) {
-		if (e.key === 'Enter') saveEdit(desc);
-		else if (e.key === 'Escape') cancelEdit();
-	}
+	function handleEditKey(e, desc) { if (e.key === 'Enter') saveEdit(desc); else if (e.key === 'Escape') cancelEdit(); }
 </script>
 
 <svelte:head><title>Tasks — Relaygent</title></svelte:head>
@@ -130,6 +85,11 @@
 			{/each}
 		</div>
 	{/if}
+	<div class="add-row add-recurring">
+		<input type="text" placeholder="Add recurring task..." bind:value={newRecurring} onkeydown={(e) => { if (e.key === 'Enter') addRecurring(); }} disabled={adding} />
+		<select bind:value={newFreq}><option>6h</option><option>12h</option><option>daily</option><option>2d</option><option>3d</option><option>weekly</option><option>monthly</option></select>
+		<button onclick={addRecurring} disabled={adding || !newRecurring.trim()}>Add</button>
+	</div>
 </section>
 
 <section class="section">
@@ -147,16 +107,10 @@
 				<div class="task oneoff">
 					{#if editingDesc === t.description}
 						<input class="edit-input" bind:value={editValue} onkeydown={(e) => handleEditKey(e, t.description)} autofocus />
-						<div class="task-actions">
-							<button class="save-btn" onclick={() => saveEdit(t.description)}>Save</button>
-							<button class="cancel-btn" onclick={cancelEdit}>Cancel</button>
-						</div>
+						<div class="task-actions"><button class="save-btn" onclick={() => saveEdit(t.description)}>Save</button><button class="cancel-btn" onclick={cancelEdit}>Cancel</button></div>
 					{:else}
 						<div class="task-desc">{t.description}</div>
-						<div class="task-actions">
-							<button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button>
-							<button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button>
-						</div>
+						<div class="task-actions"><button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button><button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button></div>
 					{/if}
 				</div>
 			{/each}
@@ -179,13 +133,13 @@
 	.task-desc { flex: 1; font-size: 0.9em; }
 	.task-meta { display: flex; gap: 0.75em; align-items: center; white-space: nowrap; font-size: 0.8em; color: var(--text-muted); }
 	.freq { background: var(--code-bg); border-radius: 4px; padding: 0.1em 0.4em; font-family: monospace; }
-	.due-label { color: var(--text-muted); }
-	.due-label.overdue { color: #f97316; font-weight: 600; }
+	.due-label { color: var(--text-muted); } .due-label.overdue { color: #f97316; font-weight: 600; }
 	.add-row { display: flex; gap: 0.5em; margin-bottom: 0.75em; }
 	.add-row input { flex: 1; padding: 0.45em 0.75em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9em; }
 	.add-row input:focus { outline: none; border-color: var(--link); }
+	.add-row select { padding: 0.45em 0.5em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9em; cursor: pointer; }
 	.add-row button { padding: 0.45em 1em; background: var(--link); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
-	.add-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+	.add-row button:disabled { opacity: 0.5; cursor: not-allowed; } .add-recurring { margin-top: 0.75em; }
 	.task-actions { display: flex; gap: 0.3em; align-items: center; }
 	.done-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; color: var(--text-muted); } .done-btn:hover { color: #16a34a; border-color: #16a34a; }
 	.edit-btn, .del-btn, .save-btn, .cancel-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; }
@@ -194,7 +148,6 @@
 	.save-btn { color: #16a34a; border-color: #16a34a; } .save-btn:hover { background: #dcfce7; }
 	.cancel-btn { color: var(--text-muted); } .cancel-btn:hover { color: var(--text); }
 	.edit-input { flex: 1; padding: 0.3em 0.5em; border: 1px solid var(--link); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.9em; outline: none; }
-	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; }
-	.error { color: #ef4444; font-size: 0.85em; margin: 0.25em 0; }
+	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; } .error { color: #ef4444; font-size: 0.85em; margin: 0.25em 0; }
 	.oneoff { background: var(--bg); }
 </style>

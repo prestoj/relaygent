@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { loadTasks, addTask, removeTask, editTask, completeTask } from '../src/lib/tasks.js';
+import { loadTasks, addTask, addRecurringTask, removeTask, editTask, completeTask } from '../src/lib/tasks.js';
 
 function makeTempDir() {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
@@ -196,4 +196,33 @@ test('completeTask: multiple completions do not corrupt timestamp', () => {
 	assert.equal(isNaN(new Date(lastVal).getTime()), false, `Timestamp must be parseable after multiple completions: ${lastVal}`);
 	// The lastVal should be YYYY-MM-DD HH:MM format only (no trailing fragments)
 	assert(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(lastVal), `Timestamp format invalid: ${lastVal}`);
+});
+
+test('addRecurringTask: creates recurring task with correct freq and last:never', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '---\ntitle: Tasks\nupdated: 2026-01-01\n---\n\n## Tasks\n\n');
+	const ok = addRecurringTask(dir, 'Check logs', 'daily');
+	assert.equal(ok, true);
+	const raw = readTasks(dir);
+	assert.ok(raw.includes('Check logs'), 'description should be present');
+	assert.ok(raw.includes('type: recurring'), 'type should be recurring');
+	assert.ok(raw.includes('freq: daily'), 'freq should be daily');
+	assert.ok(raw.includes('last: never'), 'last should be never');
+});
+
+test('addRecurringTask: task appears in loadTasks as recurring', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '---\ntitle: Tasks\nupdated: 2026-01-01\n---\n\n## Tasks\n\n');
+	addRecurringTask(dir, 'Weekly report', 'weekly');
+	const { tasks } = loadTasks(dir);
+	const t = tasks.find(t => t.description === 'Weekly report');
+	assert.ok(t, 'task should be found');
+	assert.equal(t.type, 'recurring');
+	assert.equal(t.freq, 'weekly');
+});
+
+test('addRecurringTask: returns false for missing tasks.md', () => {
+	const dir = makeTempDir();
+	const ok = addRecurringTask(dir, 'Oops', 'daily');
+	assert.equal(ok, false);
 });
