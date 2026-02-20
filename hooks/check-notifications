@@ -106,6 +106,8 @@ except Exception as e:
 " 2>>/tmp/relaygent-hook-errors.log)
 if [[ -n "$NOTIF_INFO" ]]; then
     CTX="$CTX | $NOTIF_INFO"
+    # Auto-ack Slack messages after injecting them into context
+    [[ "$NOTIF_INFO" == *"unread Slack"* ]] && date +%s.%N > ~/.relaygent/slack/.last_check_ts 2>/dev/null || true
 fi
 
 # Context fill % — check directly from JSONL (runs every tool call, no polling delay)
@@ -138,7 +140,7 @@ for line in reversed(data.strip().split(chr(10))):
     if [[ -n "$FILL_PCT" ]]; then
         echo "$FILL_PCT" > "${CONTEXT_PCT_FILE}.tmp" && mv "${CONTEXT_PCT_FILE}.tmp" "$CONTEXT_PCT_FILE"
         if [[ "$FILL_PCT" -ge "$CONTEXT_THRESHOLD" ]]; then
-            CTX="$CTX | CONTEXT ${FILL_PCT}% — AUTO-COMPACT at 95% will erase context. Wrap up NOW: rewrite handoff.md, update working-state.md, commit KB, then stop."
+            CTX="$CTX | CONTEXT ${FILL_PCT}% — AUTO-COMPACT at 95% will erase context. Wrap up NOW: rewrite HANDOFF.md, update MEMORY.md, commit KB, then stop."
         fi
     fi
 fi
