@@ -167,6 +167,16 @@ test('loadTasks: missing file returns empty list gracefully', () => {
 	assert.equal(tasks.length, 0);
 });
 
+test('addTask: inserts into ## One-off section and removes (none) placeholder', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '## One-off\n(none)\nupdated: 2026-01-01\n');
+	const ok = addTask(dir, 'New task');
+	assert.equal(ok, true);
+	const raw = readTasks(dir);
+	assert(raw.includes('New task'));
+	assert(!raw.includes('(none)'));
+});
+
 test('completeTask: replacing YYYY-MM-DD HH:MM timestamp leaves clean result', () => {
 	const dir = makeTempDir();
 	writeTasks(dir, '- [ ] Commit KB | type: recurring | freq: 12h | last: 2026-02-19 10:07\n');
