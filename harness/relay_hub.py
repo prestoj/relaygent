@@ -120,7 +120,7 @@ def check_and_rebuild_hub() -> None:
         })
         hub_pid_file = pid_dir / "hub.pid"
         proc = subprocess.Popen(
-            ["node", str(hub_dir / "build" / "index.js")],
+            ["node", str(hub_dir / "ws-server.mjs")],
             stdout=open(log_dir / "relaygent-hub.log", "a"),
             stderr=subprocess.STDOUT,
             env=env,
