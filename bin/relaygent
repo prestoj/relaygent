@@ -156,6 +156,7 @@ do_start() {
             python3 "$SCRIPT_DIR/harness/relay.py"
     fi
     echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}\n  Logs: $SCRIPT_DIR/logs/\n"
+    { sleep 2 && { [ "$(uname)" = "Darwin" ] && open "http://localhost:$HUB_PORT/" 2>/dev/null || { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "http://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &
 }
 
 do_stop() {
@@ -183,10 +184,7 @@ do_status() {
     for svc in Relay:relay Hub:hub Notifications:notifications Slack-socket:slack-socket; do
         check_process "${svc%%:*}" "${svc##*:}"
     done
-    if [ "$(uname)" = "Darwin" ]; then
-        pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" \
-            || echo -e "  Hammerspoon: ${RED}stopped${NC}"
-    elif [ "$(uname)" = "Linux" ]; then check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; fi
+    [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
 }
 
 case "${1:-help}" in
