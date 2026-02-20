@@ -15,12 +15,11 @@ git -C "$SCRIPT_DIR" pull --ff-only
 AFTER=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
 
 if [ "$BEFORE" = "$AFTER" ]; then
-    echo -e "  ${YELLOW}Already up to date.${NC}"
-    exit 0
+    echo -e "  ${YELLOW}Already up to date (rebuilding hub anyway)${NC}"
+else
+    echo -e "  ${GREEN}Updated:${NC}"
+    git -C "$SCRIPT_DIR" log --oneline "${BEFORE}..${AFTER}" | while IFS= read -r line; do echo "    $line"; done
 fi
-
-echo -e "  ${GREEN}Updated:${NC}"
-git -C "$SCRIPT_DIR" log --oneline "${BEFORE}..${AFTER}" | while IFS= read -r line; do echo "    $line"; done
 
 # Rebuild hub
 echo -e "  Rebuilding hub..."
