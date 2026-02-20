@@ -6,7 +6,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 let cached = null;
 let cacheTime = 0;
 
-function parseSession(jsonlPath) {
+export function parseSessionStats(jsonlPath) {
 	try {
 		const stat = fs.statSync(jsonlPath);
 		if (stat.size < 500) return null;
@@ -86,7 +86,7 @@ export function getRelayStats() {
 		try {
 			for (const f of fs.readdirSync(ws)) {
 				if (!f.endsWith('.jsonl')) continue;
-				const s = parseSession(path.join(ws, f));
+				const s = parseSessionStats(path.join(ws, f));
 				if (!s) continue;
 				sessions.push(s);
 				totalTokensAll += s.totalTokens;
