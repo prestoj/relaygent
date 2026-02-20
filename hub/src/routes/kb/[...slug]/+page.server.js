@@ -1,5 +1,5 @@
-import { getTopic, saveTopic, getKbDir } from '$lib/kb.js';
-import { error } from '@sveltejs/kit';
+import { getTopic, saveTopic, deleteTopic, getKbDir } from '$lib/kb.js';
+import { error, redirect } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -43,5 +43,11 @@ export const actions = {
 
 		saveTopic(params.slug, frontmatter, content);
 		return { success: true };
+	},
+
+	delete: async ({ params }) => {
+		validateSlug(params.slug);
+		try { deleteTopic(params.slug); } catch { throw error(404, 'Topic not found'); }
+		throw redirect(303, '/kb');
 	}
 };

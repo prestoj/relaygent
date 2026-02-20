@@ -82,3 +82,30 @@ test('save action: rejects path traversal', async () => {
 		{ status: 400 }
 	);
 });
+
+test('delete action: removes topic and redirects to /kb', async () => {
+	writeTopic('del-me.md', '---\ntitle: Del Me\n---\n\nBye.\n');
+	let redirected = false;
+	try {
+		await actions.delete({ params: { slug: 'del-me' } });
+	} catch (e) {
+		if (e?.status === 303 && e?.location === '/kb') redirected = true;
+		else throw e;
+	}
+	assert.ok(redirected, 'should redirect to /kb');
+	assert.equal(getTopic('del-me'), null);
+});
+
+test('delete action: throws 404 for missing topic', async () => {
+	await assert.rejects(
+		() => actions.delete({ params: { slug: 'never-existed-xyz' } }),
+		{ status: 404 }
+	);
+});
+
+test('delete action: rejects path traversal', async () => {
+	await assert.rejects(
+		() => actions.delete({ params: { slug: '../../../etc/passwd' } }),
+		{ status: 400 }
+	);
+});

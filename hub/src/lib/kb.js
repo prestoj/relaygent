@@ -135,6 +135,13 @@ export function findDeadLinks() {
 	return dead;
 }
 
+/** Delete a KB topic */
+export function deleteTopic(slug) {
+	const filepath = safeSlugPath(slug);
+	if (!fs.existsSync(filepath)) throw new Error('Topic not found');
+	fs.unlinkSync(filepath);
+}
+
 /** Save a KB topic */
 export function saveTopic(slug, frontmatter, content) {
 	const filepath = safeSlugPath(slug);

@@ -3,6 +3,7 @@
 	let editing = $state(false);
 	let editContent = $state('');
 	let newTitle = $state(data.slug || '');
+	let confirmDelete = $state(false);
 
 	function toggleEdit() {
 		editing = !editing;
@@ -32,10 +33,21 @@
 {:else}
 	<div class="header">
 		<h1>{data.topic.title || data.topic.slug}</h1>
-		<!-- svelte-ignore event_directive_deprecated -->
-		<button on:click={toggleEdit} class="edit-btn">
-			{editing ? 'View' : 'Edit'}
-		</button>
+		<div class="header-actions">
+			{#if confirmDelete}
+				<span class="confirm-text">Delete?</span>
+				<form method="POST" action="?/delete" style="display:inline">
+					<button type="submit" class="del-confirm-btn">Yes, delete</button>
+				</form>
+				<!-- svelte-ignore event_directive_deprecated -->
+				<button type="button" class="cancel-del-btn" on:click={() => confirmDelete = false}>Cancel</button>
+			{:else}
+				<!-- svelte-ignore event_directive_deprecated -->
+				<button on:click={toggleEdit} class="edit-btn">{editing ? 'View' : 'Edit'}</button>
+				<!-- svelte-ignore event_directive_deprecated -->
+				<button on:click={() => { editing = false; confirmDelete = true; }} class="del-btn">Delete</button>
+			{/if}
+		</div>
 	</div>
 
 	{#if data.topic.tags?.length}
@@ -89,10 +101,23 @@
 	}
 	.cancel-link { color: var(--text-muted); font-size: 0.9em; align-self: center; }
 	.header { display: flex; align-items: center; justify-content: space-between; }
+	.header-actions { display: flex; gap: 0.4em; align-items: center; }
 	.edit-btn {
 		padding: 0.4em 0.8em; border: 1px solid var(--border);
 		border-radius: 6px; background: var(--bg-surface); cursor: pointer; color: var(--text);
 	}
+	.del-btn {
+		padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px;
+		background: var(--bg-surface); cursor: pointer; color: var(--danger, #dc2626); font-size: 0.9em;
+	}
+	.del-confirm-btn {
+		background: #dc2626; color: #fff; border: none; border-radius: 6px;
+		padding: 0.35em 0.7em; cursor: pointer; font-size: 0.85em;
+	}
+	.cancel-del-btn {
+		background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85em; padding: 0.35em 0;
+	}
+	.confirm-text { font-size: 0.85em; color: var(--danger, #dc2626); }
 	.tags { display: flex; gap: 0.4em; margin-bottom: 0.5em; }
 	.tag {
 		font-size: 0.8em; padding: 0.2em 0.6em;
