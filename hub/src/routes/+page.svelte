@@ -5,7 +5,7 @@
 	import ActivityFeed from '$lib/components/ActivityFeed.svelte';
 	import ScreenStream from '$lib/components/ScreenStream.svelte';
 	import { sanitizeHtml } from '$lib/sanitize.js';
-
+	import SessionTimer from '$lib/components/SessionTimer.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -126,7 +126,7 @@
 {/if}
 
 <ContextBar pct={contextPct} />
-
+<SessionTimer />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
