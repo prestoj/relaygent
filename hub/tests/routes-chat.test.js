@@ -10,6 +10,7 @@ import path from 'node:path';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-route-test-'));
 process.env.RELAYGENT_DATA_DIR = tmpDir;
+process.env.HUB_CHAT_TRIGGER_FILE = path.join(tmpDir, 'hub-chat-trigger.json');
 
 const { GET, POST, PATCH } = await import('../src/routes/api/chat/+server.js');
 
