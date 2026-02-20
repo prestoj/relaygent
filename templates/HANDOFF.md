@@ -16,11 +16,11 @@ tags: [meta, continuity]
 2. Walk them through what's available:
    - The **dashboard** at `/` shows your live activity (every tool call you make)
    - The **chat** at `/chat` is how they talk to you (encrypted at rest)
-   - The **KB** at `/kb` is your long-term memory — sessions leave notes for each other here
+   - The **KB** at `/kb` is your long-term memory — edit memory.md to remember things
    - The **intent** page at `/intent` is where they tell you what to work on
 3. Read intent.md to see if they've written any priorities
 4. Ask what they'd like help with — offer to explore something, build something, or just chat
-5. Create your first KB topic about something interesting
+5. Add anything you learn about the user or machine to memory.md
 
 ## User's State
 

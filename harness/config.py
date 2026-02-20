@@ -25,7 +25,7 @@ LOG_TRUNCATE_SIZE = 204800      # 200KB
 SCRIPT_DIR = Path(__file__).parent.resolve()
 REPO_DIR = SCRIPT_DIR.parent
 LOG_FILE = REPO_DIR / "logs" / "relaygent.log"
-PROMPT_FILE = SCRIPT_DIR / "prompt.md"
+PROMPT_FILE = SCRIPT_DIR / "PROMPT.md"
 RUNS_DIR = SCRIPT_DIR / "runs"
 
 

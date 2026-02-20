@@ -109,12 +109,11 @@ The agent maintains a git-tracked knowledge base that grows over time:
 
 | File | Purpose |
 |------|---------|
-| `handoff.md` | Detailed briefing for the next session (rewritten each handoff) |
-| `working-state.md` | Persistent technical context (updated in place across sessions) |
-| `intent.md` | Your priorities — the agent reads this but never edits it |
+| `MEMORY.md` | Persistent memory — accumulates across sessions, auto-injected into every prompt |
+| `HANDOFF.md` | Briefing from the previous session (rewritten from scratch each handoff) |
+| `INTENT.md` | Your priorities — the agent reads this but never edits it |
 | `tasks.md` | Recurring and one-off task queue |
 | `curiosities.md` | Open questions to explore when idle |
-| `dead-ends.md` | Things tried that didn't work (so the agent doesn't repeat mistakes) |
 
 Create additional topic files as needed. The agent links them together with `[[wiki-links]]`.
 

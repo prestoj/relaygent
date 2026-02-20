@@ -25,7 +25,7 @@ function getModel() {
 }
 
 function getMainGoal() {
-	const handoffPath = path.join(getKbDir(), 'handoff.md');
+	const handoffPath = path.join(getKbDir(), 'HANDOFF.md');
 	try {
 		const raw = fs.readFileSync(handoffPath, 'utf-8');
 		const goalMatch = raw.match(/^#{1,3} MAIN GOAL[^\n]*\n([\s\S]*?)(?=\n---|\n#{1,3} [^M])/m);

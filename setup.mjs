@@ -68,7 +68,7 @@ async function main() {
 	// Copy KB templates
 	const templatesDir = join(REPO_DIR, 'templates');
 	const today = new Date().toISOString().split('T')[0];
-	for (const f of ['handoff.md', 'working-state.md', 'intent.md', 'tasks.md', 'curiosities.md', 'dead-ends.md', 'relay.md', 'projects.md', 'memory.md']) {
+	for (const f of ['HANDOFF.md', 'INTENT.md', 'tasks.md', 'curiosities.md', 'relay.md', 'projects.md', 'MEMORY.md']) {
 		const dest = join(KB_DIR, f);
 		if (!existsSync(dest)) {
 			let content = readFileSync(join(templatesDir, f), 'utf-8');
