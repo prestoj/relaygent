@@ -120,3 +120,14 @@ test('Relay is always first in results', async () => {
 	const results = await getServiceHealth();
 	assert.equal(results[0].name, 'Relay');
 });
+
+test('Disk entry present with valid shape', async () => {
+	writeStatus('working');
+	const results = await getServiceHealth();
+	const disk = results.find(s => s.name.startsWith('Disk'));
+	// df -h / should always succeed in test env
+	assert.ok(disk, 'Disk entry should be present');
+	assert.ok(/^Disk \d+%$/.test(disk.name), `name should be "Disk XX%": ${disk.name}`);
+	assert.equal(typeof disk.ok, 'boolean');
+	assert.equal(disk.detail, '');
+});
