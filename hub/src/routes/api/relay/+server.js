@@ -118,6 +118,7 @@ export function GET({ url }) {
 	const activity = parseSession(sessionFile, 500);
 	const reversed = activity.reverse();
 	const paginated = reversed.slice(offset, offset + limit);
+	const sessionStart = reversed.length > 0 ? (reversed[reversed.length - 1]?.time ?? null) : null;
 
-	return json({ activities: paginated, hasMore: offset + limit < reversed.length, total: reversed.length });
+	return json({ activities: paginated, hasMore: offset + limit < reversed.length, total: reversed.length, sessionStart });
 }
