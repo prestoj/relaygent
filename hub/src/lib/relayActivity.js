@@ -183,7 +183,7 @@ export function loadSession(id) {
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
 				const fp = path.join(fullPath, f);
-				if (fs.statSync(fp).size > 200) return parseSession(fp, 500);
+				if (fs.statSync(fp).size > 200) return { activity: parseSession(fp, 500), stats: parseSessionStats(fp) };
 			}
 		}
 	} catch { /* ignore */ }
