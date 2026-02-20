@@ -10,6 +10,8 @@ import fs from 'node:fs';
 // Point logs route at a temp dir so tests don't depend on real log files
 const TMP_LOGS = fs.mkdtempSync(os.tmpdir() + '/hub-logs-test-');
 process.env.RELAYGENT_LOGS_DIR = TMP_LOGS;
+// Use a port that is guaranteed to have nothing listening (notifications service unreachable)
+process.env.RELAYGENT_NOTIFICATIONS_PORT = '19999';
 
 const { GET: healthGet } = await import('../src/routes/api/health/+server.js');
 const { GET: logsGet } = await import('../src/routes/api/logs/+server.js');
@@ -128,4 +130,16 @@ test('GET /api/notifications: unreachable service returns empty reminders', asyn
 	const res = await notifGet();
 	assert.equal(res.status, 200);
 	assert.ok(Array.isArray((await res.json()).reminders));
+});
+
+test('POST /api/notifications: unreachable service returns 502', async () => {
+	const res = await notifPost(postReq({ trigger_time: '2026-06-01T09:00:00', message: 'hello' }));
+	assert.equal(res.status, 502);
+	assert.match((await res.json()).error, /unreachable/i);
+});
+
+test('DELETE /api/notifications: unreachable service returns 502', async () => {
+	const res = await notifDelete(urlReq('/api/notifications', { id: '1' }));
+	assert.equal(res.status, 502);
+	assert.match((await res.json()).error, /unreachable/i);
 });
