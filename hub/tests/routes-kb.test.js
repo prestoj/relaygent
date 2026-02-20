@@ -83,23 +83,29 @@ test('save action: rejects path traversal', async () => {
 	);
 });
 
-test('delete action: removes existing topic', async () => {
-	writeTopic('to-delete.md', '---\ntitle: To Delete\n---\n\nBye.\n');
-	const result = await actions.delete({ params: { slug: 'to-delete' } });
-	assert.deepEqual(result, { deleted: true });
-	assert.equal(getTopic('to-delete'), null);
+test('delete action: removes topic and redirects to /kb', async () => {
+	writeTopic('del-me.md', '---\ntitle: Del Me\n---\n\nBye.\n');
+	let redirected = false;
+	try {
+		await actions.delete({ params: { slug: 'del-me' } });
+	} catch (e) {
+		if (e?.status === 303 && e?.location === '/kb') redirected = true;
+		else throw e;
+	}
+	assert.ok(redirected, 'should redirect to /kb');
+	assert.equal(getTopic('del-me'), null);
 });
 
-test('delete action: returns 404 for missing topic', async () => {
+test('delete action: throws 404 for missing topic', async () => {
 	await assert.rejects(
-		() => actions.delete({ params: { slug: 'does-not-exist-del' } }),
+		() => actions.delete({ params: { slug: 'never-existed-xyz' } }),
 		{ status: 404 }
 	);
 });
 
 test('delete action: rejects path traversal', async () => {
 	await assert.rejects(
-		() => actions.delete({ params: { slug: '../../../evil' } }),
+		() => actions.delete({ params: { slug: '../../../etc/passwd' } }),
 		{ status: 400 }
 	);
 });

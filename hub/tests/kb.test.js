@@ -12,7 +12,7 @@ import path from 'node:path';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kb-test-'));
 process.env.RELAYGENT_KB_DIR = tmpDir;
 
-const { listTopics, getTopic, saveTopic, searchTopics, getKbDir, findDeadLinks } =
+const { listTopics, getTopic, saveTopic, deleteTopic, searchTopics, getKbDir, findDeadLinks } =
     await import('../src/lib/kb.js');
 
 after(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
@@ -148,4 +148,19 @@ test('findDeadLinks: handles pipe syntax [[slug|display]]', () => {
     const match = dead.find(d => d.source === 'piped' && d.target === 'ghost-topic');
     assert.ok(match);
     assert.equal(match.display, 'Ghost Page');
+});
+
+test('deleteTopic: removes the topic file', () => {
+    writeTopic('to-delete.md', '---\ntitle: Delete Me\n---\n\nContent.\n');
+    assert.ok(getTopic('to-delete'));
+    deleteTopic('to-delete');
+    assert.equal(getTopic('to-delete'), null);
+});
+
+test('deleteTopic: throws for missing topic', () => {
+    assert.throws(() => deleteTopic('no-such-topic-xyz'), /Topic not found/);
+});
+
+test('deleteTopic: rejects path traversal', () => {
+    assert.throws(() => deleteTopic('../../../etc/passwd'), /Invalid slug/);
 });
