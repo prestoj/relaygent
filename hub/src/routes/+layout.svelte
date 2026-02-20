@@ -5,6 +5,7 @@
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
+	let deadKbLinks = $state(data.deadKbLinks || 0);
 
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
@@ -39,7 +40,7 @@
 	<div class="links" class:open={menuOpen}>
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Hub</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
-		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
+		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB{#if deadKbLinks > 0}<span class="unread-badge">{deadKbLinks}</span>{/if}</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
