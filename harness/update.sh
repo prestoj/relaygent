@@ -35,11 +35,13 @@ else
     exit 1
 fi
 
-# Read hub port and KB dir from config
+# Read hub port, notifications port, and KB dir from config
 HUB_PORT=8080
+NOTIF_PORT=8083
 KB_DIR="$SCRIPT_DIR/knowledge/topics"
 if [ -f "$CONFIG_FILE" ]; then
     HUB_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['hub']['port'])" 2>/dev/null || echo 8080)
+    NOTIF_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
     KB_DIR=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['paths']['kb'])" 2>/dev/null || echo "$SCRIPT_DIR/knowledge/topics")
 fi
 
