@@ -169,6 +169,7 @@ async function start() {
   });
 
   client.on("connected", async () => {
+    clearTimeout(disconnectWatchdog);
     log("Socket Mode connected");
     // Write cache to signal we're alive, then backfill missed messages
     writeCache(readCache());
@@ -179,8 +180,10 @@ async function start() {
     }
   });
 
+  let disconnectWatchdog = null;
   client.on("disconnected", () => {
     log("Socket Mode disconnected — will auto-reconnect");
+    disconnectWatchdog = setTimeout(() => { log("Disconnected 10min — exiting for LaunchAgent restart"); process.exit(1); }, 10 * 60 * 1000);
   });
 
   // Heartbeat: touch cache every 5min so stale-detection doesn't kill a healthy connection
