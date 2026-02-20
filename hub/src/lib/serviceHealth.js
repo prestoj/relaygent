@@ -4,6 +4,7 @@
  * Only checks services that are part of the Relaygent stack.
  */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -59,7 +60,7 @@ function checkRelayStatus() {
 
 function checkDisk() {
 	try {
-		const out = execFileSync('df', ['-h', '/'], { timeout: 2000 }).toString();
+		const out = execFileSync('df', ['-h', os.homedir()], { timeout: 2000 }).toString();
 		const dataLine = out.trim().split('\n').pop();
 		const m = dataLine.match(/(\d+)%/);
 		if (!m) return null;
