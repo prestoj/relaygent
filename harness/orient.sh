@@ -94,9 +94,13 @@ if [ -d "$KB_DIR" ]; then
     echo -e "\033[0;34mKnowledge:\033[0m $TOPIC_COUNT topics"
 fi
 
-# Recent repo commits
+# Recent repo commits + branch + uncommitted changes
 if [ -d "$REPO_DIR/.git" ]; then
-    echo -e "\033[0;34mRecent changes:\033[0m"
+    BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || echo "unknown")
+    MODIFIED=$(git -C "$REPO_DIR" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    BRANCH_INFO="$BRANCH"
+    [ "${MODIFIED:-0}" -gt 0 ] 2>/dev/null && BRANCH_INFO="$BRANCH, $MODIFIED uncommitted"
+    echo -e "\033[0;34mRecent changes\033[0m (\033[0;33m${BRANCH_INFO}\033[0m):"
     git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
 fi
 
