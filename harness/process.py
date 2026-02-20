@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -19,6 +20,11 @@ def _configured_model() -> str | None:
 
 CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
 _HARNESS = Path(__file__).parent
+
+
+def _clean_env() -> dict:
+    """Return env without CLAUDECODE so nested claude launches don't fail."""
+    return {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
 
 
 def _ensure_settings() -> Path:
@@ -39,7 +45,6 @@ class ClaudeResult:
     incomplete: bool = False
     context_too_large: bool = False
     context_pct: float = 0.0
-
 class ClaudeProcess:
     """Manages Claude subprocess with hang detection."""
 
@@ -110,7 +115,8 @@ class ClaudeProcess:
                      "--settings", settings_file, "--session-id", self.session_id,
                      *self._model_args()],
                     stdin=stdin, stdout=self._log_file,
-                    stderr=subprocess.STDOUT, cwd=str(self.workspace))
+                    stderr=subprocess.STDOUT, cwd=str(self.workspace),
+                    env=_clean_env())
         except OSError:
             self._close_log(); raise
         return log_start
@@ -128,7 +134,8 @@ class ClaudeProcess:
         try:
             self.process = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=self._log_file,
-                stderr=subprocess.STDOUT, cwd=str(self.workspace))
+                stderr=subprocess.STDOUT, cwd=str(self.workspace),
+                env=_clean_env())
         except OSError:
             self._close_log(); raise
         try:
