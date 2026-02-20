@@ -142,7 +142,7 @@ do_start() {
     fi
     # Hub — build if needed
     [ ! -d "$SCRIPT_DIR/hub/build" ] && echo "  Building hub..." && (cd "$SCRIPT_DIR/hub" && npm run build >/dev/null 2>&1)
-    start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" node "$SCRIPT_DIR/hub/server.js"
+    start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" node "$SCRIPT_DIR/hub/build/index.js"
     # Notifications
     ensure_venv "$SCRIPT_DIR/notifications"
     start_service "Notifications (port $NOTIF_PORT)" "notifications" \
