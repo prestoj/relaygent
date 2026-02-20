@@ -63,7 +63,7 @@ def kill_orphaned_claudes() -> None:
 
 
 def notify_crash(crash_count: int, exit_code: int) -> None:
-    """Alert owner about repeated crashes via hub chat + Slack + log."""
+    """Alert the user about repeated crashes via hub chat + Slack + log."""
     msg = (f"Relay crashed {crash_count} times (exit code {exit_code}). "
            f"Manual intervention may be needed.")
     log(f"CRASH ALERT: {msg}")
@@ -72,7 +72,7 @@ def notify_crash(crash_count: int, exit_code: int) -> None:
 
 
 def _send_chat_alert(message: str) -> None:
-    """Best-effort alert to owner via hub chat."""
+    """Best-effort alert to the user via hub chat."""
     import json
     import urllib.error
     import urllib.request
