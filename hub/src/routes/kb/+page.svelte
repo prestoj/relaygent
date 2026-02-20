@@ -2,8 +2,19 @@
 	let { data } = $props();
 	let search = $state('');
 	let showTags = $state(false);
-
 	let showDeadLinks = $state(false);
+	let newTitle = $state('');
+	let showNewForm = $state(false);
+
+	function toSlug(s) {
+		return s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+	}
+
+	function goCreate(e) {
+		e.preventDefault();
+		const slug = toSlug(newTitle);
+		if (slug) window.location.href = `/kb/${slug}`;
+	}
 
 	let filtered = $derived(
 		search
@@ -17,7 +28,21 @@
 
 <svelte:head><title>Knowledge Base</title></svelte:head>
 
-<h1>Knowledge Base <span class="count">({data.topics.length})</span></h1>
+<div class="heading-row">
+	<h1>Knowledge Base <span class="count">({data.topics.length})</span></h1>
+	<!-- svelte-ignore event_directive_deprecated -->
+	{#if showNewForm}
+		<form class="new-form" on:submit={goCreate}>
+			<input type="text" bind:value={newTitle} placeholder="Topic title..." class="new-input" autofocus />
+			<button type="submit" class="new-submit">Create</button>
+			<!-- svelte-ignore event_directive_deprecated -->
+			<button type="button" class="new-cancel" on:click={() => { showNewForm = false; newTitle = ''; }}>✕</button>
+		</form>
+	{:else}
+		<!-- svelte-ignore event_directive_deprecated -->
+		<button class="new-btn" on:click={() => showNewForm = true}>+ New</button>
+	{/if}
+</div>
 
 <input type="search" placeholder="Filter topics or tags..." bind:value={search} class="search" />
 
@@ -83,6 +108,19 @@
 {/if}
 
 <style>
+	.heading-row { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+	.heading-row h1 { margin: 0; }
+	.new-btn {
+		background: none; border: 1px solid var(--border); color: var(--link);
+		border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.85em; cursor: pointer; white-space: nowrap;
+	}
+	.new-form { display: flex; gap: 0.4em; align-items: center; }
+	.new-input {
+		padding: 0.35em 0.6em; border: 1px solid var(--border); border-radius: 6px;
+		font-size: 0.9em; background: var(--bg-surface); color: var(--text); width: 16em;
+	}
+	.new-submit { background: var(--link); color: #fff; border: none; border-radius: 6px; padding: 0.35em 0.7em; cursor: pointer; font-size: 0.85em; }
+	.new-cancel { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9em; padding: 0.2em; }
 	.count { font-weight: 400; color: var(--text-muted); font-size: 0.6em; }
 	.search {
 		width: 100%;
