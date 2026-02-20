@@ -4,6 +4,7 @@
 import os
 import signal
 import sys
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -73,7 +74,12 @@ class RelayRunner:
             else:
                 log_start = self.claude.start_fresh()
 
+            _hb_stop = threading.Event()
+            def _heartbeat(e):
+                while not e.wait(60): set_status("working")
+            threading.Thread(target=_heartbeat, args=(_hb_stop,), daemon=True).start()
             result = self.claude.monitor(log_start)
+            _hb_stop.set()
             if self.timer.is_expired():
                 break
 
@@ -89,8 +95,7 @@ class RelayRunner:
             if result.no_output:
                 if session_established:
                     log("Resume failed (no session), starting fresh...")
-                    session_id = str(uuid.uuid4())
-                    self.claude.session_id = session_id
+                    self.claude.session_id = session_id = str(uuid.uuid4())
                     session_established = False
                     resume_reason = ""
                 else:
@@ -103,8 +108,7 @@ class RelayRunner:
 
             if result.context_too_large:
                 log("Request too large or bad image — starting fresh session (not resuming)")
-                session_id = str(uuid.uuid4())
-                self.claude.session_id = session_id
+                self.claude.session_id = session_id = str(uuid.uuid4())
                 session_established = False
                 incomplete_count = 0
                 resume_reason = ""
@@ -115,8 +119,7 @@ class RelayRunner:
                 incomplete_count += 1
                 if incomplete_count > MAX_INCOMPLETE_RETRIES:
                     log(f"Too many incomplete exits ({incomplete_count}), starting fresh session...")
-                    session_id = str(uuid.uuid4())
-                    self.claude.session_id = session_id
+                    self.claude.session_id = session_id = str(uuid.uuid4())
                     session_established = False
                     resume_reason = ""
                     incomplete_count = 0
@@ -138,8 +141,7 @@ class RelayRunner:
                     notify_crash(crash_count, result.exit_code)
                     break
                 log(f"Crashed (exit={result.exit_code}), retrying ({crash_count}/{MAX_RETRIES})...")
-                session_id = str(uuid.uuid4())
-                self.claude.session_id = session_id
+                self.claude.session_id = session_id = str(uuid.uuid4())
                 session_established = False
                 resume_reason = ""
                 time.sleep(15)
@@ -153,9 +155,7 @@ class RelayRunner:
                 time.sleep(2)
                 continue
 
-            session_established = True
-            incomplete_count = 0
-            crash_count = 0
+            session_established = True; incomplete_count = crash_count = 0
 
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
                 session_id = self._spawn_successor(
