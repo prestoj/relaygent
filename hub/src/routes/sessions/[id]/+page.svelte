@@ -46,6 +46,7 @@
 	<span class="stat"><strong>{textBlocks}</strong> text blocks</span>
 </div>
 {/if}
+{#if data.summary}<p class="sum">{data.summary}</p>{/if}
 
 {#if !data.activity || data.activity.length === 0}
 	<p style="color: var(--text-muted)">No activity recorded for this session.</p>
@@ -83,6 +84,7 @@
 	.stats-row { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.75em; font-size: 0.85em; color: var(--text-muted); }
 	.stats-row strong { color: var(--text); }
 	.sep { color: var(--border); }
+	.sum { margin: 0 0 0.75em; font-size: 0.82em; color: var(--text-muted); }
 	.count { color: var(--text-muted); font-size: 0.85em; margin: 0 0 1em; }
 	.feed { display: flex; flex-direction: column; gap: 2px; }
 	.entry { border-radius: 4px; overflow: hidden; }
