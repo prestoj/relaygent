@@ -156,3 +156,18 @@ test('GET /api/relay: limit parameter respected', async () => {
 	const body = await res.json();
 	assert.ok(body.activities.length <= 1);
 });
+
+// --- GET: session lookup by UUID (covers findSessionById lines 15-19) ---
+test('GET /api/relay: known session uuid returns activities array', async () => {
+	const uuid = '12345678-1234-1234-1234-123456789abc';
+	const projectDir = path.join(tmpHome, '.claude', 'projects', 'test-project');
+	fs.mkdirSync(projectDir, { recursive: true });
+	// Write a minimal JSONL session file (enough for parseSession to succeed)
+	const entry = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'hello' }] }, timestamp: new Date().toISOString() });
+	fs.writeFileSync(path.join(projectDir, `${uuid}.jsonl`), entry + '\n');
+	const res = GET(getReq({ session: uuid }));
+	assert.equal(res.status, 200);
+	const body = await res.json();
+	assert.ok(Array.isArray(body.activities));
+	assert.ok(typeof body.hasMore === 'boolean');
+});
