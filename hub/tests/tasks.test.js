@@ -166,3 +166,34 @@ test('loadTasks: missing file returns empty list gracefully', () => {
 	const { tasks } = loadTasks(dir);
 	assert.equal(tasks.length, 0);
 });
+
+test('completeTask: replacing YYYY-MM-DD HH:MM timestamp leaves clean result', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '- [ ] Commit KB | type: recurring | freq: 12h | last: 2026-02-19 10:07\n');
+	const ok = completeTask(dir, 'Commit KB');
+	assert.equal(ok, true);
+	const raw = readTasks(dir);
+	// Should have exactly one `last:` value — no leftover time fragments
+	const match = raw.match(/last:\s*(.+)/);
+	assert(match, 'last: field should be present');
+	const lastVal = match[1].trim();
+	// Must be a valid date — no extra tokens like "10:07" dangling
+	assert(!lastVal.includes('10:07'), `Old time fragment should not appear: ${lastVal}`);
+	assert.equal(isNaN(new Date(lastVal).getTime()), false, `Timestamp must be parseable: ${lastVal}`);
+});
+
+test('completeTask: multiple completions do not corrupt timestamp', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '- [ ] Commit KB | type: recurring | freq: 12h | last: 2026-02-19 10:07\n');
+	completeTask(dir, 'Commit KB');
+	completeTask(dir, 'Commit KB');
+	completeTask(dir, 'Commit KB');
+	const raw = readTasks(dir);
+	const match = raw.match(/last:\s*(.+)/);
+	assert(match, 'last: field should be present');
+	const lastVal = match[1].trim();
+	// No extra space-separated tokens — timestamp must parse cleanly
+	assert.equal(isNaN(new Date(lastVal).getTime()), false, `Timestamp must be parseable after multiple completions: ${lastVal}`);
+	// The lastVal should be YYYY-MM-DD HH:MM format only (no trailing fragments)
+	assert(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(lastVal), `Timestamp format invalid: ${lastVal}`);
+});

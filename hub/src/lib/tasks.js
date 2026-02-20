@@ -96,7 +96,7 @@ export function completeTask(kbDir, description) {
 			const t = parseTaskLine(l);
 			if (t && t.description === description && t.type === 'recurring') {
 				found = true;
-				return l.replace(/last:\s*\S+/, `last: ${timestamp}`);
+				return l.replace(/last:\s*[^|]*/, `last: ${timestamp}`);
 			}
 			return l;
 		});
