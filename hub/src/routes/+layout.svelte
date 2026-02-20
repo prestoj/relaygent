@@ -7,6 +7,7 @@
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
 	let deadKbLinks = $state(data.deadKbLinks || 0);
+	let dueReminders = $state(data.dueReminders || 0);
 
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
@@ -46,6 +47,7 @@
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
+		<a href="/reminders" class:active={isActive('/reminders')} onclick={() => { dueReminders = 0; closeMenu(); }}>Reminders{#if dueReminders > 0}<span class="unread-badge">{dueReminders}</span>{/if}</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
