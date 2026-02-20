@@ -7,38 +7,37 @@
  * Tracks last-check timestamp in ~/.relaygent/gmail/.last_check_ts.
  *
  * Usage: node email-poller.mjs
- * Env: HUB_PORT (default 8080)
+ * Env: HUB_PORT (default 8080), HOME
  */
 import { getGmailClient } from "./gmail-client.mjs";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { fileURLToPath } from "url";
 
-const GMAIL_DIR = join(homedir(), ".relaygent", "gmail");
-const LAST_CHECK_FILE = join(GMAIL_DIR, ".last_check_ts");
-const POLL_MS = 2 * 60 * 1000; // 2 minutes
-const HUB_PORT = process.env.HUB_PORT || "8080";
-const HUB_CHAT = `http://127.0.0.1:${HUB_PORT}/api/chat`;
+function gmailDir() { return join(homedir(), ".relaygent", "gmail"); }
+function lastCheckFile() { return join(gmailDir(), ".last_check_ts"); }
+function hubChat() { return `http://127.0.0.1:${process.env.HUB_PORT || "8080"}/api/chat`; }
 
-function log(msg) {
+export function log(msg) {
 	const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
 	console.log(`[${ts}] [email-poller] ${msg}`);
 }
 
-function getLastTs() {
+export function getLastTs() {
 	try {
-		if (existsSync(LAST_CHECK_FILE)) return parseFloat(readFileSync(LAST_CHECK_FILE, "utf-8").trim()) || 0;
+		if (existsSync(lastCheckFile())) return parseFloat(readFileSync(lastCheckFile(), "utf-8").trim()) || 0;
 	} catch {}
 	return 0;
 }
 
-function saveTs(ts) {
-	try { mkdirSync(GMAIL_DIR, { recursive: true }); writeFileSync(LAST_CHECK_FILE, String(ts)); } catch {}
+export function saveTs(ts) {
+	try { mkdirSync(gmailDir(), { recursive: true }); writeFileSync(lastCheckFile(), String(ts)); } catch {}
 }
 
-async function postToHub(content) {
+export async function postToHub(content) {
 	try {
-		const res = await fetch(HUB_CHAT, {
+		const res = await fetch(hubChat(), {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ content, role: "user" }),
@@ -47,9 +46,9 @@ async function postToHub(content) {
 	} catch (e) { log(`Hub post error: ${e.message}`); }
 }
 
-async function poll() {
+export async function poll(gmailOverride = null) {
 	let gmail;
-	try { gmail = getGmailClient(); } catch (e) {
+	try { gmail = gmailOverride || getGmailClient(); } catch (e) {
 		log(`Gmail not configured: ${e.message}`); return;
 	}
 
@@ -86,6 +85,10 @@ async function poll() {
 	} catch (e) { log(`Poll error: ${e.message}`); }
 }
 
-log(`Started — polling every ${POLL_MS / 60000} min (hub port ${HUB_PORT})`);
-poll();
-setInterval(poll, POLL_MS);
+// Auto-start only when run directly (not when imported by tests)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+	const POLL_MS = 2 * 60 * 1000;
+	log(`Started — polling every ${POLL_MS / 60000} min (hub port ${process.env.HUB_PORT || "8080"})`);
+	poll();
+	setInterval(poll, POLL_MS);
+}
