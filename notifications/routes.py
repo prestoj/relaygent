@@ -10,6 +10,7 @@ from notif_config import app
 from db import get_db
 from flask import jsonify, request
 from reminders import is_recurring_reminder_due
+import tasks_collector
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,10 @@ def get_notifications():
         _collect_chat_messages(notifications)
     except Exception:
         logger.exception("Failed to collect chat messages")
+    try:
+        tasks_collector.collect(notifications)
+    except Exception:
+        logger.exception("Failed to collect due tasks")
     if not fast_mode:
         for name, collector in _slow_collectors:
             if name in skip_sources:
