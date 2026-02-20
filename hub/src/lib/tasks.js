@@ -69,6 +69,23 @@ export function addTask(kbDir, description) {
 	} catch { return false; }
 }
 
+export function addRecurringTask(kbDir, description, freq) {
+	const file = path.join(kbDir, 'tasks.md');
+	try {
+		let raw = fs.readFileSync(file, 'utf-8');
+		const today = new Date().toISOString().slice(0, 10);
+		const newLine = `- [ ] ${description} | type: recurring | freq: ${freq} | last: never`;
+		if (/^## Tasks/m.test(raw)) {
+			raw = raw.replace(/^(## Tasks\n)/m, `$1${newLine}\n`);
+		} else {
+			raw += `\n${newLine}\n`;
+		}
+		raw = raw.replace(/^updated:.*$/m, `updated: ${today}`);
+		const tmp = file + '.tmp'; fs.writeFileSync(tmp, raw, 'utf-8'); fs.renameSync(tmp, file);
+		return true;
+	} catch { return false; }
+}
+
 export function removeTask(kbDir, description) {
 	const file = path.join(kbDir, 'tasks.md');
 	try {

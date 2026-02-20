@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { loadTasks, addTask, removeTask, editTask, completeTask } from '$lib/tasks.js';
+import { loadTasks, addTask, addRecurringTask, removeTask, editTask, completeTask } from '$lib/tasks.js';
 import { getKbDir } from '$lib/kb.js';
 
 export function GET() {
@@ -17,11 +17,18 @@ export function GET() {
 	return json({ recurring, oneoff, now: now.toISOString() });
 }
 
+const VALID_FREQS = new Set(['6h', '12h', 'daily', '2d', '3d', 'weekly', 'monthly']);
+
 export async function POST({ request }) {
 	try {
-		const { description } = await request.json();
+		const { description, freq } = await request.json();
 		if (!description || typeof description !== 'string' || !description.trim()) {
 			return json({ error: 'description required' }, { status: 400 });
+		}
+		if (freq !== undefined) {
+			if (!VALID_FREQS.has(freq)) return json({ error: 'invalid freq' }, { status: 400 });
+			const ok = addRecurringTask(getKbDir(), description.trim(), freq);
+			return json({ ok });
 		}
 		const ok = addTask(getKbDir(), description.trim());
 		return json({ ok });
