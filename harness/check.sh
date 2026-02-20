@@ -114,7 +114,7 @@ echo ""
 if [ -n "$KB_DIR" ] && [ -d "$KB_DIR" ]; then
     TOPIC_COUNT=$(find "$KB_DIR" -name "*.md" -not -path "*/contacts/*" 2>/dev/null | wc -l | tr -d ' ')
     ok "KB" "$TOPIC_COUNT topics in $KB_DIR"
-    for f in handoff.md intent.md working-state.md tasks.md; do
+    for f in handoff.md intent.md memory.md tasks.md; do
         [ ! -f "$KB_DIR/$f" ] && warn "KB/$f" "missing (run: ./setup.sh)"
     done
 else
