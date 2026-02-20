@@ -4,6 +4,12 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import fs from 'node:fs';
+
+// Point logs route at a temp dir so tests don't depend on real log files
+const TMP_LOGS = fs.mkdtempSync(os.tmpdir() + '/hub-logs-test-');
+process.env.RELAYGENT_LOGS_DIR = TMP_LOGS;
 
 const { GET: healthGet } = await import('../src/routes/api/health/+server.js');
 const { GET: logsGet } = await import('../src/routes/api/logs/+server.js');

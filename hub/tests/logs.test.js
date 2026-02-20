@@ -8,18 +8,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// Point HOME at a temp directory so the route finds our fake log files
-const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'logs-test-'));
-const logsDir = path.join(tmpHome, 'projects', 'relaygent', 'logs');
-fs.mkdirSync(logsDir, { recursive: true });
-const origHome = process.env.HOME;
-process.env.HOME = tmpHome;
+// Point the route at a temp logs dir via env var
+const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'logs-test-'));
+process.env.RELAYGENT_LOGS_DIR = logsDir;
 
 const { GET } = await import('../src/routes/api/logs/+server.js');
 
 after(() => {
-	process.env.HOME = origHome;
-	fs.rmSync(tmpHome, { recursive: true, force: true });
+	delete process.env.RELAYGENT_LOGS_DIR;
+	fs.rmSync(logsDir, { recursive: true, force: true });
 });
 
 function makeUrl(file, lines) {
