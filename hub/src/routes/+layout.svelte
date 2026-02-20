@@ -1,6 +1,7 @@
 <script>
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
+	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
@@ -57,6 +58,7 @@
 <main>
 	{@render children()}
 </main>
+<ChatBubble />
 </div>
 
 <style>
