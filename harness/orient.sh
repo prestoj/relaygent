@@ -101,7 +101,18 @@ if [ -d "$REPO_DIR/.git" ]; then
     BRANCH_INFO="$BRANCH"
     [ "${MODIFIED:-0}" -gt 0 ] 2>/dev/null && BRANCH_INFO="$BRANCH, $MODIFIED uncommitted"
     echo -e "\033[0;34mRecent changes\033[0m (\033[0;33m${BRANCH_INFO}\033[0m):"
-    git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
+    # Show commits since HANDOFF was last written (context for this session), capped at 10
+    if [ -f "$HANDOFF_FILE" ]; then
+        SINCE=$(date -r "$HANDOFF_FILE" "+%Y-%m-%dT%H:%M:%S" 2>/dev/null)
+        NEW_COMMITS=$(git -C "$REPO_DIR" log --oneline --since="$SINCE" 2>/dev/null | head -10)
+        if [ -n "$NEW_COMMITS" ]; then
+            echo "$NEW_COMMITS" | while IFS= read -r line; do echo "  $line"; done
+        else
+            git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
+        fi
+    else
+        git -C "$REPO_DIR" log --oneline -3 2>/dev/null | while IFS= read -r line; do echo "  $line"; done
+    fi
 fi
 
 # Open PRs
