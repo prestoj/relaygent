@@ -162,7 +162,13 @@ fi
 SLACK_USER="$HOME/.relaygent/slack/token.json"
 SLACK_APP="$HOME/.relaygent/slack/app-token"
 if [ -f "$SLACK_USER" ] && [ -f "$SLACK_APP" ]; then
-    ok "Slack" "user token + app token (Socket Mode enabled)"
+    SLACK_TOK=$(python3 -c "import json; print(json.load(open('$SLACK_USER'))['access_token'])" 2>/dev/null)
+    SLACK_AUTH=$(curl -sf --max-time 3 -H "Authorization: Bearer $SLACK_TOK" "https://slack.com/api/auth.test" 2>/dev/null)
+    if echo "$SLACK_AUTH" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if d.get('ok') else 1)" 2>/dev/null; then
+        ok "Slack" "user token valid + app token (Socket Mode enabled)"
+    else
+        warn "Slack" "token file exists but auth.test failed — token may be expired"
+    fi
     if pgrep -f "slack-socket-listener" >/dev/null 2>&1; then
         ok "Slack socket" "listener running (real-time DMs active)"
     else
