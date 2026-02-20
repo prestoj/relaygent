@@ -58,6 +58,7 @@
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
+		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">
 			{darkMode ? 'Light' : 'Dark'}
