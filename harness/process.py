@@ -1,16 +1,10 @@
 """Claude subprocess management with hang detection."""
 from __future__ import annotations
-
-import json
-import os
-import subprocess
-import time
+import json, os, subprocess, time
 from dataclasses import dataclass
 from pathlib import Path
-
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, PROMPT_FILE, SILENCE_TIMEOUT, Timer, log
 from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size, strip_old_images
-
 def _configured_model() -> str | None:
     """Read model from ~/.relaygent/config.json, or None for default."""
     try:
@@ -18,9 +12,20 @@ def _configured_model() -> str | None:
     except (OSError, json.JSONDecodeError, KeyError):
         return None
 
+def _build_prompt() -> bytes:
+    """Return prompt.md bytes, with KB memory.md appended if present."""
+    prompt = PROMPT_FILE.read_bytes()
+    try:
+        cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
+        mem = (Path(cfg["paths"]["kb"]) / "memory.md").read_text().strip()
+        if mem:
+            prompt += b"\n\n<memory>\n" + mem.encode() + b"\n</memory>\n"
+    except (OSError, json.JSONDecodeError, KeyError):
+        pass
+    return prompt
+
 CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
 _HARNESS = Path(__file__).parent
-
 _CLAUDE_INTERNAL = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE"}
 
 def _clean_env() -> dict:
@@ -33,7 +38,6 @@ def _ensure_settings() -> Path:
     if tmpl.exists() and (not dest.exists() or tmpl.stat().st_mtime > dest.stat().st_mtime):
         dest.write_text(tmpl.read_text().replace("RELAYGENT_DIR", str(_HARNESS.parent)))
     return dest
-
 
 @dataclass
 class ClaudeResult:
@@ -109,14 +113,13 @@ class ClaudeProcess:
         self._log_file = self._open_log()
         settings_file = str(_ensure_settings())
         try:
-            with open(PROMPT_FILE) as stdin:
-                self.process = subprocess.Popen(
-                    ["claude", "--print", "--dangerously-skip-permissions",
-                     "--settings", settings_file, "--session-id", self.session_id,
-                     *self._model_args()],
-                    stdin=stdin, stdout=self._log_file,
-                    stderr=subprocess.STDOUT, cwd=str(self.workspace),
-                    env=_clean_env())
+            self.process = subprocess.Popen(
+                ["claude", "--print", "--dangerously-skip-permissions",
+                 "--settings", settings_file, "--session-id", self.session_id,
+                 *self._model_args()],
+                stdin=subprocess.PIPE, stdout=self._log_file,
+                stderr=subprocess.STDOUT, cwd=str(self.workspace), env=_clean_env())
+            self.process.stdin.write(_build_prompt()); self.process.stdin.flush(); self.process.stdin.close()
         except OSError:
             self._close_log(); raise
         return log_start
@@ -154,10 +157,8 @@ class ClaudeProcess:
         hung, timed_out, last_hang_check = False, False, 0.0
         initial_jsonl_size = get_jsonl_size(self.session_id, self.workspace)
         last_jsonl_size, last_activity_time = initial_jsonl_size, time.time()
-
         while self.process.poll() is None:
             attempt_elapsed = time.time() - attempt_start
-
             if self.timer.is_expired():
                 log("Time limit reached, terminating..."); self._terminate(); timed_out = True; break
             if (attempt_elapsed >= HANG_CHECK_DELAY
@@ -177,24 +178,20 @@ class ClaudeProcess:
                     log(f"Context at {current_fill:.0f}% (hook handling wrap-up warning)"); self._context_warning_sent = True
             remaining = self.timer.remaining()
             time.sleep(1 if remaining <= 60 else (5 if remaining <= 300 else 30))
-
         if self.process and self.process.poll() is None:
             try: self.process.wait(timeout=30)
             except subprocess.TimeoutExpired:
-                log("WARNING: Process stuck, force killing")
-                self.process.kill()
+                log("WARNING: Process stuck, force killing"); self.process.kill()
                 try: self.process.wait(timeout=10)
                 except subprocess.TimeoutExpired: log("WARNING: Process did not die")
         no_output = get_jsonl_size(self.session_id, self.workspace) == initial_jsonl_size
         incomplete, _ = check_incomplete_exit(self.session_id, self.workspace)
         context_too_large = False
         try:
-            with open(LOG_FILE) as f:
-                lines = f.readlines()[log_start:]
+            lines = open(LOG_FILE).readlines()[log_start:]
             if any('Request too large' in l or 'Could not process image' in l for l in lines):
-                context_too_large = True
-                log('Context too large or bad image — will start fresh')
+                context_too_large = True; log('Context too large or bad image — will start fresh')
         except OSError: pass
-        return ClaudeResult(exit_code=(self.process.returncode if self.process else 0) or 0, hung=hung, timed_out=timed_out,
-            no_output=no_output, incomplete=incomplete, context_too_large=context_too_large,
-            context_pct=self.get_context_fill())
+        return ClaudeResult(exit_code=(self.process.returncode if self.process else 0) or 0, hung=hung,
+            timed_out=timed_out, no_output=no_output, incomplete=incomplete,
+            context_too_large=context_too_large, context_pct=self.get_context_fill())
