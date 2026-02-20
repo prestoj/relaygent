@@ -5,6 +5,15 @@
 	let showDeadLinks = $state(false);
 	let newTitle = $state('');
 	let showNewForm = $state(false);
+	let committing = $state(false);
+	let commitDone = $state(false);
+
+	async function commitKb() {
+		if (committing) return;
+		committing = true;
+		try { const r = await fetch('/api/kb', { method: 'POST' }); if (r.ok) { commitDone = true; setTimeout(() => { commitDone = false; }, 3000); } } catch { /* ignore */ }
+		committing = false;
+	}
 
 	function toSlug(s) {
 		return s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -41,6 +50,7 @@
 	{:else}
 		<!-- svelte-ignore event_directive_deprecated -->
 		<button class="new-btn" on:click={() => showNewForm = true}>+ New</button>
+		<button class="commit-btn" onclick={commitKb} disabled={committing}>{committing ? '…' : commitDone ? '✓ Committed' : 'Commit KB'}</button>
 	{/if}
 </div>
 
