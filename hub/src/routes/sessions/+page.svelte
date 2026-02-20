@@ -31,10 +31,13 @@
 	<ul class="session-list">
 		{#each data.sessions as s, i}
 			<li class:current={i === 0}>
-				<a href="/sessions/{s.id}">{s.displayTime}</a>
-				<span class="meta">
-					{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
-				</span>
+				<div class="row">
+					<a href="/sessions/{s.id}">{s.displayTime}</a>
+					<span class="meta">
+						{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
+					</span>
+				</div>
+				{#if s.summary}<p class="sum">{s.summary}</p>{/if}
 			</li>
 		{/each}
 	</ul>
@@ -46,9 +49,11 @@
 		font-size: 0.85em; color: var(--text-muted); }
 	.stats-row strong { color: var(--text); }
 	.sep { color: var(--border); }
-	.session-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.3em; }
-	.session-list li { display: flex; align-items: baseline; gap: 0.75em; }
+	.session-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5em; }
+	.session-list li { display: flex; flex-direction: column; gap: 0.1em; }
+	.row { display: flex; align-items: baseline; gap: 0.75em; }
 	.session-list a { font-family: monospace; font-size: 1.05em; }
 	.meta { font-size: 0.8em; color: var(--text-muted); }
+	.sum { margin: 0; font-size: 0.75em; color: var(--text-muted); padding-left: 0.2em; }
 	.current a { font-weight: 600; }
 </style>
