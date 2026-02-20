@@ -68,7 +68,9 @@
 <main>
 	{@render children()}
 </main>
+{#if !isActive('/chat')}
 <ChatBubble />
+{/if}
 </div>
 
 <style>

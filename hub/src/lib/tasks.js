@@ -84,6 +84,29 @@ export function removeTask(kbDir, description) {
 	} catch { return false; }
 }
 
+export function completeTask(kbDir, description) {
+	const file = path.join(kbDir, 'tasks.md');
+	try {
+		let raw = fs.readFileSync(file, 'utf-8');
+		const now = new Date();
+		const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
+		const today = now.toISOString().slice(0, 10);
+		let found = false;
+		const lines = raw.split('\n').map(l => {
+			const t = parseTaskLine(l);
+			if (t && t.description === description && t.type === 'recurring') {
+				found = true;
+				return l.replace(/last:\s*\S+/, `last: ${timestamp}`);
+			}
+			return l;
+		});
+		if (!found) return false;
+		raw = lines.join('\n').replace(/^updated:.*$/m, `updated: ${today}`);
+		const tmp = file + '.tmp'; fs.writeFileSync(tmp, raw, 'utf-8'); fs.renameSync(tmp, file);
+		return true;
+	} catch { return false; }
+}
+
 export function editTask(kbDir, oldDescription, newDescription) {
 	const file = path.join(kbDir, 'tasks.md');
 	try {

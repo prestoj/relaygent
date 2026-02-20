@@ -42,6 +42,17 @@
 		return `${Math.round(m / 1440)}d overdue`;
 	}
 
+	async function completeRecurring(desc) {
+		try {
+			const res = await fetch('/api/tasks', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ description: desc }),
+			});
+			if (res.ok) await refreshTasks();
+		} catch { /* ignore */ }
+	}
+
 	async function addTask() {
 		if (!newTask.trim() || adding) return;
 		adding = true; error = '';
@@ -112,6 +123,7 @@
 					<div class="task-meta">
 						<span class="freq">{t.freq}</span>
 						<span class="due-label" class:overdue={t.due}>{formatDue(t)}</span>
+						<button class="done-btn" onclick={() => completeRecurring(t.description)} title="Mark done">✓</button>
 					</div>
 				</div>
 			{/each}
@@ -174,6 +186,7 @@
 	.add-row button { padding: 0.45em 1em; background: var(--link); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
 	.add-row button:disabled { opacity: 0.5; cursor: not-allowed; }
 	.task-actions { display: flex; gap: 0.3em; align-items: center; }
+	.done-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; color: var(--text-muted); } .done-btn:hover { color: #16a34a; border-color: #16a34a; }
 	.edit-btn, .del-btn, .save-btn, .cancel-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; }
 	.edit-btn { color: var(--text-muted); } .edit-btn:hover { color: var(--link); border-color: var(--link); }
 	.del-btn { color: var(--text-muted); } .del-btn:hover { color: #ef4444; border-color: #ef4444; }
