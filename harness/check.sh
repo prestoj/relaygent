@@ -127,6 +127,11 @@ SLACK_USER="$HOME/.relaygent/slack/token.json"
 SLACK_APP="$HOME/.relaygent/slack/app-token"
 if [ -f "$SLACK_USER" ] && [ -f "$SLACK_APP" ]; then
     ok "Slack" "user token + app token (Socket Mode enabled)"
+    if pgrep -f "slack-socket-listener" >/dev/null 2>&1; then
+        ok "Slack socket" "listener running (real-time DMs active)"
+    else
+        warn "Slack socket" "listener not running — run: relaygent start"
+    fi
 elif [ -f "$SLACK_USER" ]; then
     warn "Slack" "user token OK but no app token — real-time DMs won't work (add xapp-* token to $SLACK_APP)"
 elif [ -f "$SLACK_APP" ]; then
