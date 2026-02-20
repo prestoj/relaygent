@@ -3,6 +3,8 @@
 	let search = $state('');
 	let showTags = $state(false);
 
+	let showDeadLinks = $state(false);
+
 	let filtered = $derived(
 		search
 			? data.topics.filter(t =>
@@ -18,6 +20,26 @@
 <h1>Knowledge Base <span class="count">({data.topics.length})</span></h1>
 
 <input type="search" placeholder="Filter topics or tags..." bind:value={search} class="search" />
+
+{#if data.deadLinks.length > 0}
+	<!-- svelte-ignore event_directive_deprecated -->
+	<div class="dead-links-notice">
+		<button class="dead-links-toggle" on:click={() => showDeadLinks = !showDeadLinks}>
+			⚠ {data.deadLinks.length} broken wiki-link{data.deadLinks.length !== 1 ? 's' : ''}
+			{showDeadLinks ? '▲' : '▼'}
+		</button>
+		{#if showDeadLinks}
+			<ul class="dead-links-list">
+				{#each data.deadLinks as link}
+					<li>
+						<a href="/kb/{link.source}">{link.source}</a>
+						→ <code>[[{link.display}]]</code> (missing: <em>{link.target}</em>)
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+{/if}
 
 {#if data.activeTag}
 	<div class="active-filter">
@@ -110,4 +132,16 @@
 	.date { color: var(--text-muted); font-size: 0.85em; }
 	.empty { color: var(--text-muted); }
 	.section-label { font-size: 1em; color: var(--text-muted); margin-top: 2em; }
+	.dead-links-notice { margin: 0.5em 0; }
+	.dead-links-toggle {
+		background: none; border: none; cursor: pointer;
+		font-size: 0.85em; padding: 0.25em 0;
+		color: var(--warning, #b45309);
+	}
+	.dead-links-list {
+		list-style: none; padding: 0.25em 0 0 0;
+		font-size: 0.85em; color: var(--text-muted);
+	}
+	.dead-links-list li { padding: 0.2em 0; }
+	.dead-links-list code { background: var(--code-bg); border-radius: 3px; padding: 0.1em 0.3em; }
 </style>

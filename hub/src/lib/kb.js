@@ -109,6 +109,32 @@ export function getTopic(slug) {
 	return { slug, ...meta, html, backlinks };
 }
 
+/** Find dead wiki-links across all KB topics */
+export function findDeadLinks() {
+	if (!fs.existsSync(KB_DIR)) return [];
+	const files = findMarkdownFiles(KB_DIR);
+	const validSlugs = new Set(files.map(f => f.slug));
+	const seen = new Set();
+	const dead = [];
+	for (const { filepath, slug } of files) {
+		let raw;
+		try { raw = fs.readFileSync(filepath, 'utf-8'); } catch { continue; }
+		const re = /\[\[([^\]]+)\]\]/g;
+		let m;
+		while ((m = re.exec(raw)) !== null) {
+			const parts = m[1].split('|');
+			const target = parts[0].toLowerCase().replace(/\s+/g, '-');
+			const display = parts.length > 1 ? parts[1] : parts[0];
+			const key = `${slug}→${target}`;
+			if (!validSlugs.has(target) && !seen.has(key)) {
+				seen.add(key);
+				dead.push({ source: slug, target, display });
+			}
+		}
+	}
+	return dead;
+}
+
 /** Save a KB topic */
 export function saveTopic(slug, frontmatter, content) {
 	const filepath = safeSlugPath(slug);

@@ -12,7 +12,7 @@ import path from 'node:path';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kb-test-'));
 process.env.RELAYGENT_KB_DIR = tmpDir;
 
-const { listTopics, getTopic, saveTopic, searchTopics, getKbDir } =
+const { listTopics, getTopic, saveTopic, searchTopics, getKbDir, findDeadLinks } =
     await import('../src/lib/kb.js');
 
 after(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
@@ -121,4 +121,31 @@ test('searchTopics: includes snippet with context', () => {
     const results = searchTopics('search_term_abc');
     assert.ok(results.length > 0);
     assert.ok(results[0].snippet.includes('search_term_abc'));
+});
+
+test('findDeadLinks: returns empty array when no broken links', () => {
+    writeTopic('a.md', '---\ntitle: A\n---\n\nSee [[b]] here.\n');
+    writeTopic('b.md', '---\ntitle: B\n---\n\nNo links.\n');
+    const dead = findDeadLinks();
+    assert.ok(!dead.some(d => d.source === 'a' && d.target === 'b'));
+});
+
+test('findDeadLinks: reports missing link target', () => {
+    writeTopic('broken.md', '---\ntitle: Broken\n---\n\nSee [[does-not-exist-xyz]] here.\n');
+    const dead = findDeadLinks();
+    assert.ok(dead.some(d => d.source === 'broken' && d.target === 'does-not-exist-xyz'));
+});
+
+test('findDeadLinks: deduplicates same source→target pair', () => {
+    writeTopic('dup.md', '---\ntitle: Dup\n---\n\n[[missing-xyz]] and [[missing-xyz]] again.\n');
+    const dead = findDeadLinks().filter(d => d.source === 'dup' && d.target === 'missing-xyz');
+    assert.equal(dead.length, 1);
+});
+
+test('findDeadLinks: handles pipe syntax [[slug|display]]', () => {
+    writeTopic('piped.md', '---\ntitle: Piped\n---\n\nSee [[ghost-topic|Ghost Page]] here.\n');
+    const dead = findDeadLinks();
+    const match = dead.find(d => d.source === 'piped' && d.target === 'ghost-topic');
+    assert.ok(match);
+    assert.equal(match.display, 'Ghost Page');
 });
