@@ -48,6 +48,7 @@
 		<span class="bar" class:open={menuOpen}></span>
 	</button>
 	<div class="links" class:open={menuOpen}>
+		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Hub</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
 		<a href="/chat" class:active={isActive('/chat')} onclick={() => { unreadChat = 0; closeMenu(); }}>
