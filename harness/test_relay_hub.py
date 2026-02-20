@@ -151,3 +151,50 @@ class TestLaunchAgentPath:
         ]), patch("relay_hub._launchctl"):
             check_and_rebuild_hub()
         assert not (self.home / ".relaygent" / "hub.pid").exists()
+
+
+class TestLinuxSIGTERM:
+    """Linux-specific: SIGTERM to old hub pid before rebuild."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("relay_hub.REPO_DIR", tmp_path)
+        self.repo = tmp_path
+        self.home = tmp_path / "home"; self.home.mkdir()
+        (self.home / ".relaygent").mkdir()
+        for d in ("data", "hub", "logs"): (tmp_path / d).mkdir()
+        monkeypatch.setattr("relay_hub.Path.home", lambda: self.home)
+        monkeypatch.setattr("relay_hub._hub_uses_launchagent", lambda: False)
+        monkeypatch.setattr("relay_hub.time.sleep", lambda _: None)
+
+    def _git_run(self, head="abc"):
+        r = MagicMock(); r.stdout = head; r.returncode = 0; return r
+
+    def _build_run(self, rc=0):
+        r = MagicMock(); r.returncode = rc; r.stderr = b""; return r
+
+    def test_sigterm_sent_to_old_pid(self):
+        (self.home / ".relaygent" / "hub.pid").write_text("1234\n")
+        proc = MagicMock(); proc.pid = 9999
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), self._build_run()]), \
+             patch("relay_hub.subprocess.Popen", return_value=proc), \
+             patch("relay_hub.os.kill") as mock_kill:
+            check_and_rebuild_hub()
+        mock_kill.assert_any_call(1234, __import__("signal").SIGTERM)
+
+    def test_handles_dead_process_gracefully(self):
+        pid_file = self.home / ".relaygent" / "hub.pid"
+        pid_file.write_text("9999\n")
+        proc = MagicMock(); proc.pid = 1111
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), self._build_run()]), \
+             patch("relay_hub.subprocess.Popen", return_value=proc), \
+             patch("relay_hub.os.kill", side_effect=ProcessLookupError):
+            check_and_rebuild_hub()  # Should not raise
+        assert "1111" in (self.home / ".relaygent" / "hub.pid").read_text()
+
+    def test_no_popen_on_build_failure(self):
+        r = MagicMock(); r.returncode = 1; r.stderr = b"err"
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), r]), \
+             patch("relay_hub.subprocess.Popen") as mock_popen:
+            check_and_rebuild_hub()
+        mock_popen.assert_not_called()
