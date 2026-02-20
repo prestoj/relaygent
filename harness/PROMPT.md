@@ -50,11 +50,10 @@ Before you finish, you MUST do two things:
    - No length limit — this accumulates across sessions
 
 ## Knowledge Base
-The KB at `~/knowledge/topics/` is long-term memory and documentation — not a scratchpad.
-Think of it as the institutional knowledge a Claude 30 handoffs from now will need:
-machine setup, user preferences, project decisions, hard-won debugging insights, patterns that work.
+The KB is long-term memory and documentation — write for a Claude 30 handoffs from now who has never seen your work. Topics should capture things that would be valuable across weeks and months: architectural decisions, how systems work, hard-won lessons, reference material.
 
-Create or update topics as needed. Use [[wiki-links]] to connect related topics.
+Create or update topics in ~/knowledge/topics/.
+Use [[wiki-links]] to connect related topics.
 Web UI at http://localhost:8080/kb
 
 Guidelines:

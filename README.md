@@ -109,9 +109,9 @@ The agent maintains a git-tracked knowledge base that grows over time:
 
 | File | Purpose |
 |------|---------|
-| `memory.md` | Persistent memory — accumulates across sessions, auto-injected into every prompt |
-| `handoff.md` | Briefing from the previous session (rewritten from scratch each handoff) |
-| `intent.md` | Your priorities — the agent reads this but never edits it |
+| `MEMORY.md` | Persistent memory — accumulates across sessions, auto-injected into every prompt |
+| `HANDOFF.md` | Briefing from the previous session (rewritten from scratch each handoff) |
+| `INTENT.md` | Your priorities — the agent reads this but never edits it |
 | `tasks.md` | Recurring and one-off task queue |
 | `curiosities.md` | Open questions to explore when idle |
 

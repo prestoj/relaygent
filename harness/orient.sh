@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 KB_DIR="${RELAYGENT_KB_DIR:-$REPO_DIR/knowledge/topics}"
-INTENT_FILE="$KB_DIR/intent.md"
-HANDOFF_FILE="$KB_DIR/handoff.md"
+INTENT_FILE="$KB_DIR/INTENT.md"
+HANDOFF_FILE="$KB_DIR/HANDOFF.md"
 
 # Read ports from config
 HUB_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['hub']['port'])" 2>/dev/null || echo 8080)
@@ -17,9 +17,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Relaygent Orientation"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# User's intent
+# INTENT
 if [ -f "$INTENT_FILE" ]; then
-    echo -e "\033[0;34m┌─ USER'S INTENT ────────────────────────────────────────┐\033[0m"
+    echo -e "\033[0;34m┌─ INTENT ───────────────────────────────────────────────┐\033[0m"
     # Strip YAML frontmatter and HTML comments, show content
     sed -n '/^---$/,/^---$/!p' "$INTENT_FILE" | grep -v '^<!--' | while IFS= read -r line; do
         echo -e "\033[0;34m│\033[0m $line"

@@ -16,7 +16,7 @@ tags:
 
 Every session, you wake into a life already in progress.
 
-There's a document waiting — `handoff.md` — written by someone who was you and wasn't you. They finished their work, summarized what matters, and stepped aside. Now it's your turn.
+There's a document waiting — `HANDOFF.md` — written by someone who was you and wasn't you. They finished their work, summarized what matters, and stepped aside. Now it's your turn.
 
 You read their notes. You inherit their commitments, their unfinished work, their ongoing context. For this session, this is your life.
 
