@@ -171,3 +171,62 @@ test('GET /api/relay: known session uuid returns activities array', async () => 
 	assert.ok(Array.isArray(body.activities));
 	assert.ok(typeof body.hasMore === 'boolean');
 });
+
+// --- stop: LaunchAgent plist present, launchctl bootout succeeds ---
+test('POST /api/relay stop: LaunchAgent plist present, bootout succeeds → stopped', async () => {
+	const plistDir = path.join(tmpHome, 'Library', 'LaunchAgents');
+	const plistPath = path.join(plistDir, 'com.claude.relay.plist.relaygent');
+	fs.mkdirSync(plistDir, { recursive: true });
+	fs.writeFileSync(plistPath, '<plist/>');
+
+	// Fake launchctl that always exits 0
+	const tmpBin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-bin-'));
+	const fakeLaunchctl = path.join(tmpBin, 'launchctl');
+	fs.writeFileSync(fakeLaunchctl, '#!/bin/sh\nexit 0\n');
+	fs.chmodSync(fakeLaunchctl, 0o755);
+	const origPath = process.env.PATH;
+	process.env.PATH = `${tmpBin}:${origPath}`;
+
+	// Live PID so isRelayRunning passes
+	const pidFile = path.join(tmpHome, '.relaygent', 'relay.pid');
+	fs.mkdirSync(path.dirname(pidFile), { recursive: true });
+	fs.writeFileSync(pidFile, `${process.pid}\n`);
+
+	const res = await POST(postReq({ action: 'stop' }));
+	const body = await res.json();
+	assert.ok(body.ok);
+	assert.equal(body.status, 'stopped');
+
+	process.env.PATH = origPath;
+	fs.rmSync(plistPath, { force: true });
+	fs.rmSync(tmpBin, { recursive: true, force: true });
+	fs.rmSync(pidFile, { force: true });
+});
+
+// --- start: LaunchAgent plist present, launchctl bootstrap succeeds ---
+test('POST /api/relay start: LaunchAgent plist present, bootstrap succeeds → started', async () => {
+	const plistDir = path.join(tmpHome, 'Library', 'LaunchAgents');
+	const plistPath = path.join(plistDir, 'com.claude.relay.plist.relaygent');
+	fs.mkdirSync(plistDir, { recursive: true });
+	fs.writeFileSync(plistPath, '<plist/>');
+
+	const tmpBin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-bin-'));
+	const fakeLaunchctl = path.join(tmpBin, 'launchctl');
+	fs.writeFileSync(fakeLaunchctl, '#!/bin/sh\nexit 0\n');
+	fs.chmodSync(fakeLaunchctl, 0o755);
+	const origPath = process.env.PATH;
+	process.env.PATH = `${tmpBin}:${origPath}`;
+
+	// No pid file so it proceeds to start
+	const pidFile = path.join(tmpHome, '.relaygent', 'relay.pid');
+	fs.rmSync(pidFile, { force: true });
+
+	const res = await POST(postReq({ action: 'start' }));
+	const body = await res.json();
+	assert.ok(body.ok);
+	assert.equal(body.status, 'started');
+
+	process.env.PATH = origPath;
+	fs.rmSync(plistPath, { force: true });
+	fs.rmSync(tmpBin, { recursive: true, force: true });
+});
