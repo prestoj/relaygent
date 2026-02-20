@@ -1,13 +1,9 @@
 <script>
 	import { browser } from '$app/environment';
-	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
-	import ChatBubble from '$lib/components/ChatBubble.svelte';
-
 	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
-	let unreadChat = $state(data.unreadChat || 0);
 	let dueTasks = $state(data.dueTasks || 0);
 
 	if (browser) {
@@ -28,13 +24,6 @@
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
 
-	let pollInterval;
-	async function pollUnread() {
-		if (isActive('/chat')) { unreadChat = 0; return; }
-		try { const d = await (await fetch('/api/chat?mode=unread')).json(); unreadChat = d.count || 0; } catch { /* ignore */ }
-	}
-	onMount(() => { pollInterval = setInterval(pollUnread, 30000); });
-	onDestroy(() => clearInterval(pollInterval));
 </script>
 
 <svelte:head><link rel="icon" href="/favicon.svg" /></svelte:head>
@@ -51,9 +40,6 @@
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Hub</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
-		<a href="/chat" class:active={isActive('/chat')} onclick={() => { unreadChat = 0; closeMenu(); }}>
-			Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}
-		</a>
 		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
@@ -70,9 +56,6 @@
 <main>
 	{@render children()}
 </main>
-{#if !isActive('/chat')}
-<ChatBubble />
-{/if}
 </div>
 
 <style>
