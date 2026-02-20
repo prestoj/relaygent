@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { parseSessionStats } from './relayStats.js';
 
 /** Short human-readable summary for the collapsed feed view. */
 export function summarizeInput(toolName, input) {
@@ -163,7 +164,8 @@ export function listSessions() {
 			if (!best || maxSize < 200) continue;
 			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
 			if (!m) continue;
-			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize });
+			const st = parseSessionStats(best) || {};
+			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls });
 		}
 	} catch { /* ignore */ }
 	return sessions.sort((a, b) => b.id.localeCompare(a.id));

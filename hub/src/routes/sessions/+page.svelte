@@ -1,10 +1,5 @@
 <script>
 	let { data } = $props();
-	function fmtSize(b) {
-		if (b < 1024) return `${b}B`;
-		if (b < 1024 * 1024) return `${(b/1024).toFixed(0)}KB`;
-		return `${(b/1024/1024).toFixed(1)}MB`;
-	}
 	function fmtTokens(n) {
 		if (!n) return '0';
 		if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M`;
@@ -37,7 +32,9 @@
 		{#each data.sessions as s, i}
 			<li class:current={i === 0}>
 				<a href="/sessions/{s.id}">{s.displayTime}</a>
-				<span class="meta">{fmtSize(s.size)}{i === 0 ? ' · current' : ''}</span>
+				<span class="meta">
+					{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
+				</span>
 			</li>
 		{/each}
 	</ul>

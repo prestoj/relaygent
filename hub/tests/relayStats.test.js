@@ -15,7 +15,7 @@ import path from 'path';
 
 let tmpDir;
 let projectsDir;
-let getRelayStats;
+let getRelayStats, parseSessionStats;
 
 function makeEntry(type, opts = {}) {
 	const base = { type, timestamp: opts.timestamp || new Date().toISOString() };
@@ -70,7 +70,7 @@ before(async () => {
 
 	// Set HOME so CLAUDE_PROJECTS resolves to our tmpDir
 	process.env.HOME = tmpDir;
-	({ getRelayStats } = await import('../src/lib/relayStats.js'));
+	({ getRelayStats, parseSessionStats } = await import('../src/lib/relayStats.js'));
 });
 
 after(() => {
@@ -186,4 +186,14 @@ test('getRelayStats: returns cached result on second call', () => {
 	const stats2 = getRelayStats();
 	// Should be the exact same object reference (cached)
 	assert.equal(stats1, stats2, 'second call returns cached object');
+});
+
+test('parseSessionStats: returns stats with correct shape and values', () => {
+	const file = path.join(projectsDir, 'test-workspace', 'session.jsonl');
+	const s = parseSessionStats(file);
+	assert.ok(s !== null && typeof s === 'object', 'returns object');
+	assert.ok(typeof s.durationMin === 'number' && typeof s.totalTokens === 'number' && typeof s.toolCalls === 'number');
+	assert.ok(s.totalTokens >= 2000, `totalTokens >= 2000, got ${s.totalTokens}`);
+	assert.ok(s.toolCalls >= 3, `toolCalls >= 3, got ${s.toolCalls}`);
+	assert.equal(parseSessionStats('/nonexistent/file.jsonl'), null);
 });
