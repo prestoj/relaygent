@@ -151,7 +151,7 @@ fi
 # Handoff
 if [ -f "$HANDOFF_FILE" ]; then
     HANDOFF_LINES=$(wc -l < "$HANDOFF_FILE" | tr -d ' ')
-    HANDOFF_MODIFIED=$(stat -f "%Sm" -t "%H:%M" "$HANDOFF_FILE" 2>/dev/null || stat -c "%y" "$HANDOFF_FILE" 2>/dev/null | cut -d' ' -f2 | cut -d: -f1-2)
+    HANDOFF_MODIFIED=$(date -r "$HANDOFF_FILE" "+%H:%M" 2>/dev/null || stat -c "%y" "$HANDOFF_FILE" 2>/dev/null | awk '{print substr($2,1,5)}')
     echo -e "\n\033[0;34mHandoff:\033[0m $HANDOFF_LINES lines, last updated $HANDOFF_MODIFIED"
     # Show main goal
     GOAL=$(sed -n '/^#\{1,2\} MAIN GOAL/,/^#\{1,2\} [^M]/p' "$HANDOFF_FILE" | head -5)
