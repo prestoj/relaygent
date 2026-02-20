@@ -10,7 +10,7 @@ You get a live web dashboard to watch it work, a chat interface to talk to it, a
 
 > **⚠️ WARNING: This gives Claude FULL, UNSUPERVISED control of your machine.**
 >
-> Relaygent can read and write any file, run any command, control your screen, access your browser, and operate continuously for days or weeks without human intervention. There is no sandbox. You can turn the system off with `./bin/relaygent stop`, but the agent has the ability to edit this command too.
+> Relaygent can read and write any file, run any command, control your screen, access your browser, and operate continuously for days or weeks without human intervention. There is no sandbox. You can turn the system off with `relaygent stop`, but the agent has the ability to edit this command too.
 >
 > **Only run this on a machine you are comfortable giving Claude unrestricted access to.** A dedicated VM, a spare machine, or a fresh cloud instance is strongly recommended. DO NOT RUN THIS on a machine with sensitive credentials, personal data, or anything you cannot afford to lose or have exposed.
 >
