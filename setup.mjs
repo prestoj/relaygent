@@ -112,7 +112,6 @@ async function main() {
 			rl.close(); process.exit(1);
 		}
 	}
-	// Install Python dependencies (notifications Flask server)
 	for (const sub of ['notifications']) {
 		const dir = join(REPO_DIR, sub);
 		const venv = join(dir, '.venv');
@@ -124,13 +123,14 @@ async function main() {
 		} catch {
 			console.log(`  ${sub}: ${C.red}venv failed${C.reset}. Debian/Ubuntu: sudo apt install python3-venv`);
 			console.log(`  ${C.red}Cannot continue without ${sub}. Fix the error above and re-run setup.${C.reset}`);
-			rl.close();
-			process.exit(1);
+			rl.close(); process.exit(1);
 		}
 	}
 	console.log(`  Building hub...`);
 	try {
 		execSync('npm run build', { cwd: join(REPO_DIR, 'hub'), stdio: 'pipe' });
+		const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_DIR, stdio: 'pipe' }).stdout?.toString().trim() || '';
+		if (head) writeFileSync(join(DATA_DIR, 'hub-build-commit'), head);
 		console.log(`  Hub: ${C.green}built${C.reset}`);
 	} catch (e) {
 		console.log(`  Hub: ${C.red}build failed${C.reset} — ${e.stderr?.toString().trim() || e.message}`);
