@@ -79,6 +79,39 @@ test('POST /api/tasks: rejects missing description', async () => {
 	assert.equal(res.status, 400);
 });
 
+test('POST /api/tasks: adds a recurring task with valid freq', async () => {
+	writeTasks('updated: 2026-01-01\n');
+	const res = await POST(jsonReq({ description: 'Commit KB', freq: 'daily' }));
+	assert.equal(res.status, 200);
+	assert.equal((await res.json()).ok, true);
+	assert.ok(readTasks().includes('Commit KB'));
+});
+
+test('POST /api/tasks: rejects invalid freq', async () => {
+	const res = await POST(jsonReq({ description: 'Do thing', freq: 'hourly' }));
+	assert.equal(res.status, 400);
+});
+
+test('POST /api/tasks: returns 500 on bad request body', async () => {
+	const res = await POST({ request: new Request('http://localhost/', { method: 'POST', body: 'not-json', headers: { 'Content-Type': 'application/json' } }) });
+	assert.equal(res.status, 500);
+});
+
+test('PATCH /api/tasks: returns 500 on bad request body', async () => {
+	const res = await PATCH({ request: new Request('http://localhost/', { method: 'PATCH', body: 'not-json', headers: { 'Content-Type': 'application/json' } }) });
+	assert.equal(res.status, 500);
+});
+
+test('PUT /api/tasks: returns 500 on bad request body', async () => {
+	const res = await PUT({ request: new Request('http://localhost/', { method: 'PUT', body: 'not-json', headers: { 'Content-Type': 'application/json' } }) });
+	assert.equal(res.status, 500);
+});
+
+test('DELETE /api/tasks: returns 500 on bad request body', async () => {
+	const res = await DELETE({ request: new Request('http://localhost/', { method: 'DELETE', body: 'not-json', headers: { 'Content-Type': 'application/json' } }) });
+	assert.equal(res.status, 500);
+});
+
 // --- PATCH ---
 test('PATCH /api/tasks: renames a task', async () => {
 	writeTasks('- [ ] Old name | type: one-off\nupdated: 2026-01-01\n');
