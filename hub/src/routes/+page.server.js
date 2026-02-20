@@ -66,14 +66,14 @@ function getContextPct() {
 
 export async function load() {
 	const topics = listTopics();
-	const clockActivity = getRelayActivity();
+	const relayActivity = getRelayActivity();
 	const services = await getServiceHealth();
 
 	return {
 		topicCount: topics.length,
 		attentionItems: getAttentionItems(),
 		mainGoal: getMainGoal(),
-		relayActivity: clockActivity?.recentActivity || [],
+		relayActivity: relayActivity?.recentActivity || [],
 		contextPct: getContextPct(),
 		services,
 		currentModel: getModel(),
