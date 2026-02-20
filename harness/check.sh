@@ -31,6 +31,13 @@ else
     fail "Node.js" "not found — install from https://nodejs.org (20+)"
 fi
 
+# git
+if command -v git &>/dev/null; then
+    ok "git" "$(git --version 2>/dev/null)"
+else
+    fail "git" "not found — required for KB and hooks (install: sudo apt install git)"
+fi
+
 # Claude Code + auth
 if command -v claude &>/dev/null; then
     VER=$(claude --version 2>/dev/null | head -1 | tr -d '\n')
