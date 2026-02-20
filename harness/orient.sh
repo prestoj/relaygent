@@ -54,6 +54,15 @@ if [ "$UNREAD_COUNT" -gt 0 ] 2>/dev/null; then
     echo -e "\n\033[1;33mChat:\033[0m $UNREAD_COUNT unread message(s) — check with read_messages"
 fi
 
+# Unread Slack messages (from socket listener cache)
+SLACK_CACHE="/tmp/relaygent-slack-socket-cache.json"
+if [ -f "$SLACK_CACHE" ]; then
+    SLACK_COUNT=$(python3 -c "import json; print(len(json.load(open('$SLACK_CACHE')).get('messages', [])))" 2>/dev/null || echo 0)
+    if [ "$SLACK_COUNT" -gt 0 ] 2>/dev/null; then
+        echo -e "\033[1;33mSlack:\033[0m $SLACK_COUNT unread message(s) — check with mcp__slack__read_messages"
+    fi
+fi
+
 # Pending reminders
 PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/pending" 2>/dev/null)
 PENDING_COUNT=$(echo "$PENDING" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
