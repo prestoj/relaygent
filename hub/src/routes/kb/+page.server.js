@@ -1,4 +1,4 @@
-import { listTopics } from '$lib/kb.js';
+import { listTopics, findDeadLinks } from '$lib/kb.js';
 
 export function load({ url }) {
 	const tag = url.searchParams.get('tag');
@@ -15,5 +15,6 @@ export function load({ url }) {
 		topics = topics.filter(t => (t.tags || []).includes(tag));
 	}
 
-	return { topics, dailyLogs, allTags, activeTag: tag };
+	const deadLinks = findDeadLinks();
+	return { topics, dailyLogs, allTags, activeTag: tag, deadLinks };
 }
