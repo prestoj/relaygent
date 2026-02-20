@@ -52,11 +52,13 @@ class TestDatabase:
         assert row["message"] == "test"
 
 
-class TestReminderCRUD:
+class TestReminderCreate:
+    """POST /reminder is used internally by the sleep tool (max_minutes wake timeout)."""
+
     def test_create(self, client):
         resp = client.post("/reminder", json={
             "trigger_time": "2026-12-31T23:59:00",
-            "message": "New Year",
+            "message": "sleep timeout",
         })
         assert resp.status_code == 201
         data = resp.get_json()
@@ -79,69 +81,6 @@ class TestReminderCRUD:
             "message": "x" * 2001,
         })
         assert resp.status_code == 400
-
-    def test_delete(self, client):
-        resp = client.post("/reminder", json={
-            "trigger_time": "2026-12-31T00:00:00",
-            "message": "delete me",
-        })
-        rid = resp.get_json()["id"]
-        resp = client.delete(f"/reminder/{rid}")
-        assert resp.status_code == 200
-        assert resp.get_json()["status"] == "deleted"
-
-    def test_delete_nonexistent(self, client):
-        resp = client.delete("/reminder/99999")
-        assert resp.status_code == 404
-
-    def test_list_upcoming(self, client):
-        client.post("/reminder", json={
-            "trigger_time": "2099-01-01T00:00:00",
-            "message": "future",
-        })
-        resp = client.get("/upcoming")
-        data = resp.get_json()
-        assert len(data) >= 1
-        assert any(r["message"] == "future" for r in data)
-
-    def test_list_pending_due(self, client):
-        past = (datetime.now() - timedelta(minutes=5)).isoformat()
-        client.post("/reminder", json={
-            "trigger_time": past, "message": "overdue",
-        })
-        resp = client.get("/pending")
-        data = resp.get_json()
-        assert len(data) >= 1
-
-    def test_fire_one_off(self, client):
-        past = (datetime.now() - timedelta(minutes=1)).isoformat()
-        rid = client.post("/reminder", json={"trigger_time": past, "message": "fire me"}).get_json()["id"]
-        assert client.post(f"/reminder/{rid}/fire").get_json()["status"] == "fired"
-
-    def test_fire_nonexistent(self, client):
-        resp = client.post("/reminder/99999/fire")
-        assert resp.status_code == 404
-
-    def test_create_recurring(self, client):
-        resp = client.post("/reminder", json={
-            "trigger_time": "2026-01-01T00:00:00",
-            "message": "daily",
-            "recurrence": "0 9 * * *",
-        })
-        assert resp.status_code == 201
-        assert resp.get_json()["recurrence"] == "0 9 * * *"
-
-    def test_fire_recurring_reschedules(self, client):
-        resp = client.post("/reminder", json={
-            "trigger_time": "2026-01-01T00:00:00",
-            "message": "recurring",
-            "recurrence": "0 9 * * *",
-        })
-        rid = resp.get_json()["id"]
-        resp = client.post(f"/reminder/{rid}/fire")
-        data = resp.get_json()
-        assert data["status"] == "rescheduled"
-        assert "next_trigger" in data
 
 
 class TestRecurringLogic:
