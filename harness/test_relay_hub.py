@@ -13,13 +13,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from relay_hub import check_and_rebuild_hub
 
 
-def _make_git_result(head: str) -> MagicMock:
-    r = MagicMock()
-    r.stdout = head
-    r.returncode = 0
-    return r
-
-
 class TestCheckAndRebuildHub:
     @pytest.fixture(autouse=True)
     def patch_repo_dir(self, tmp_path, monkeypatch):
@@ -32,6 +25,8 @@ class TestCheckAndRebuildHub:
         (tmp_path / "hub").mkdir()
         (tmp_path / "logs").mkdir()
         monkeypatch.setattr("relay_hub.Path.home", lambda: self.home)
+        # All tests in this class use the non-LaunchAgent path
+        monkeypatch.setattr("relay_hub._hub_uses_launchagent", lambda: False)
 
     def _git_run(self, head="abc1234"):
         r = MagicMock(); r.stdout = head; r.returncode = 0; return r
@@ -102,3 +97,57 @@ class TestCheckAndRebuildHub:
             check_and_rebuild_hub()
         pid_file = self.home / ".relaygent" / "hub.pid"
         assert "5678" in pid_file.read_text()
+
+
+class TestLaunchAgentPath:
+    @pytest.fixture(autouse=True)
+    def patch_repo_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("relay_hub.REPO_DIR", tmp_path)
+        self.repo = tmp_path
+        self.home = tmp_path / "home"
+        self.home.mkdir()
+        (self.home / ".relaygent").mkdir()
+        (tmp_path / "data").mkdir()
+        (tmp_path / "hub").mkdir()
+        (tmp_path / "logs").mkdir()
+        monkeypatch.setattr("relay_hub.Path.home", lambda: self.home)
+
+    def _git_run(self, head="abc1234"):
+        r = MagicMock(); r.stdout = head; r.returncode = 0; return r
+
+    def _build_run(self, rc=0):
+        r = MagicMock(); r.returncode = rc; r.stderr = b""; return r
+
+    @patch("relay_hub._hub_uses_launchagent", return_value=True)
+    @patch("relay_hub.time.sleep")
+    def test_uses_launchctl_stop_start(self, mock_sleep, mock_la):
+        with patch("relay_hub.subprocess.run", side_effect=[
+            self._git_run("newhead"), self._build_run(0)
+        ]), patch("relay_hub._launchctl") as mock_lc, \
+           patch("relay_hub.subprocess.Popen") as mock_popen:
+            check_and_rebuild_hub()
+        assert mock_lc.call_args_list[0][0] == ("stop", "com.relaygent.hub")
+        assert mock_lc.call_args_list[1][0] == ("start", "com.relaygent.hub")
+        mock_popen.assert_not_called()
+
+    @patch("relay_hub._hub_uses_launchagent", return_value=True)
+    @patch("relay_hub.time.sleep")
+    def test_launchagent_restarts_hub_on_build_failure(self, mock_sleep, mock_la, capsys):
+        r = MagicMock(); r.returncode = 1; r.stderr = b"err"
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run("newhead"), r]), \
+             patch("relay_hub._launchctl") as mock_lc:
+            check_and_rebuild_hub()
+        # Should stop, fail build, then start again to restore old build
+        calls = [c[0] for c in mock_lc.call_args_list]
+        assert ("stop", "com.relaygent.hub") in calls
+        assert ("start", "com.relaygent.hub") in calls
+        assert "failed" in capsys.readouterr().out
+
+    @patch("relay_hub._hub_uses_launchagent", return_value=True)
+    @patch("relay_hub.time.sleep")
+    def test_launchagent_does_not_write_pid_file(self, mock_sleep, mock_la):
+        with patch("relay_hub.subprocess.run", side_effect=[
+            self._git_run("abc"), self._build_run(0)
+        ]), patch("relay_hub._launchctl"):
+            check_and_rebuild_hub()
+        assert not (self.home / ".relaygent" / "hub.pid").exists()
