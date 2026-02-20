@@ -73,34 +73,27 @@ async function backfill(web) {
   const oldest = Math.max(lastAck, lastCachedTs);
   if (!oldest) return;
 
-  // Only fetch DMs and the most active channels (limit API calls)
-  const channelRes = await web.conversations.list({
-    types: "im,mpim", exclude_archived: true, limit: 20,
-  });
-  const channels = (channelRes.channels || []).filter(c => c.is_member).slice(0, 5);
+  // Use persisted known channels (conversations.list requires im:read scope we may not have)
+  const knownIds = new Set([...(cache.knownChannels || []), ...msgs.map(m => m.channel)]);
+  const channels = [...knownIds].map(id => ({ id, is_im: id.startsWith("D") }));
   let added = 0;
   const skipSubtypes = new Set(["channel_join","bot_message","message_changed","message_deleted"]);
   for (const ch of channels) {
     try {
-      const hist = await web.conversations.history({ channel: ch.id, oldest: String(oldest), limit: 5 });
+      const hist = await web.conversations.history({ channel: ch.id, oldest: String(oldest), limit: 20 });
       for (const m of (hist.messages || []).reverse()) {
         if (m.user === selfUid) continue;
         if (parseFloat(m.ts) <= oldest) continue;
         if (msgs.find(x => x.ts === m.ts)) continue;
         if (m.subtype && skipSubtypes.has(m.subtype)) continue;
-        const channelName = ch.name || ch.id;
-        msgs.push({ channel: ch.id, channel_name: channelName,
+        msgs.push({ channel: ch.id, channel_name: ch.id,
           user: m.user || "", text: (m.text || "").slice(0, 500), ts: m.ts, received: Date.now() });
         added++;
       }
       await new Promise(r => setTimeout(r, 500)); // rate limit: 2 req/sec
     } catch { /* skip */ }
   }
-  if (added > 0) {
-    cache.messages = msgs.slice(-MAX_MESSAGES);
-    writeCache(cache);
-    log(`Backfilled ${added} missed DM message(s)`);
-  }
+  if (added > 0) { cache.messages = msgs.slice(-MAX_MESSAGES); writeCache(cache); log(`Backfilled ${added} missed DM message(s)`); }
 }
 
 async function start() {
@@ -156,6 +149,8 @@ async function start() {
     } catch { /* use ID as fallback */ }
 
     const cache = readCache();
+    if (!cache.knownChannels) cache.knownChannels = [];
+    if (!cache.knownChannels.includes(channelId)) cache.knownChannels.push(channelId);
     cache.messages.push({
       channel: channelId,
       channel_name: channelName,
