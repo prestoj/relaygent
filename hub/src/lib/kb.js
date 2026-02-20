@@ -113,7 +113,7 @@ export function getTopic(slug) {
 export function findDeadLinks() {
 	if (!fs.existsSync(KB_DIR)) return [];
 	const files = findMarkdownFiles(KB_DIR);
-	const validSlugs = new Set(files.map(f => f.slug));
+	const validSlugs = new Set(files.map(f => f.slug.toLowerCase()));
 	const seen = new Set();
 	const dead = [];
 	for (const { filepath, slug } of files) {
