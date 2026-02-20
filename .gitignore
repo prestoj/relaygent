@@ -12,7 +12,7 @@ harness/settings.json
 knowledge/
 data/
 data-*/
-logs/
+/logs/
 harness/.last_run_timestamp
 
 # Secrets and credentials
