@@ -22,6 +22,7 @@ const APP_TOKEN_PATH = path.join(os.homedir(), ".relaygent", "slack", "app-token
 const USER_TOKEN_PATH = path.join(os.homedir(), ".relaygent", "slack", "token.json");
 const CACHE_FILE = "/tmp/relaygent-slack-socket-cache.json";
 const LAST_ACK_FILE = path.join(os.homedir(), ".relaygent", "slack", ".last_check_ts");
+const SEEDED_CHANNELS_PATH = path.join(os.homedir(), ".relaygent", "slack", "seeded-channels");
 const MAX_MESSAGES = 50;
 
 function loadAppToken() {
@@ -171,13 +172,10 @@ async function start() {
   client.on("connected", async () => {
     clearTimeout(disconnectWatchdog);
     log("Socket Mode connected");
-    // Write cache to signal we're alive, then backfill missed messages
-    writeCache(readCache());
-    try {
-      await backfill(web);
-    } catch (e) {
-      log(`Backfill error: ${e.message}`);
-    }
+    const c = readCache();
+    try { const ids = fs.readFileSync(SEEDED_CHANNELS_PATH,"utf-8").split("\n").filter(s=>s.trim()); c.knownChannels=[...new Set([...(c.knownChannels||[]),...ids])]; } catch {}
+    writeCache(c);
+    try { await backfill(web); } catch (e) { log(`Backfill error: ${e.message}`); }
   });
 
   let disconnectWatchdog = null;
