@@ -59,8 +59,15 @@ if curl -sf --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/health" >/dev/null 2>
 else
     fail "Hub" "not responding on :$HUB_PORT — run: relaygent start"
 fi
+BUILD_COMMIT_FILE="$REPO_DIR/data/hub-build-commit"
+CURRENT_HEAD=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo "")
+BUILT_HEAD=$(cat "$BUILD_COMMIT_FILE" 2>/dev/null | head -c 40 || echo "")
 if [ ! -d "$REPO_DIR/hub/build" ]; then
-    warn "Hub build" "no build dir — hub may be in dev mode or needs rebuild"
+    warn "Hub build" "no build dir — run: relaygent update"
+elif [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$BUILT_HEAD" ]; then
+    warn "Hub build" "stale (built $(echo "$BUILT_HEAD" | head -c 7), current $(echo "$CURRENT_HEAD" | head -c 7)) — run: relaygent update"
+else
+    ok "Hub build" "current ($(echo "${CURRENT_HEAD:-?}" | head -c 7))"
 fi
 if curl -sf --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/health" >/dev/null 2>&1; then
     ok "Notifications" "running on :$NOTIF_PORT"
