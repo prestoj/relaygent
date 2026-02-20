@@ -22,8 +22,16 @@ function findSessionById(sessionId) {
 }
 
 const RELAY_PID_FILE = path.join(process.env.HOME, '.relaygent', 'relay.pid');
-const RELAY_PY = path.join(process.env.HOME, 'relaygent', 'harness', 'relay.py');
-const RELAY_LOG = path.join(process.env.HOME, 'relaygent', 'logs', 'relaygent.log');
+const CONFIG_FILE = path.join(process.env.HOME, '.relaygent', 'config.json');
+
+function getRepoDir() {
+	try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')).paths?.repo; } catch { /* ignore */ }
+	return path.join(process.env.HOME, 'relaygent');
+}
+
+const REPO_DIR = getRepoDir();
+const RELAY_PY = path.join(REPO_DIR, 'harness', 'relay.py');
+const RELAY_LOG = path.join(REPO_DIR, 'logs', 'relaygent.log');
 
 function getRelayPid() {
 	try {
