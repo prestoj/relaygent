@@ -90,7 +90,7 @@
 	function connect() {
 		if (!browser) return;
 		const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-		ws = new WebSocket(`${proto}//${location.host}/ws/chat`);
+		ws = new WebSocket(`${proto}//${location.host}/ws`);
 		ws.onmessage = async (e) => {
 			let msg; try { msg = JSON.parse(e.data); } catch { return; }
 			if (msg.type !== 'message') return;

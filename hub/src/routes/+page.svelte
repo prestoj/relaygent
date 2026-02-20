@@ -48,7 +48,7 @@
 	function connect() {
 		if (!browser) return;
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		ws = new WebSocket(`${proto}//${window.location.host}/ws/relay`);
+		ws = new WebSocket(`${proto}//${window.location.host}/ws`);
 		ws.onopen = () => { connected = true; };
 		ws.onclose = () => { connected = false; setTimeout(connect, 3000); };
 		ws.onmessage = (event) => {
