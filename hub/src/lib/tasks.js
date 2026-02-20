@@ -76,7 +76,7 @@ export function removeTask(kbDir, description) {
 		const today = new Date().toISOString().slice(0, 10);
 		const lines = raw.split('\n').filter(l => {
 			const t = parseTaskLine(l);
-			return !(t && t.description === description && t.type !== 'recurring');
+			return !(t && t.description === description);
 		});
 		raw = lines.join('\n').replace(/^updated:.*$/m, `updated: ${today}`);
 		const tmp = file + '.tmp'; fs.writeFileSync(tmp, raw, 'utf-8'); fs.renameSync(tmp, file);
@@ -115,7 +115,7 @@ export function editTask(kbDir, oldDescription, newDescription) {
 		let found = false;
 		const lines = raw.split('\n').map(l => {
 			const t = parseTaskLine(l);
-			if (t && t.description === oldDescription && t.type !== 'recurring') {
+			if (t && t.description === oldDescription) {
 				found = true;
 				return l.replace(oldDescription, newDescription);
 			}
