@@ -10,6 +10,25 @@ from pathlib import Path
 from config import LOG_FILE, LOG_MAX_SIZE, LOG_TRUNCATE_SIZE, REPO_DIR, SCRIPT_DIR, log
 
 LOCK_FILE = SCRIPT_DIR / ".relay.lock"
+PID_FILE = Path.home() / ".relaygent" / "relay.pid"
+
+
+def write_pid_file() -> None:
+    """Write current process PID to ~/.relaygent/relay.pid."""
+    try:
+        PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PID_FILE.write_text(f"{os.getpid()}\n")
+    except OSError as e:
+        log(f"WARNING: Could not write pid file: {e}")
+
+
+def cleanup_pid_file() -> None:
+    """Remove pid file if it belongs to this process."""
+    try:
+        if PID_FILE.exists() and PID_FILE.read_text().strip() == str(os.getpid()):
+            PID_FILE.unlink()
+    except OSError:
+        pass
 
 
 def acquire_lock() -> int:
