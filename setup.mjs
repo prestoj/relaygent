@@ -19,9 +19,9 @@ const LOGS_DIR = join(REPO_DIR, 'logs');
 const DATA_DIR = join(REPO_DIR, 'data');
 
 const C = { reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m', cyan: '\x1b[36m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m' };
-
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const ask = (q) => new Promise(r => rl.question(q, r));
+const openBrowser = (url) => { const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'; spawnSync(cmd, [url], { stdio: 'ignore' }); };
 
 async function main() {
 	// Step 0: Claude Code — must be installed and authenticated before anything else
@@ -186,14 +186,14 @@ async function main() {
 
 	console.log(`\n${C.green}Setup complete!${C.reset} Dashboard: http://localhost:${hubPort}/`);
 	console.log(`  ${C.bold}relaygent start${C.reset} / ${C.bold}stop${C.reset} / ${C.bold}status${C.reset} / ${C.bold}restart${C.reset}\n`);
-
 	const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
 	if (launch !== 'n') {
 		console.log(`\nStarting Relaygent...\n`);
 		spawnSync(join(REPO_DIR, 'bin', 'relaygent'), ['start'],
 			{ stdio: 'inherit', env: { ...process.env, ...envFromConfig(config) } });
+		const hubUrl = `http://localhost:${hubPort}/`;
+		console.log(`Opening hub: ${hubUrl}`); openBrowser(hubUrl);
 	}
-
 	rl.close();
 }
 
