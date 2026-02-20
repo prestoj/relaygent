@@ -181,6 +181,9 @@ elif [ -f "$SLACK_APP" ]; then
 else
     warn "Slack" "not configured (optional — run ./setup.sh to configure)"
 fi
+# Email MCP (optional)
+[ -d "$REPO_DIR/email/node_modules" ] || warn "Email MCP" "deps missing — run: npm install --prefix $REPO_DIR/email"
+[ -f "$HOME/.relaygent/gmail/credentials.json" ] || warn "Gmail" "not configured (optional — run: gmail-reauth-auto)"
 
 # Summary
 echo ""
