@@ -1,0 +1,156 @@
+/**
+ * Unit tests for browser-exprs.mjs — CDP JS expression builders.
+ *
+ * Pure string-building functions; no browser or Chrome required.
+ * Run: node --test computer-use/test_browser_exprs.mjs
+ */
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+	COORD_EXPR, CLICK_EXPR, TEXT_CLICK_EXPR,
+	TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR,
+	_deep, frameRoot,
+} from './browser-exprs.mjs';
+
+describe('frameRoot', () => {
+	it('returns document for undefined/null frame', () => {
+		assert.equal(frameRoot(undefined), 'document');
+		assert.equal(frameRoot(null), 'document');
+	});
+
+	it('returns window.frames[N].document for numeric frame', () => {
+		assert.equal(frameRoot(0), 'window.frames[0].document');
+		assert.equal(frameRoot(2), 'window.frames[2].document');
+	});
+});
+
+describe('_deep', () => {
+	it('is a non-empty string defining _dq and _dqa helpers', () => {
+		assert.ok(typeof _deep === 'string' && _deep.length > 0);
+		assert.ok(_deep.includes('function _dq(') && _deep.includes('function _dqa('));
+	});
+});
+
+describe('COORD_EXPR', () => {
+	it('returns an IIFE string', () => {
+		const expr = COORD_EXPR('#btn', undefined);
+		assert.ok(expr.startsWith('(function(){') && expr.trimEnd().endsWith(')()'));
+	});
+
+	it('embeds the selector JSON-escaped', () => {
+		const sel = 'input[name="q"]';
+		assert.ok(COORD_EXPR(sel, undefined).includes(JSON.stringify(sel)));
+	});
+
+	it('uses document ROOT when no frame', () => {
+		assert.ok(COORD_EXPR('.foo', undefined).includes('ROOT=document'));
+	});
+
+	it('uses window.frames[N] when frame specified', () => {
+		assert.ok(COORD_EXPR('.foo', 1).includes('window.frames[1].document'));
+	});
+
+	it('includes sx/sy screen coordinate calculation', () => {
+		const expr = COORD_EXPR('a', undefined);
+		assert.ok(expr.includes('sx:') && expr.includes('sy:'));
+	});
+});
+
+describe('CLICK_EXPR', () => {
+	it('is a string IIFE embedding the selector', () => {
+		const expr = CLICK_EXPR('#submit', undefined);
+		assert.ok(typeof expr === 'string');
+		assert.ok(expr.includes(JSON.stringify('#submit')));
+	});
+
+	it('calls .click() and scrollIntoView on the element', () => {
+		const expr = CLICK_EXPR('a', undefined);
+		assert.ok(expr.includes('.click()') && expr.includes('scrollIntoView'));
+	});
+
+	it('returns null when element not found', () => {
+		assert.ok(CLICK_EXPR('a', undefined).includes('return null'));
+	});
+});
+
+describe('TEXT_CLICK_EXPR', () => {
+	it('is a string IIFE embedding text and index', () => {
+		const expr = TEXT_CLICK_EXPR('Submit', 0, undefined);
+		assert.ok(typeof expr === 'string');
+		assert.ok(expr.includes(JSON.stringify('Submit')));
+	});
+
+	it('uses frame reference when provided', () => {
+		assert.ok(TEXT_CLICK_EXPR('ok', 0, 2).includes('window.frames[2].document'));
+	});
+
+	it('embeds element index', () => {
+		assert.ok(TEXT_CLICK_EXPR('btn', 3, undefined).includes('i=3'));
+	});
+
+	it('includes unicode normalization and error path', () => {
+		const expr = TEXT_CLICK_EXPR('test', 0, undefined);
+		assert.ok(expr.includes('norm=') && expr.includes("'No match'"));
+	});
+});
+
+describe('TYPE_EXPR', () => {
+	it('is a string IIFE embedding selector and text', () => {
+		const expr = TYPE_EXPR('#q', 'search text', false, undefined);
+		assert.ok(expr.includes(JSON.stringify('#q')));
+		assert.ok(expr.includes(JSON.stringify('search text')));
+	});
+
+	it('returns "not found" when element missing', () => {
+		assert.ok(TYPE_EXPR('input', 'hi', false, undefined).includes("'not found'"));
+	});
+
+	it('includes form submit logic only when submit=true', () => {
+		assert.ok(TYPE_EXPR('input', 'q', true, undefined).includes('form') &&
+			TYPE_EXPR('input', 'q', true, undefined).includes('submit'));
+		assert.ok(!TYPE_EXPR('input', 'q', false, undefined).includes('form'));
+	});
+
+	it('fires input and change events', () => {
+		const expr = TYPE_EXPR('input', 'x', false, undefined);
+		assert.ok(expr.includes("'input'") && expr.includes("'change'"));
+	});
+});
+
+describe('TYPE_SLOW_EXPR', () => {
+	it('is a string IIFE embedding selector and text', () => {
+		const expr = TYPE_SLOW_EXPR('#search', 'hello', false, undefined);
+		assert.ok(expr.includes(JSON.stringify('#search')));
+		assert.ok(expr.includes(JSON.stringify('hello')));
+	});
+
+	it('returns a Promise for async char-by-char typing', () => {
+		assert.ok(TYPE_SLOW_EXPR('input', 'x', false, undefined).includes('new Promise'));
+	});
+
+	it('dispatches keydown/keypress/keyup per char', () => {
+		const expr = TYPE_SLOW_EXPR('input', 'x', false, undefined);
+		assert.ok(expr.includes('keydown') && expr.includes('keypress') && expr.includes('keyup'));
+	});
+
+	it('includes Enter submit when submit=true', () => {
+		assert.ok(TYPE_SLOW_EXPR('input', 'q', true, undefined).includes('Enter'));
+	});
+});
+
+describe('WAIT_EXPR', () => {
+	it('is a string IIFE embedding selector and timeout', () => {
+		const expr = WAIT_EXPR('.loading', 7500);
+		assert.ok(expr.includes(JSON.stringify('.loading')) && expr.includes('7500'));
+	});
+
+	it('returns a Promise that resolves with "found"', () => {
+		const expr = WAIT_EXPR('div', 1000);
+		assert.ok(expr.includes('new Promise') && expr.includes("res('found')"));
+	});
+
+	it('polls via setTimeout(poll)', () => {
+		assert.ok(WAIT_EXPR('div', 1000).includes('setTimeout(poll'));
+	});
+});
