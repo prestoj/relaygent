@@ -2,7 +2,12 @@ import { json, error } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 
-const LOGS_DIR = path.join(process.env.HOME, 'projects', 'relaygent', 'logs');
+const CONFIG_FILE = path.join(process.env.HOME, '.relaygent', 'config.json');
+function getLogsDir() {
+	try { return path.join(JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')).paths?.repo, 'logs'); } catch { /* ignore */ }
+	return path.join(process.env.HOME, 'relaygent', 'logs');
+}
+const LOGS_DIR = process.env.RELAYGENT_LOGS_DIR || getLogsDir();
 
 // Whitelist of log files exposed to the hub
 const ALLOWED = ['relaygent', 'relaygent-hub', 'relaygent-notifications', 'slack-socket'];
