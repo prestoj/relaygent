@@ -78,7 +78,7 @@ EOF
 fi
 
 # Pending reminders
-PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/pending" 2>/dev/null)
+PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/upcoming" 2>/dev/null)
 PENDING_COUNT=$(echo "$PENDING" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
 if [ "$PENDING_COUNT" -gt 0 ] 2>/dev/null; then
     echo -e "\033[1;33mReminders:\033[0m $PENDING_COUNT due"

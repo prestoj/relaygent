@@ -67,6 +67,28 @@ def create_reminder():
     return jsonify(result), 201
 
 
+@app.route("/upcoming", methods=["GET"])
+def list_reminders():
+    """List unfired reminders (used by hub dashboard)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, trigger_time, message, created_at, recurrence "
+            "FROM reminders WHERE fired = 0 ORDER BY trigger_time"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/reminder/<int:reminder_id>", methods=["DELETE"])
+def delete_reminder(reminder_id):
+    """Cancel a reminder by id."""
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
+        conn.commit()
+    if cur.rowcount == 0:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"ok": True})
+
+
 def is_recurring_reminder_due(recurrence, last_trigger_time):
     """Check if recurring reminder should fire now.
 
