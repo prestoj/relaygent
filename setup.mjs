@@ -24,7 +24,13 @@ const ask = (q) => new Promise(r => rl.question(q, r));
 const openBrowser = (url) => { const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'; spawnSync(cmd, [url], { stdio: 'ignore' }); };
 
 async function main() {
-	// Step 0: Claude Code — must be installed and authenticated before anything else
+	// Step 0: Prerequisites
+	if (spawnSync('git', ['--version'], { stdio: 'pipe' }).status !== 0) {
+		console.log(`${C.red}git required. Install git and re-run setup.${C.reset}`); process.exit(1);
+	}
+	const nodeMajor = parseInt(process.versions.node.split('.')[0], 10);
+	if (nodeMajor < 20) console.log(`${C.yellow}Warning: Node.js ${process.versions.node} detected; v20+ recommended.${C.reset}`);
+	// Claude Code — must be installed and authenticated before anything else
 	if (spawnSync('claude', ['--version'], { stdio: 'pipe' }).status !== 0) {
 		console.log(`${C.red}Claude Code required. Install: ${C.bold}npm install -g @anthropic-ai/claude-code${C.reset}`);
 		console.log(`Then run ${C.bold}claude${C.reset} to log in, then ${C.bold}./setup.sh${C.reset} again.`);
@@ -32,25 +38,20 @@ async function main() {
 	}
 	const claudeVer = spawnSync('claude', ['--version'], { stdio: 'pipe' });
 	console.log(`${C.green}Claude Code found: ${claudeVer.stdout.toString().trim()}${C.reset}`);
-
-	// Check authentication
 	if (spawnSync('claude', ['-p', 'hi'], { stdio: 'pipe', timeout: 15000 }).status !== 0) {
 		console.log(`${C.red}Claude Code not logged in. Run ${C.bold}claude${C.reset}${C.red} first.${C.reset}`);
 		process.exit(1);
 	}
 	console.log(`${C.green}Claude Code authenticated.${C.reset}\n`);
-
 	console.log(`Sets up a persistent AI agent with a web dashboard.\n`);
 
 	const agentName = 'relaygent'; const hubPort = 8080;
-
 	// Write config
 	console.log(`${C.yellow}Setting up directories...${C.reset}`);
 	mkdirSync(CONFIG_DIR, { recursive: true });
 	mkdirSync(KB_DIR, { recursive: true });
 	mkdirSync(LOGS_DIR, { recursive: true });
 	mkdirSync(DATA_DIR, { recursive: true });
-
 	const config = {
 		agent: { name: agentName },
 		hub: { port: hubPort },
@@ -137,7 +138,6 @@ async function main() {
 		console.log(`  ${C.red}Fix the error above and re-run setup.${C.reset}`);
 		rl.close(); process.exit(1);
 	}
-
 	setupClaudeMd(HOME, config, REPO_DIR, C);
 	// Create secrets file and store credentials
 	await setupSecrets(REPO_DIR, C);
