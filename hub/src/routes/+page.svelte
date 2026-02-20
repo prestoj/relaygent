@@ -7,6 +7,7 @@
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
 	let { data } = $props();
+	let recentTopics = $state(data.recentTopics || []);
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
 	let connected = $state(false);
@@ -125,6 +126,16 @@
 </section>
 {/if}
 
+{#if recentTopics.length > 0}
+<section class="recent-kb">
+	<span class="rk-label">KB</span>
+	{#each recentTopics as t}
+		<a class="rk-topic" href="/kb/{t.slug}">{t.title}</a>
+	{/each}
+	<a class="rk-more" href="/kb">all →</a>
+</section>
+{/if}
+
 <ContextBar pct={contextPct} />
 <SessionTimer />
 <section class="screen-toggle">
@@ -165,35 +176,23 @@
 	.badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 10px; background: #fee2e2; color: #dc2626; }  .badge.on { background: #dcfce7; color: #16a34a; }
 	.hook-ctx { font-size: 0.72em; color: var(--text-muted); padding: 0.3em 1em; background: var(--code-bg); border-radius: 6px; margin-bottom: 0.75em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.relay-toggle { font-size: 0.78em; padding: 0.2em 0.6em; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; background: var(--bg-surface); color: var(--text-muted); }
-	.relay-toggle:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
-	.relay-toggle.stopping { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
-	.relay-toggle.stopping:hover:not(:disabled) { background: #fee2e2; }
-	.relay-toggle.starting { border-color: #86efac; color: #16a34a; background: #f0fdf4; }
-	.relay-toggle.starting:hover:not(:disabled) { background: #dcfce7; }
-	.relay-toggle:disabled { opacity: 0.5; cursor: wait; }
+	.relay-toggle:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }  .relay-toggle:disabled { opacity: 0.5; cursor: wait; }
+	.relay-toggle.stopping { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }  .relay-toggle.stopping:hover:not(:disabled) { background: #fee2e2; }
+	.relay-toggle.starting { border-color: #86efac; color: #16a34a; background: #f0fdf4; }  .relay-toggle.starting:hover:not(:disabled) { background: #dcfce7; }
 	.model-picker select { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.4em; font-size: 0.78em; cursor: pointer; }
 	.model-picker select:hover { border-color: var(--text-muted); }  .model-picker select:disabled { opacity: 0.5; cursor: wait; }
-	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }
-	.svc { display: flex; align-items: center; gap: 0.3em; font-size: 0.78em; color: var(--text-muted); }
-	.svc .dot { width: 5px; height: 5px; border-radius: 50%; }
+	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }  .svc { display: flex; align-items: center; gap: 0.3em; font-size: 0.78em; color: var(--text-muted); }  .svc .dot { width: 5px; height: 5px; border-radius: 50%; }
 	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; } .relay-detail { opacity: 0.7; font-size: 0.9em; margin-left: 0.1em; }
 	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
-	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }
-	.gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
-	.attention { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.75em 1em; margin-bottom: 1em; }
-	.att-hdr { display: flex; justify-content: space-between; align-items: center; }
-	.attention h3 { margin: 0 0 0.3em; font-size: 0.9em; color: var(--text-muted); }
-	.att-item { display: flex; justify-content: space-between; gap: 0.5em; padding: 0.4em 0.6em; background: var(--code-bg); border-radius: 4px; margin-bottom: 0.3em; font-size: 0.88em; }
-	.att-item :global(strong) { color: var(--link); }
-	.x, .clear-all { background: none; border: none; color: var(--text-muted); cursor: pointer; }  .x:hover, .clear-all:hover { color: var(--text); }
-	.clear-all { font-size: 0.75em; border: 1px solid var(--border); padding: 0.2em 0.4em; border-radius: 4px; }
-	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }
-	.waiting-icon { font-size: 2em; margin-bottom: 0.5em; animation: pulse 2s infinite; }
-	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }
-	.waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
-	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }
-	.toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }
-	.screen-wrap { margin-top: 0.5em; }
+	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }  .gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
+	.attention { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.75em 1em; margin-bottom: 1em; }  .att-hdr { display: flex; justify-content: space-between; align-items: center; }  .attention h3 { margin: 0 0 0.3em; font-size: 0.9em; color: var(--text-muted); }
+	.att-item { display: flex; justify-content: space-between; gap: 0.5em; padding: 0.4em 0.6em; background: var(--code-bg); border-radius: 4px; margin-bottom: 0.3em; font-size: 0.88em; }  .att-item :global(strong) { color: var(--link); }
+	.x, .clear-all { background: none; border: none; color: var(--text-muted); cursor: pointer; }  .x:hover, .clear-all:hover { color: var(--text); }  .clear-all { font-size: 0.75em; border: 1px solid var(--border); padding: 0.2em 0.4em; border-radius: 4px; }
+	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; animation: pulse 2s infinite; }
+	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
+	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
+	.recent-kb { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 0.6em; padding: 0.4em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; font-size: 0.8em; }  .rk-label { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.25em; }
+	.rk-topic { color: var(--link); text-decoration: none; padding: 0.1em 0.4em; background: var(--code-bg); border-radius: 4px; }  .rk-topic:hover { text-decoration: underline; }  .rk-more { color: var(--text-muted); text-decoration: none; margin-left: auto; }  .rk-more:hover { color: var(--text); }
 	@media (max-width: 768px) {
 		.goal { flex-direction: column; gap: 0.25em; }
 	}
