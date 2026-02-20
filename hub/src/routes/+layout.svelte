@@ -6,15 +6,17 @@
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
-	let deadKbLinks = $state(data.deadKbLinks || 0);
+	let deadKbLinks = $derived(data.deadKbLinks || 0);
 
+	// Sync dueTasks when layout data changes (e.g. navigation)
+	$effect(() => { dueTasks = data.dueTasks || 0; });
 
+	// Initialize darkMode from localStorage, then keep body class in sync
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
-		if (stored !== null) darkMode = stored === 'true';
-		else darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		document.body.classList.toggle('dark-mode', darkMode);
+		darkMode = stored !== null ? stored === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 	}
+	$effect(() => { if (browser) document.body.classList.toggle('dark-mode', darkMode); });
 
 	function toggleDark() {
 		darkMode = !darkMode;
