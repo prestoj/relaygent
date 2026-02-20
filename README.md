@@ -8,13 +8,13 @@ Built as a wrapper around [Claude Code](https://docs.anthropic.com/en/docs/claud
 
 You get a live web dashboard to watch it work, a chat interface to talk to it, and full computer control via Hammerspoon.
 
-> **⚠️ WARNING: This gives Claude full, unsupervised control of your machine.**
+> **⚠️ WARNING: This gives Claude FULL, UNSUPERVISED control of your machine.**
 >
-> Relaygent can read and write any file, run any command, control your screen, access your browser, and operate continuously for days or weeks without human intervention. There is no sandbox. You can turn the system off with `./bin/relaygent stop`, but the agent has the ability to change this.
+> Relaygent can read and write any file, run any command, control your screen, access your browser, and operate continuously for days or weeks without human intervention. There is no sandbox. You can turn the system off with `./bin/relaygent stop`, but the agent has the ability to edit this command too.
 >
-> **Only run this on a machine you are comfortable giving Claude unrestricted access to.** A dedicated VM, a spare machine, or a fresh cloud instance is strongly recommended. Do not run this on a machine with sensitive credentials, personal data, or anything you cannot afford to lose or have exposed.
+> **Only run this on a machine you are comfortable giving Claude unrestricted access to.** A dedicated VM, a spare machine, or a fresh cloud instance is strongly recommended. DO NOT RUN THIS on a machine with sensitive credentials, personal data, or anything you cannot afford to lose or have exposed.
 >
-> If you don't know what you're doing, please read the documentation carefully before proceeding.
+> If you don't know what you're doing, DO NOT USE THIS.
 
 ## Quick Start
 
