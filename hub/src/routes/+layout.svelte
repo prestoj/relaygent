@@ -1,5 +1,6 @@
 <script>
 	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -8,6 +9,14 @@
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
 	let deadKbLinks = $derived(data.deadKbLinks || 0);
+	let notifCount = $state(0);
+
+	onMount(() => {
+		const poll = async () => {
+			try { notifCount = ((await (await fetch('/api/notifications/pending?fast=1')).json()).notifications || []).length; } catch {}
+		};
+		poll(); const id = setInterval(poll, 60000); return () => clearInterval(id);
+	});
 
 	// Sync dueTasks when layout data changes (e.g. navigation)
 	$effect(() => { dueTasks = data.dueTasks || 0; });
@@ -54,6 +63,7 @@
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
+		<a href="/notifications" class="notif-bell" class:active={isActive('/notifications')} onclick={closeMenu} title="Notifications">&#x1F514;{#if notifCount > 0}<span class="unread-badge">{notifCount}</span>{/if}</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
 		</button>
@@ -118,6 +128,8 @@
 		transition: transform 0.2s;
 	}
 	.theme-toggle:hover { transform: scale(1.2); }
+	.notif-bell { font-size: 1.1em; line-height: 1; text-decoration: none !important; display: inline-flex; align-items: center; }
+	.notif-bell:hover { transform: scale(1.15); }
 	.logout-btn {
 		background: none; border: 1px solid var(--border); cursor: pointer;
 		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
