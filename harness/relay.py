@@ -16,7 +16,8 @@ from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
 from relay_loop import Action, LoopState, handle_error
 from relay_utils import (acquire_lock, cleanup_context_file, cleanup_pid_file,
-                         commit_kb, notify_crash, rotate_log, startup_init)
+                         commit_kb, notify_crash, notify_lifecycle, rotate_log,
+                         startup_init)
 from session import SleepManager
 from wake_cycle import run_wake_cycle
 
@@ -31,6 +32,7 @@ class RelayRunner:
     def _spawn_successor(self, workspace, state, reason):
         """Spawn a successor session."""
         log(f"{reason} ({self.timer.remaining() // 60} min remaining)")
+        notify_lifecycle("New session", reason)
         commit_kb()
         cleanup_context_file()
         state.new_session()
@@ -116,6 +118,7 @@ class RelayRunner:
                     continue
                 log(f"Idle output {state.idle_continuation_count} times in a row, going to sleep cycle")
             state.idle_continuation_count = 0
+            notify_lifecycle("Sleeping", "waiting for notifications")
             wake_result = run_wake_cycle(self.sleep_mgr, self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
@@ -126,6 +129,7 @@ class RelayRunner:
 
         goal = validate_and_log()
         commit_kb()
+        notify_lifecycle("Relay stopped", goal or "session complete")
         set_status("off", goal=goal)
         cleanup_context_file()
         log("Relay run complete")

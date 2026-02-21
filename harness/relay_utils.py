@@ -71,6 +71,12 @@ def notify_crash(crash_count: int, exit_code: int) -> None:
     _send_slack_alert(f":rotating_light: *Relay crash alert*: {msg}")
 
 
+def notify_lifecycle(event: str, detail: str = "") -> None:
+    """Lightweight hub chat notification for session lifecycle events."""
+    msg = f"[relay] {event}" + (f" — {detail}" if detail else "")
+    _send_chat_alert(msg)
+
+
 def _send_chat_alert(message: str) -> None:
     """Best-effort alert to the user via hub chat."""
     import json
