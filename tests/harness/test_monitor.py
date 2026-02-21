@@ -98,6 +98,44 @@ class TestMonitorContextWarning:
         assert p._context_warning_sent is False
 
 
+class TestMonitorRateLimited:
+    def test_detects_rate_limit_in_log(self, tmp_path, monkeypatch):
+        import process as proc_mod
+        log_file = tmp_path / "test.log"
+        log_file.write_text("Starting...\nYou've hit your limit. Resets 11pm.\n")
+        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
+        p = _make_process(tmp_path)
+        p.process.poll.return_value = 0
+        with patch("process.get_jsonl_size", return_value=0), \
+             patch("process.check_incomplete_exit", return_value=(False, None)):
+            result = p.monitor(0)
+        assert result.rate_limited is True
+
+    def test_no_rate_limit_for_normal_log(self, tmp_path, monkeypatch):
+        import process as proc_mod
+        log_file = tmp_path / "test.log"
+        log_file.write_text("Starting...\nProcessing...\nDone\n")
+        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
+        p = _make_process(tmp_path)
+        p.process.poll.return_value = 0
+        with patch("process.get_jsonl_size", return_value=100), \
+             patch("process.check_incomplete_exit", return_value=(False, None)):
+            result = p.monitor(0)
+        assert result.rate_limited is False
+
+    def test_detects_usage_limit(self, tmp_path, monkeypatch):
+        import process as proc_mod
+        log_file = tmp_path / "test.log"
+        log_file.write_text("Error: usage limit exceeded\n")
+        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
+        p = _make_process(tmp_path)
+        p.process.poll.return_value = 0
+        with patch("process.get_jsonl_size", return_value=0), \
+             patch("process.check_incomplete_exit", return_value=(False, None)):
+            result = p.monitor(0)
+        assert result.rate_limited is True
+
+
 class TestMonitorContextPct:
     def test_returns_context_pct(self, tmp_path):
         p = _make_process(tmp_path)

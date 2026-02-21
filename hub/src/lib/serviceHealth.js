@@ -47,7 +47,8 @@ function checkRelayStatus() {
 	try {
 		const { status, updated } = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
 		const ok = status === 'working' || status === 'sleeping';
-		let detail = status;
+		const labels = { rate_limited: 'rate limited', crashed: 'crashed' };
+		let detail = labels[status] || status;
 		if (updated) {
 			const ageMin = Math.round((Date.now() - new Date(updated).getTime()) / 60000);
 			if (ageMin >= 1) detail = `${status} (${ageMin}m)`;
