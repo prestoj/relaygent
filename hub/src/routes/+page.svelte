@@ -84,6 +84,7 @@
 	onDestroy(() => { if (ws) ws.close(); clearInterval(svcInterval); if (browser) window.removeEventListener('scroll', handleScroll); });
 	function clearAttentionItem(index) { attentionItems = attentionItems.filter((_, i) => i !== index); }
 	function clearAllAttention() { attentionItems = []; }
+	$effect(() => { if (browser) document.title = `Relaygent · ${relayRunning ? 'Live' : 'Offline'}${contextPct ? ` (${contextPct}%)` : ''}`; });
 </script>
 
 <svelte:head><title>Relaygent</title></svelte:head>

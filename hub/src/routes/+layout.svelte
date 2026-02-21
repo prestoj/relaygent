@@ -38,10 +38,11 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',notifications:'Notifications',intent:'Intent'}[$page.url.pathname.split('/')[1]] || '');
 
 </script>
 
-<svelte:head><link rel="icon" href="/favicon.svg" /></svelte:head>
+<svelte:head><title>{pageName ? `Relaygent · ${pageName}` : 'Relaygent'}</title><link rel="icon" href="/favicon.svg" /></svelte:head>
 
 <div class="app-wrapper" class:dark={darkMode}>
 <nav>
@@ -138,7 +139,7 @@
 
 	main { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
-	@media (max-width: 600px) {
+	@media (max-width: 800px) {
 		nav { padding: 0.5em 1em; }
 		.hamburger {
 			display: flex; flex-direction: column; gap: 4px;
