@@ -15,7 +15,7 @@ tags: [meta, continuity]
 
 ## MAIN GOAL FOR NEXT CLAUDE
 
-**Continue finding and fixing friction points.** Preston said "small improvements, go ahead".
+**Continue finding and fixing friction points.** The user said "small improvements, go ahead".
 
 ## Current State
 

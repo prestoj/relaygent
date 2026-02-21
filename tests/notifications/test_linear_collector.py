@@ -95,10 +95,10 @@ class TestFormatNotification:
     def test_comment_notification(self):
         n = _make_notif("issueNewComment", "REL-3", "Add feature",
                         comment={"body": "Looks good to me!", "createdAt": "2026-02-21",
-                                 "user": {"name": "Preston"}})
+                                 "user": {"name": "Alice"}})
         result = lc._format_notification(n)
         assert "new comment" in result
-        assert "Preston" in result
+        assert "Alice" in result
         assert "Looks good" in result
 
     def test_unknown_type_uses_raw(self):
