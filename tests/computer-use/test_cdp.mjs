@@ -13,6 +13,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import fs from 'node:fs';
 
 const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT ?? '9223', 10);
 const IS_MAC = process.platform === 'darwin';
@@ -163,5 +164,46 @@ describe('cdp module', () => {
 	it('cdpEval: works after reconnect', { skip: SKIP }, async () => {
 		const result = await cdpMod.cdpEval('40 + 2');
 		assert.equal(result, 42);
+	});
+
+	it('cdpConnected: returns true when connected', { skip: SKIP }, async () => {
+		await cdpMod.getConnection();
+		assert.equal(cdpMod.cdpConnected(), true);
+	});
+
+	it('cdpConnected: returns falsy after disconnect', { skip: SKIP }, () => {
+		cdpMod.cdpDisconnect();
+		assert.ok(!cdpMod.cdpConnected(), 'should be falsy after disconnect');
+	});
+});
+
+// ── patchChromePrefs ─────────────────────────────────────────────────────────
+
+describe('patchChromePrefs', () => {
+	const PREFS_PATH = `${process.env.HOME}/data/chrome-debug-profile/Default/Preferences`;
+	const prefsExist = (() => { try { return !!fs.statSync(PREFS_PATH); } catch { return false; } })();
+	const PREFS_SKIP = prefsExist ? false : 'Chrome debug profile prefs not found';
+
+	it('does not throw', () => {
+		assert.doesNotThrow(() => cdpMod?.patchChromePrefs?.() ?? null);
+	});
+
+	it('sets exit_type to Normal', { skip: PREFS_SKIP }, () => {
+		cdpMod.patchChromePrefs();
+		const prefs = JSON.parse(fs.readFileSync(PREFS_PATH, 'utf8'));
+		assert.equal(prefs.profile.exit_type, 'Normal');
+		assert.equal(prefs.profile.exited_cleanly, true);
+	});
+
+	it('blocks permission prompts via default_content_setting_values', { skip: PREFS_SKIP }, () => {
+		cdpMod.patchChromePrefs();
+		const prefs = JSON.parse(fs.readFileSync(PREFS_PATH, 'utf8'));
+		const dcsv = prefs.profile.default_content_setting_values;
+		assert.ok(dcsv, 'default_content_setting_values exists');
+		assert.equal(dcsv.clipboard, 2, 'clipboard blocked');
+		assert.equal(dcsv.notifications, 2, 'notifications blocked');
+		assert.equal(dcsv.geolocation, 2, 'geolocation blocked');
+		assert.equal(dcsv.media_stream_camera, 2, 'camera blocked');
+		assert.equal(dcsv.media_stream_mic, 2, 'mic blocked');
 	});
 });

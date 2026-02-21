@@ -141,4 +141,28 @@ export function registerBrowserTools(server, IS_LINUX) {
       return jsonRes({ status: result ?? "timeout", selector });
     }
   );
+
+  server.tool("browser_get_text",
+    "Get visible text content from the page or a specific element. Useful for reading content without screenshots.",
+    { selector: z.string().optional().describe("CSS selector (default: body)"),
+      max_length: z.coerce.number().optional().describe("Max characters (default: 4000)") },
+    async ({ selector, max_length = 4000 }) => {
+      const sel = selector ? `_dq(${JSON.stringify(selector)})` : `document.body`;
+      const expr = `(function(){${_deep}var el=${sel};return el?(el.innerText||'').substring(0,${max_length}):'not found'})()`;
+      const text = await cdpEval(expr);
+      if (text === null) return jsonRes({ error: cdpErr(selector || 'body') });
+      if (text === 'not found') return jsonRes({ error: `Element not found: ${selector}` });
+      return jsonRes({ text, length: text.length });
+    }
+  );
+
+  server.tool("browser_url",
+    "Get the current page URL and title.",
+    {},
+    async () => {
+      const r = await cdpEval(`JSON.stringify({url:location.href,title:document.title})`);
+      if (!r) return jsonRes({ error: 'CDP not connected — use browser_navigate first' });
+      try { return jsonRes(JSON.parse(r)); } catch { return jsonRes({ url: r }); }
+    }
+  );
 }
