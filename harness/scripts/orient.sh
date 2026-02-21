@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 KB_DIR="${RELAYGENT_KB_DIR:-$REPO_DIR/knowledge/topics}"
 INTENT_FILE="$KB_DIR/INTENT.md"

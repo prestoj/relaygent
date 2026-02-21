@@ -2,7 +2,7 @@
 # Relaygent update — pull latest code, rebuild hub, and restart it
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 PID_DIR="$HOME/.relaygent"
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -27,7 +27,7 @@ fi
 
 # Rebuild hub
 echo -e "  Rebuilding hub..."
-if npm install -q --prefix "$SCRIPT_DIR/hub" && npm run build --prefix "$SCRIPT_DIR/hub" >/dev/null 2>&1; then
+if npm install -q --prefix "$SCRIPT_DIR/hub" && (cd "$SCRIPT_DIR/hub" && npx vite build >/dev/null 2>&1); then
     echo -e "  Hub: ${GREEN}built${NC}"
     git -C "$SCRIPT_DIR" rev-parse HEAD > "$SCRIPT_DIR/data/hub-build-commit" 2>/dev/null || true
 else

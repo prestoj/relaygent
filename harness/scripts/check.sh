@@ -3,7 +3,7 @@
 # Exit 0 = all critical checks passed (warnings OK), Exit 1 = failures.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 KB_DIR="${RELAYGENT_KB_DIR:-}"
 
