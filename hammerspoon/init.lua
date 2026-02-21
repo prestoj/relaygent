@@ -10,9 +10,29 @@ hs.openConsoleOnDockClick(false)
 pcall(function() hs.console.hswindow():close() end)
 local json = hs.json
 local PORT = tonumber(os.getenv("HAMMERSPOON_PORT")) or 8097
+local MEM_LIMIT_MB = tonumber(os.getenv("HAMMERSPOON_MEM_LIMIT_MB")) or 500
 local input = dofile(hs.configdir .. "/input_handlers.lua")
 local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
 local ax_press = dofile(hs.configdir .. "/ax_press.lua")
+
+-- Get Hammerspoon RSS in MB (returns nil on error)
+local function getRSSMB()
+    local pid = hs.processInfo.processID
+    local h = io.popen(string.format("ps -o rss= -p %d 2>/dev/null", pid))
+    if not h then return nil end
+    local out = h:read("*a"); h:close()
+    local kb = tonumber(out)
+    return kb and math.floor(kb / 1024) or nil
+end
+
+-- Memory watchdog: check RSS every 60s, reload if over limit
+_G.__claude_mem_watchdog = hs.timer.doEvery(60, function()
+    local mb = getRSSMB()
+    if mb and mb > MEM_LIMIT_MB then
+        hs.printf("Memory watchdog: RSS %dMB exceeds %dMB limit — reloading", mb, MEM_LIMIT_MB)
+        hs.reload()
+    end
+end)
 
 local function annotateWithIndicator(img, ix, iy)
     local sz = img:size()
@@ -39,7 +59,7 @@ local function handleRequest(method, path, headers, body)
     local key = method .. " " .. path
     local ok, rb, code = pcall(function()
         if key == "GET /health" then
-            return json.encode({status="ok", screens=#hs.screen.allScreens()}), 200
+            return json.encode({status="ok", screens=#hs.screen.allScreens(), rss_mb=getRSSMB()}), 200
         elseif key == "POST /reload" then
             hs.timer.doAfter(0.1, hs.reload)
             return json.encode({status="reloading"}), 200
