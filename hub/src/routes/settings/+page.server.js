@@ -34,6 +34,20 @@ function loadConfig() {
 	} catch { return { hubPort: 8080, notificationsPort: 8083, repoPath: '', authEnabled: false }; }
 }
 
+function getSetupChecks(config) {
+	const home = os.homedir();
+	const kbDir = process.env.RELAYGENT_KB_DIR || path.join(home, 'knowledge', 'topics');
+	const checks = [];
+	const fileHasContent = (p) => { try { return fs.readFileSync(p, 'utf-8').trim().length > 50; } catch { return false; } };
+	const fileExists = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
+	checks.push({ label: 'Intent', ok: fileHasContent(path.join(kbDir, 'INTENT.md')), hint: 'Edit ~/knowledge/topics/INTENT.md to set agent direction' });
+	checks.push({ label: 'CLAUDE.md', ok: fileExists(path.join(home, 'CLAUDE.md')) || fileExists(path.join(process.env.RELAYGENT_REPO || '.', 'CLAUDE.md')), hint: 'Run relaygent setup to generate CLAUDE.md' });
+	checks.push({ label: 'Slack', ok: fileExists(path.join(home, '.relaygent', 'slack', 'bot-token')) || fileExists(path.join(home, '.relaygent', 'slack', 'app-token')), hint: 'Run relaygent mcp add slack to configure' });
+	checks.push({ label: 'Email', ok: fileExists(path.join(home, '.relaygent', 'gmail', 'credentials.json')), hint: 'Run node email/setup-gmail.mjs to configure' });
+	checks.push({ label: 'Auth', ok: config.authEnabled, hint: 'Set hub.passwordHash in ~/.relaygent/config.json' });
+	return checks;
+}
+
 export async function load() {
 	const services = await getServiceHealth();
 	const upSec = os.uptime();
@@ -56,5 +70,6 @@ export async function load() {
 		const date = execFileSync('git', ['log', '-1', '--format=%cd', '--date=short'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
 		version = `${hash} (${date})`;
 	} catch { /* not in git repo */ }
-	return { system, services, mcpServers: loadMcpServers(), config: loadConfig(), version };
+	const config = loadConfig();
+	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config) };
 }

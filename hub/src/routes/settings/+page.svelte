@@ -19,6 +19,22 @@
 
 <h1>Settings</h1>
 
+{#if data.setupChecks?.some(c => !c.ok)}
+<section class="card">
+	<h2>Setup</h2>
+	<div class="check-list">
+		{#each data.setupChecks as check}
+			<div class="check-row">
+				<span class="dot" class:up={check.ok} class:down={!check.ok}></span>
+				<span class="check-label">{check.label}</span>
+				{#if !check.ok}<span class="check-hint">{check.hint}</span>{/if}
+			</div>
+		{/each}
+	</div>
+	<p class="hint">Complete all checks for the best experience</p>
+</section>
+{/if}
+
 <section class="card">
 	<h2>System</h2>
 	<div class="grid">
@@ -98,6 +114,10 @@
 	.mcp-name { font-weight: 600; font-family: monospace; white-space: nowrap; }
 	.mcp-cmd { color: var(--text-muted); font-family: monospace; font-size: 0.85em; word-break: break-word; }
 	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; }
+	.check-list { display: flex; flex-direction: column; gap: 0.5em; }
+	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
+	.check-label { font-weight: 600; min-width: 5em; }
+	.check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
 	@media (max-width: 600px) {
 		.grid { grid-template-columns: 7em 1fr; gap: 0.25em 0.5em; font-size: 0.85em; }
 	}
