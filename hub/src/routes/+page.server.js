@@ -15,15 +15,6 @@ function isRelayRunning() {
 	} catch { return false; }
 }
 
-const CONFIG_PATH = path.join(process.env.HOME, '.relaygent', 'config.json');
-
-function getModel() {
-	try {
-		const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-		return config.model || null;
-	} catch { return null; }
-}
-
 function getMainGoal() {
 	const handoffPath = path.join(getKbDir(), 'HANDOFF.md');
 	try {
@@ -76,7 +67,6 @@ export async function load() {
 		relayActivity: relayActivity?.recentActivity || [],
 		contextPct: getContextPct(),
 		services,
-		currentModel: getModel(),
 		relayRunning: isRelayRunning(),
 	};
 }

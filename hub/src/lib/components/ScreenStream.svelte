@@ -12,20 +12,35 @@
 	let pending = false;
 	let dragState = null; // { startX, startY, moved } when dragging
 	let justDragged = false; // prevents click from firing after drag
+	let nativeWidth = 0; // actual screen width (before scaling)
 
 	function refresh() {
 		if (!imgEl || pending) return;
 		pending = true;
-		const img = new Image();
-		img.onload = () => { imgEl.src = img.src; online = true; everLoaded = true; pending = false; };
-		img.onerror = () => { online = false; pending = false; };
-		img.src = `/api/screen?t=${Date.now()}`;
+		fetch(`/api/screen?t=${Date.now()}`)
+			.then(res => {
+				const w = parseInt(res.headers.get('X-Native-Width') || '0', 10);
+				if (w > 0) nativeWidth = w;
+				return res.blob();
+			})
+			.then(blob => {
+				imgEl.src = URL.createObjectURL(blob);
+				online = true;
+				everLoaded = true;
+				pending = false;
+			})
+			.catch(() => { online = false; pending = false; });
 	}
 
 	function toNative(e) {
 		const rect = imgEl.getBoundingClientRect();
-		const scaleX = imgEl.naturalWidth / rect.width;
-		const scaleY = imgEl.naturalHeight / rect.height;
+		// Use nativeWidth if available (corrects for server-side scaling to MAX_WIDTH)
+		const effectiveW = nativeWidth || imgEl.naturalWidth;
+		const effectiveH = imgEl.naturalWidth > 0
+			? effectiveW * imgEl.naturalHeight / imgEl.naturalWidth
+			: imgEl.naturalHeight;
+		const scaleX = effectiveW / rect.width;
+		const scaleY = effectiveH / rect.height;
 		return { x: Math.round((e.clientX - rect.left) * scaleX), y: Math.round((e.clientY - rect.top) * scaleY) };
 	}
 

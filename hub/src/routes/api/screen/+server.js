@@ -41,6 +41,7 @@ export async function GET() {
 			headers: {
 				'Content-Type': 'image/png',
 				'Cache-Control': 'no-cache, no-store',
+				'X-Native-Width': String(pngWidth),
 			}
 		});
 	} catch {
