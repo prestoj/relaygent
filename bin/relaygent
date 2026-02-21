@@ -54,7 +54,7 @@ print(s,t)
         fi
         ;;
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
-    orient|check|update|health|clean-logs) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    orient|check|update|health|clean-logs|cleanup) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
@@ -77,6 +77,7 @@ print(s,t)
             "check" "Diagnose configuration" \
             "health" "Ping all services and report status" \
             "update" "Pull latest, rebuild, restart" \
+            "cleanup" "Free disk: old sessions, caches, logs (--dry-run)" \
             "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
             "install-services" "Set up auto-restart services (macOS/Linux)" \
             "set-password" "Set/remove hub dashboard auth (--remove)" \
