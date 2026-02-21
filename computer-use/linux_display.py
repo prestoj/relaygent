@@ -65,14 +65,12 @@ def screenshot(params: dict) -> tuple[dict, int]:
 
 def windows(_params: dict) -> tuple[dict, int]:
     wins = []
-    # Build WM_CLASS lookup from wmctrl -l -x (for app names)
     wm_classes: dict[str, str] = {}
     try:
         xout = _run(["wmctrl", "-l", "-x"])
         for line in xout.splitlines():
             parts = line.split(None, 3)
             if len(parts) >= 3:
-                # parts[2] is WM_CLASS, e.g. "xfce4-terminal.Xfce4-terminal"
                 wm_classes[parts[0]] = parts[2].split(".")[0]
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
@@ -164,26 +162,27 @@ _CHROME_ARGS = [
 ]
 
 
-def _patch_chrome_prefs() -> None:
-    """Set exit_type=Normal so Chrome doesn't show 'Restore pages?' bubble."""
-    import json as _json
-    pref = "/tmp/chrome-debug-profile/Default/Preferences"
+def _patch_chrome_prefs():
+    import json as _j
+    p = "/tmp/chrome-debug-profile/Default/Preferences"
     try:
-        with open(pref) as f:
-            data = _json.load(f)
-        data.setdefault("profile", {})["exit_type"] = "Normal"
-        data["profile"]["exited_cleanly"] = True
-        with open(pref, "w") as f:
-            _json.dump(data, f)
-    except (FileNotFoundError, ValueError, OSError):
-        pass
+        d = _j.loads(open(p).read())
+        d.setdefault("profile", {}).update(exit_type="Normal", exited_cleanly=True)
+        open(p, "w").write(_j.dumps(d))
+    except (FileNotFoundError, ValueError, OSError): pass
+
+
+def _kill_non_cdp_chrome():
+    import urllib.request, time
+    try: urllib.request.urlopen("http://localhost:9223/json/version", timeout=1); return
+    except Exception: pass
+    subprocess.run(["pkill", "-f", "chrome"], capture_output=True, timeout=3); time.sleep(0.5)
 
 
 def launch(params: dict) -> tuple[dict, int]:
     app = params.get("app")
     if not app:
         return {"error": "app required"}, 400
-    # Try original name, lowercase, hyphenated-lowercase, then aliases
     candidates = [app, app.lower(), app.lower().replace(" ", "-")]
     base = app.lower().replace(" ", "-")
     candidates.extend(_ALIASES.get(base, []))
@@ -192,6 +191,7 @@ def launch(params: dict) -> tuple[dict, int]:
             extra = _CHROME_ARGS if name in _CHROME_NAMES else []
             if name in _CHROME_NAMES:
                 _patch_chrome_prefs()
+                _kill_non_cdp_chrome()
             subprocess.Popen([name] + extra, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             return {"launched": name}, 200
