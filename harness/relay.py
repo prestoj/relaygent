@@ -16,6 +16,7 @@ from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
 from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, notify_crash, rotate_log, startup_init  # noqa: E501
 from session import SleepManager
+from wake_cycle import run_wake_cycle
 
 
 class RelayRunner:
@@ -168,7 +169,7 @@ class RelayRunner:
                     continue
                 log(f"Idle output {idle_continuation_count} times in a row, going to sleep cycle")
             idle_continuation_count = 0  # reset when going to sleep (idle limit or non-idle)
-            wake_result = self.sleep_mgr.run_wake_cycle(self.claude)
+            wake_result = run_wake_cycle(self.sleep_mgr, self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
                 session_id = self._spawn_successor(

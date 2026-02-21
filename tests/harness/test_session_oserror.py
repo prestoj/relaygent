@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 
 from session import SleepManager, SleepResult
+from wake_cycle import run_wake_cycle
 from process import ClaudeResult
 
 
@@ -39,8 +40,8 @@ class TestRunWakeCycleOSError:
             SleepResult(woken=False),                       # done
         ]
         with patch.object(mgr, "auto_sleep_and_wake", side_effect=wake_results), \
-             patch("session.log"), patch("session.time.sleep"):
-            mgr.run_wake_cycle(claude)
+             patch("wake_cycle.log"), patch("wake_cycle.time.sleep"):
+            run_wake_cycle(mgr, claude)
         assert claude.resume.call_count == 2
 
     def test_gives_up_after_max_oserror_retries(self):
@@ -49,11 +50,10 @@ class TestRunWakeCycleOSError:
         mgr = SleepManager(timer)
         claude = MagicMock()
         claude.resume.side_effect = OSError("persistent error")
-        # Always wake so the loop keeps trying
         always_wake = SleepResult(woken=True, wake_message="ping")
         with patch.object(mgr, "auto_sleep_and_wake", return_value=always_wake), \
-             patch("session.log"), patch("session.time.sleep"):
-            result = mgr.run_wake_cycle(claude)
+             patch("wake_cycle.log"), patch("wake_cycle.time.sleep"):
+            result = run_wake_cycle(mgr, claude)
         assert result is None
 
     def test_not_woken_returns_none(self):
@@ -63,7 +63,7 @@ class TestRunWakeCycleOSError:
         claude = MagicMock()
         with patch.object(mgr, "auto_sleep_and_wake",
                           return_value=SleepResult(woken=False)), \
-             patch("session.log"), patch("session.time.sleep"):
-            result = mgr.run_wake_cycle(claude)
+             patch("wake_cycle.log"), patch("wake_cycle.time.sleep"):
+            result = run_wake_cycle(mgr, claude)
         assert result is None
         claude.resume.assert_not_called()
