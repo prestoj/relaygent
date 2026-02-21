@@ -30,6 +30,12 @@ class SleepResult:
 MAX_CACHE_STALE = 60  # Force wake if cache file hasn't updated in this many seconds
 
 
+def _is_sleep_timeout_reminder(notif: dict) -> bool:
+    """Return True if this notification is a sleep() max_minutes timer reminder."""
+    return (notif.get("type") == "reminder"
+            and notif.get("message", "").startswith("Sleep timeout"))
+
+
 class SleepManager:
     """Handles sleep polling using cached notification file."""
 
@@ -48,25 +54,17 @@ class SleepManager:
 
         new_notifications = []
         for notif in notifications:
-            notif_timestamps = self._extract_timestamps(notif)
-            new_timestamps = notif_timestamps - self._seen_timestamps
-            if new_timestamps:
-                self._seen_timestamps.update(notif_timestamps)
+            ts = self._extract_timestamps(notif)
+            if ts - self._seen_timestamps:
+                self._seen_timestamps.update(ts)
                 new_notifications.append(notif)
-
         return new_notifications
 
     def _extract_timestamps(self, notif: dict) -> set:
         """Extract dedup keys from a notification."""
-        timestamps = set()
-        for msg in notif.get("messages", []):
-            ts = msg.get("timestamp")
-            if ts:
-                timestamps.add(ts)
-
+        timestamps = {m["timestamp"] for m in notif.get("messages", []) if m.get("timestamp")}
         if notif.get("type") == "reminder":
             timestamps.add(f"reminder-{notif.get('id')}")
-        # Slack: use individual message ts values so each message wakes once
         source = notif.get("source", "")
         for ch in notif.get("channels", []):
             msgs = ch.get("messages", [])
@@ -74,7 +72,6 @@ class SleepManager:
                 timestamps.update(f"{source}-{m['ts']}" for m in msgs if m.get("ts"))
             else:
                 timestamps.add(f"{source}-{ch.get('id', '')}-{ch.get('unread', 0)}")
-        # Fallback: if no dedup keys found, use type+source as key
         if not timestamps and notif.get("type"):
             timestamps.add(f"{notif['type']}-{source}-{notif.get('count', 0)}")
 
@@ -91,17 +88,18 @@ class SleepManager:
 
     def _wait_for_wake(self) -> tuple[bool, list]:
         """Poll cache file for wake condition. Returns (woken, notifications)."""
-        # Slack dedup keys include unread count, so new messages produce new keys.
-        # Don't clear them here — causes infinite wake loop on channels with phantom unreads.
         set_status("sleeping")
         log("Sleeping, waiting for notifications...")
 
         while True:
             notifications = self._check_notifications()
             if notifications:
-                first = notifications[0]
-                log(f"Notification: {first.get('type', '?')}")
-                return True, notifications
+                real = [n for n in notifications if not _is_sleep_timeout_reminder(n)]
+                if not real:
+                    log("Sleep timeout reminder(s) fired — staying asleep")
+                    continue
+                log(f"Notification: {real[0].get('type', '?')}")
+                return True, real
 
             # Force-wake if cache file is stale or missing (poller may have died)
             try:
@@ -188,7 +186,7 @@ class SleepManager:
                 if claude_result.timed_out:
                     return None
             if claude_result.context_too_large:
-                log("Request too large or bad image during wake — returning for fresh session")
+                log("Request too large or bad image — returning for fresh session")
                 return claude_result
             if claude_result.exit_code != 0:
                 log(f"Crashed during wake (exit={claude_result.exit_code}), resuming...")
