@@ -1,4 +1,3 @@
-// Browser automation tools via CDP — registers browser_navigate, browser_eval, browser_coords, etc.
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
 import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp } from "./cdp.mjs";
@@ -178,6 +177,15 @@ export function registerBrowserTools(server, IS_LINUX) {
       try { return jsonRes(JSON.parse(r)); } catch { return jsonRes({ url: r }); }
     }
   );
+
+  server.tool("browser_fill", "Fill multiple form fields at once, more efficient than repeated browser_type calls. Auto-returns screenshot.",
+    { fields: z.array(z.object({ selector: z.string(), value: z.string() })).describe("Array of {selector, value} pairs"),
+      submit: z.string().optional().describe("CSS selector to click after filling"), frame: z.coerce.number().optional().describe("iframe index") },
+    async ({ fields, submit, frame }) => {
+      for (const f of fields) { const r = await cdpEval(TYPE_EXPR(f.selector, f.value, false, frame)); if (r === "not found") return jsonRes({ error: `Field not found: ${f.selector}` }); }
+      if (submit) { const r = await cdpEval(CLICK_EXPR(submit, frame)); if (!r) return jsonRes({ error: cdpErr(submit) }); }
+      return actionRes(`Filled ${fields.length} fields${submit ? ' and submitted' : ''}`, submit ? 1500 : 400);
+    });
 
   server.tool("browser_tabs",
     "List all open Chrome tabs with URLs and titles.",

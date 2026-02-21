@@ -78,10 +78,10 @@ describe("tool registration", () => {
 	const EXPECTED = [
 		"browser_navigate", "browser_eval", "browser_coords", "browser_type",
 		"browser_click", "browser_click_text", "browser_hover", "browser_select", "browser_scroll",
-		"browser_wait", "browser_get_text", "browser_url", "browser_tabs",
+		"browser_wait", "browser_get_text", "browser_url", "browser_fill", "browser_tabs",
 	];
 
-	it("registers all 13 browser tools", () => {
+	it("registers all 14 browser tools", () => {
 		for (const name of EXPECTED) assert.ok(handlers[name], `missing: ${name}`);
 		assert.equal(Object.keys(handlers).length, EXPECTED.length);
 	});
@@ -209,6 +209,26 @@ describe("browser_url", () => {
 		const data = jsonContent(r);
 		assert.ok(data.error);
 		assert.ok(data.error.includes("CDP not connected"));
+	});
+});
+
+// ── browser_fill ─────────────────────────────────────────────────────────────
+describe("browser_fill", () => {
+	it("fills fields and returns count (CDP disconnected → falls through)", async () => {
+		const r = await handlers.browser_fill({
+			fields: [{ selector: "#name", value: "Alice" }, { selector: "#email", value: "a@b.com" }],
+		});
+		// CDP disconnected → cdpEval returns null (not "not found") → falls through
+		assert.ok(textContent(r).includes("Filled 2 fields"));
+	});
+
+	it("returns error when submit click fails (CDP disconnected)", async () => {
+		const r = await handlers.browser_fill({
+			fields: [{ selector: "input", value: "test" }],
+			submit: "button[type=submit]",
+		});
+		const data = jsonContent(r);
+		assert.ok(data.error);
 	});
 });
 
