@@ -1,4 +1,4 @@
-"""Tests for _build_prompt() and _ensure_settings() in process.py."""
+"""Tests for build_prompt() and ensure_settings() in harness_env.py."""
 from __future__ import annotations
 
 import json
@@ -29,16 +29,16 @@ class TestBuildPrompt:
         self.prompt_file.write_bytes(b"Hello {KB_DIR} world")
 
     def _call(self, home, kb_dir=None, memory_content=None):
-        from process import _build_prompt
+        from harness_env import build_prompt
         if kb_dir is None:
             kb_dir = self.tmp / "kb"
         kb_dir = Path(kb_dir)
         kb_dir.mkdir(parents=True, exist_ok=True)
         if memory_content is not None:
             (kb_dir / "MEMORY.md").write_text(memory_content)
-        with patch("process.PROMPT_FILE", self.prompt_file), \
-             patch("process.Path.home", return_value=home):
-            return _build_prompt()
+        with patch("harness_env.PROMPT_FILE", self.prompt_file), \
+             patch("harness_env.Path.home", return_value=home):
+            return build_prompt()
 
     def test_substitutes_kb_dir(self, tmp_path):
         home = _make_config(tmp_path)
@@ -83,10 +83,10 @@ class TestBuildPrompt:
         home = tmp_path / "home"
         home.mkdir()
         (home / ".relaygent").mkdir()
-        with patch("process.PROMPT_FILE", self.prompt_file), \
-             patch("process.Path.home", return_value=home):
-            from process import _build_prompt
-            result = _build_prompt()
+        with patch("harness_env.PROMPT_FILE", self.prompt_file), \
+             patch("harness_env.Path.home", return_value=home):
+            from harness_env import build_prompt
+            result = build_prompt()
         assert result == b"Hello {KB_DIR} world"
 
     def test_returns_bytes(self, tmp_path):
@@ -103,28 +103,28 @@ class TestBuildPrompt:
 
 class TestEnsureSettings:
     def test_creates_settings_from_template(self, tmp_path):
-        from process import _ensure_settings
+        from harness_env import ensure_settings
         harness = tmp_path / "harness"
         harness.mkdir()
         tmpl = harness / "settings.json.template"
         tmpl.write_text('{"dir": "RELAYGENT_DIR/x"}')
         dest = harness / "settings.json"
-        with patch("process._HARNESS", harness):
-            result = _ensure_settings()
+        with patch("harness_env._HARNESS", harness):
+            result = ensure_settings()
         assert result == dest
         assert str(tmp_path.parent) in dest.read_text() or "RELAYGENT_DIR" not in dest.read_text()
 
     def test_skips_when_no_template(self, tmp_path):
-        from process import _ensure_settings
+        from harness_env import ensure_settings
         harness = tmp_path / "harness"
         harness.mkdir()
-        with patch("process._HARNESS", harness):
-            result = _ensure_settings()
+        with patch("harness_env._HARNESS", harness):
+            result = ensure_settings()
         assert not (harness / "settings.json").exists()
 
     def test_does_not_overwrite_newer_dest(self, tmp_path):
         import time
-        from process import _ensure_settings
+        from harness_env import ensure_settings
         harness = tmp_path / "harness"
         harness.mkdir()
         tmpl = harness / "settings.json.template"
@@ -135,6 +135,6 @@ class TestEnsureSettings:
         future = time.time() + 10
         import os
         os.utime(dest, (future, future))
-        with patch("process._HARNESS", harness):
-            _ensure_settings()
+        with patch("harness_env._HARNESS", harness):
+            ensure_settings()
         assert '"old": true' in dest.read_text()

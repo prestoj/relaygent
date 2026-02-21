@@ -8,7 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from config import Timer
-from process import ClaudeProcess, ClaudeResult, _clean_env, _configured_model, _CLAUDE_INTERNAL
+from process import ClaudeProcess, ClaudeResult
+from harness_env import clean_env, configured_model, _CLAUDE_INTERNAL
 
 
 class TestClaudeResult:
@@ -157,11 +158,11 @@ class TestConfiguredModel:
         config.parent.mkdir(parents=True)
         config.write_text(json.dumps({"model": "claude-sonnet-4-6"}))
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        assert _configured_model() == "claude-sonnet-4-6"
+        assert configured_model() == "claude-sonnet-4-6"
 
     def test_returns_none_when_no_config(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        assert _configured_model() is None
+        assert configured_model() is None
 
     def test_returns_none_when_no_model_key(self, tmp_path, monkeypatch):
         import json
@@ -169,32 +170,32 @@ class TestConfiguredModel:
         config.parent.mkdir(parents=True)
         config.write_text(json.dumps({"other": "value"}))
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        assert _configured_model() is None
+        assert configured_model() is None
 
     def test_returns_none_on_malformed_json(self, tmp_path, monkeypatch):
         config = tmp_path / ".relaygent" / "config.json"
         config.parent.mkdir(parents=True)
         config.write_text("NOT JSON")
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        assert _configured_model() is None
+        assert configured_model() is None
 
 
 class TestModelArgs:
     def test_returns_model_args_when_set(self, tmp_path):
         p = ClaudeProcess("s", Timer(), tmp_path)
-        with patch("process._configured_model", return_value="claude-opus-4-6"):
+        with patch("process.configured_model", return_value="claude-opus-4-6"):
             assert p._model_args() == ["--model", "claude-opus-4-6"]
 
     def test_returns_empty_when_no_model(self, tmp_path):
         p = ClaudeProcess("s", Timer(), tmp_path)
-        with patch("process._configured_model", return_value=None):
+        with patch("process.configured_model", return_value=None):
             assert p._model_args() == []
 
 class TestCleanEnv:
     def test_strips_internal_vars(self, monkeypatch):
         for v in _CLAUDE_INTERNAL: monkeypatch.setenv(v, "1")
-        assert not any(v in _clean_env() for v in _CLAUDE_INTERNAL)
+        assert not any(v in clean_env() for v in _CLAUDE_INTERNAL)
     def test_preserves_normal_vars(self, monkeypatch):
         monkeypatch.setenv("HOME", "/home/claude"); monkeypatch.setenv("PATH", "/usr/bin")
-        env = _clean_env()
+        env = clean_env()
         assert env["HOME"] == "/home/claude" and env["PATH"] == "/usr/bin"

@@ -1,43 +1,10 @@
 """Claude subprocess management with hang detection."""
 from __future__ import annotations
-import json, os, subprocess, time
+import subprocess, time
 from dataclasses import dataclass
-from pathlib import Path
-from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, PROMPT_FILE, SILENCE_TIMEOUT, Timer, log
+from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, SILENCE_TIMEOUT, Timer, log
+from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings
 from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size, strip_old_images
-def _configured_model() -> str | None:
-    try: return json.loads((Path.home() / ".relaygent" / "config.json").read_text()).get("model")
-    except (OSError, json.JSONDecodeError, KeyError): return None
-
-def _build_prompt() -> bytes:
-    """Return PROMPT.md bytes, with {KB_DIR} substituted and KB MEMORY.md appended if present."""
-    prompt = PROMPT_FILE.read_bytes()
-    try:
-        cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
-        kb = Path(cfg["paths"]["kb"])
-        prompt = prompt.replace(b"{KB_DIR}", str(kb).encode())
-        prompt = prompt.replace(b"{HUB_PORT}", str(cfg.get("hub", {}).get("port", 8080)).encode())
-        mem = (kb / "MEMORY.md").read_text().strip()
-        if mem:
-            prompt += b"\n\n<memory>\n" + mem.encode() + b"\n</memory>\n"
-    except (OSError, json.JSONDecodeError, KeyError):
-        pass
-    return prompt
-
-CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
-_HARNESS = Path(__file__).parent
-_CLAUDE_INTERNAL = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE"}
-
-def _clean_env() -> dict:
-    """Return env without Claude Code internals so nested launches don't fail."""
-    return {k: v for k, v in os.environ.items() if k not in _CLAUDE_INTERNAL}
-
-def _ensure_settings() -> Path:
-    """Generate settings.json from template, substituting RELAYGENT_DIR."""
-    tmpl, dest = _HARNESS / "settings.json.template", _HARNESS / "settings.json"
-    if tmpl.exists() and (not dest.exists() or tmpl.stat().st_mtime > dest.stat().st_mtime):
-        dest.write_text(tmpl.read_text().replace("RELAYGENT_DIR", str(_HARNESS.parent)))
-    return dest
 
 @dataclass
 class ClaudeResult:
@@ -105,20 +72,20 @@ class ClaudeProcess:
         self._close_log(); LOG_FILE.parent.mkdir(parents=True, exist_ok=True); return open(LOG_FILE, "a")
 
     def _model_args(self) -> list[str]:
-        m = _configured_model(); return ["--model", m] if m else []
+        m = configured_model(); return ["--model", m] if m else []
 
     def start_fresh(self) -> int:
         log_start = self._get_log_lines()
         self._log_file = self._open_log()
-        settings_file = str(_ensure_settings())
+        settings_file = str(ensure_settings())
         try:
             self.process = subprocess.Popen(
                 ["claude", "--print", "--dangerously-skip-permissions",
                  "--settings", settings_file, "--session-id", self.session_id,
                  *self._model_args()],
                 stdin=subprocess.PIPE, stdout=self._log_file,
-                stderr=subprocess.STDOUT, cwd=str(self.workspace), env=_clean_env())
-            self.process.stdin.write(_build_prompt()); self.process.stdin.flush(); self.process.stdin.close()
+                stderr=subprocess.STDOUT, cwd=str(self.workspace), env=clean_env())
+            self.process.stdin.write(build_prompt()); self.process.stdin.flush(); self.process.stdin.close()
         except OSError:
             self._close_log(); raise
         return log_start
@@ -129,7 +96,7 @@ class ClaudeProcess:
         if stripped: log(f"Stripped {stripped} old screenshots from JSONL before resume")
         log_start = self._get_log_lines()
         self._log_file = self._open_log()
-        settings_file = str(_ensure_settings())
+        settings_file = str(ensure_settings())
         cmd = ["claude", "--resume", self.session_id,
                "--print", "--dangerously-skip-permissions", "--settings", settings_file,
                *self._model_args()]
@@ -137,7 +104,7 @@ class ClaudeProcess:
             self.process = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=self._log_file,
                 stderr=subprocess.STDOUT, cwd=str(self.workspace),
-                env=_clean_env())
+                env=clean_env())
         except OSError:
             self._close_log(); raise
         try:
