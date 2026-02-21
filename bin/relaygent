@@ -96,15 +96,8 @@ do_start() {
     # Computer-use backend
     if [ "$(uname)" = "Darwin" ]; then
         if ! pgrep -x Hammerspoon >/dev/null 2>&1; then
-            if command -v open &>/dev/null && open -Ra Hammerspoon 2>/dev/null; then
-                open -a Hammerspoon
-                echo -e "  Hammerspoon: ${GREEN}launched${NC}"
-            else
-                echo -e "  Hammerspoon: ${YELLOW}not installed (computer-use unavailable)${NC}"
-            fi
-        else
-            echo -e "  Hammerspoon: ${GREEN}already running${NC}"
-        fi
+            command -v open &>/dev/null && open -Ra Hammerspoon 2>/dev/null && open -a Hammerspoon && echo -e "  Hammerspoon: ${GREEN}launched${NC}" || echo -e "  Hammerspoon: ${YELLOW}not installed${NC}"
+        else echo -e "  Hammerspoon: ${GREEN}already running${NC}"; fi
     elif [ "$(uname)" = "Linux" ]; then
         local missing=""
         for dep in xdotool scrot wmctrl convert; do
@@ -112,8 +105,7 @@ do_start() {
         done
         python3 -c "import pyatspi" 2>/dev/null || missing="$missing python3-pyatspi"
         if [ -n "$missing" ]; then
-            echo -e "  Computer-use: ${YELLOW}missing deps:${missing}${NC}"
-            echo -e "    ${YELLOW}Install: sudo apt install xdotool scrot wmctrl imagemagick python3-pyatspi at-spi2-core${NC}"
+            echo -e "  Computer-use: ${YELLOW}missing deps:${missing}${NC}\n    ${YELLOW}Install: sudo apt install xdotool scrot wmctrl imagemagick python3-pyatspi at-spi2-core${NC}"
         elif [ -z "${DISPLAY:-}" ]; then
             if command -v Xvfb &>/dev/null; then
                 export DISPLAY=:99
@@ -130,11 +122,8 @@ do_start() {
             if [ "$port_ok" = true ]; then
                 start_service "Computer-use (port $HS_PORT)" "computer-use" \
                     env DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/computer-use/linux-server.py"
-                # Verify server started
                 sleep 0.5
-                if ! curl -sf "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
-                    echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
-                fi
+                curl -sf "http://localhost:$HS_PORT/health" >/dev/null 2>&1 || echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
             fi
         fi
     else
@@ -164,9 +153,18 @@ do_start() {
 do_stop() {
     load_config 2>/dev/null || true
     echo -e "${CYAN}Stopping Relaygent...${NC}"
-    systemctl --user stop relaygent-relay.service 2>/dev/null || true; stop_process "Relay" "relay"
-    local claude_pids; claude_pids=$(pgrep -f "claude.*--print.*--session-id" 2>/dev/null) || true
-    [ -n "$claude_pids" ] && kill -TERM $claude_pids 2>/dev/null && echo -e "  Claude: ${YELLOW}cleaned up${NC}" || true
+    systemctl --user stop relaygent-relay.service 2>/dev/null || true
+    local rpid="$PID_DIR/relay.pid"
+    if [ -f "$rpid" ] && kill -0 "$(cat "$rpid")" 2>/dev/null; then
+        local pid; pid=$(cat "$rpid")
+        echo -e "  Relay: ${YELLOW}graceful shutdown (up to 65s for handoff)...${NC}"
+        kill -TERM "$pid" 2>/dev/null || true
+        for i in $(seq 1 65); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+        kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null && echo -e "  Relay: ${RED}force killed${NC}" || echo -e "  Relay: ${GREEN}stopped gracefully${NC}"
+        rm -f "$rpid" 2>/dev/null
+    else
+        echo -e "  Relay: ${YELLOW}not running${NC}"; rm -f "$rpid" 2>/dev/null
+    fi
     for svc in Computer-use:computer-use Hub:hub Notifications:notifications Slack-socket:slack-socket Email-poller:email-poller; do
         stop_process "${svc%%:*}" "${svc##*:}"
     done

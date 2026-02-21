@@ -1,6 +1,8 @@
 """Tests for RelayRunner state machine logic."""
 from __future__ import annotations
 
+import signal
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,7 +11,7 @@ import pytest
 
 
 from process import ClaudeResult
-from relay import RelayRunner
+from relay import RelayRunner, _SHUTDOWN_MSG
 
 
 def _result(**kwargs) -> ClaudeResult:
@@ -187,3 +189,129 @@ class TestShouldSleepFalse:
         assert exit_code == 0
         # Should have resumed (not gone to sleep cycle)
         r.sleep_mgr.run_wake_cycle.assert_not_called()
+
+
+class TestGracefulShutdown:
+    def test_sigterm_resumes_with_shutdown_message(self, runner):
+        """SIGTERM should resume the session with shutdown message, not just kill."""
+        r, tmp_path = runner
+        mock_process = MagicMock()
+        mock_process.poll.return_value = None  # process is running
+        mock_process.wait.return_value = 0  # completes within timeout
+
+        mock_claude = MagicMock()
+        mock_claude.process = mock_process
+        r.claude = mock_claude
+
+        with (
+            patch("relay.commit_kb") as mock_commit,
+            patch("relay.set_status") as mock_status,
+            patch("relay.ClaudeProcess"),
+            patch("relay.uuid.uuid4", return_value="test-uuid"),
+        ):
+            # Install the signal handler by calling run() setup
+            # We need to test the _shutdown closure directly
+            handler = None
+            original_signal = signal.signal
+
+            def capture_handler(sig, func):
+                nonlocal handler
+                if sig == signal.SIGTERM:
+                    handler = func
+                return original_signal(sig, func)
+
+            with patch("relay.signal.signal", side_effect=capture_handler):
+                # Start run but immediately trigger shutdown via captured handler
+                with patch.object(r.claude, "start_fresh", return_value=0):
+                    with patch.object(r.claude, "monitor") as mock_mon:
+                        mock_mon.side_effect = lambda _: _result()
+                        # Run setup to install handler, then exit via timer
+                        r.timer.is_expired.side_effect = [False, True]
+                        r.run()
+
+            assert handler is not None, "SIGTERM handler should have been installed"
+
+            # Now simulate SIGTERM by calling the captured handler
+            r.claude = mock_claude  # restore our mock
+            with pytest.raises(SystemExit) as exc_info:
+                handler(signal.SIGTERM, None)
+
+            assert exc_info.value.code == 0
+            mock_claude.resume.assert_called_once_with(_SHUTDOWN_MSG)
+            mock_process.wait.assert_called_once_with(timeout=60)
+            mock_commit.assert_called()
+
+    def test_sigterm_force_kills_on_timeout(self, runner):
+        """If agent doesn't finish in 60s, force kill."""
+        r, tmp_path = runner
+        mock_process = MagicMock()
+        mock_process.poll.return_value = None
+        mock_process.wait.side_effect = subprocess.TimeoutExpired("claude", 60)
+
+        mock_claude = MagicMock()
+        mock_claude.process = mock_process
+        r.claude = mock_claude
+
+        with (
+            patch("relay.commit_kb"),
+            patch("relay.set_status"),
+            patch("relay.ClaudeProcess"),
+            patch("relay.uuid.uuid4", return_value="test-uuid"),
+        ):
+            handler = None
+            original_signal = signal.signal
+
+            def capture_handler(sig, func):
+                nonlocal handler
+                if sig == signal.SIGTERM:
+                    handler = func
+                return original_signal(sig, func)
+
+            with patch("relay.signal.signal", side_effect=capture_handler):
+                with patch.object(r.claude, "start_fresh", return_value=0):
+                    with patch.object(r.claude, "monitor") as mock_mon:
+                        mock_mon.side_effect = lambda _: _result()
+                        r.timer.is_expired.side_effect = [False, True]
+                        r.run()
+
+            r.claude = mock_claude
+            with pytest.raises(SystemExit):
+                handler(signal.SIGTERM, None)
+
+            mock_claude._terminate.assert_called_once()
+
+    def test_sigterm_when_no_process_running(self, runner):
+        """SIGTERM when no Claude process → just commit and exit."""
+        r, _ = runner
+        r.claude = MagicMock()
+        r.claude.process = None
+
+        with (
+            patch("relay.commit_kb") as mock_commit,
+            patch("relay.set_status"),
+            patch("relay.ClaudeProcess"),
+            patch("relay.uuid.uuid4", return_value="test-uuid"),
+        ):
+            handler = None
+            original_signal = signal.signal
+
+            def capture_handler(sig, func):
+                nonlocal handler
+                if sig == signal.SIGTERM:
+                    handler = func
+                return original_signal(sig, func)
+
+            with patch("relay.signal.signal", side_effect=capture_handler):
+                with patch.object(r.claude, "start_fresh", return_value=0):
+                    with patch.object(r.claude, "monitor") as mock_mon:
+                        mock_mon.side_effect = lambda _: _result()
+                        r.timer.is_expired.side_effect = [False, True]
+                        r.run()
+
+            r.claude.process = None
+            with pytest.raises(SystemExit) as exc_info:
+                handler(signal.SIGTERM, None)
+
+            assert exc_info.value.code == 0
+            mock_commit.assert_called()
+            r.claude.resume.assert_not_called()

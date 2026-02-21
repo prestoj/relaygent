@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """Relaygent - Autonomous context-based Claude runner."""
 
-import os
-import signal
-import sys
-import time
-import uuid
+import os, signal, subprocess, sys, time, uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -17,6 +13,9 @@ from process import ClaudeProcess
 from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, notify_crash, rotate_log, startup_init  # noqa: E501
 from session import SleepManager
 
+_SHUTDOWN_MSG = ("SHUTDOWN: The relay is being stopped. You have ~60 seconds. "
+                 "Write your HANDOFF.md NOW, update MEMORY.md, commit KB, then stop. "
+                 "Do NOT start new work — just preserve continuity for your successor.")
 
 class RelayRunner:
     """Main orchestrator for relay Claude runs."""
@@ -28,8 +27,7 @@ class RelayRunner:
     def _spawn_successor(self, workspace, reason):
         """Spawn a successor session. Returns new session_id."""
         log(f"{reason} ({self.timer.remaining() // 60} min remaining)")
-        commit_kb()
-        cleanup_context_file()
+        commit_kb(); cleanup_context_file()
         session_id = str(uuid.uuid4())
         self.claude = ClaudeProcess(session_id, self.timer, workspace)
         log(f"Successor session: {session_id}")
@@ -38,25 +36,27 @@ class RelayRunner:
 
     def run(self) -> int:
         """Main entry point. Returns exit code."""
-        rotate_log()
-        cleanup_context_file()
+        rotate_log(); cleanup_context_file()
         workspace = get_workspace_dir()
         log(f"Workspace: {workspace}")
         cleanup_old_workspaces(days=7)
-
-        timestamp_file = Path(__file__).parent / ".last_run_timestamp"
-        timestamp_file.write_text(str(int(self.timer.start_time)))
+        (Path(__file__).parent / ".last_run_timestamp").write_text(str(int(self.timer.start_time)))
 
         session_id = str(uuid.uuid4())
         log(f"Starting relay run (session: {session_id})")
-
         self.claude = ClaudeProcess(session_id, self.timer, workspace)
 
         def _shutdown(*_):
-            set_status("off")
-            if self.claude:
-                self.claude._terminate()
-            sys.exit(1)
+            log("Graceful shutdown — giving agent 60s to write handoff...")
+            set_status("shutting_down")
+            if self.claude and self.claude.process and self.claude.process.poll() is None:
+                self.claude.resume(_SHUTDOWN_MSG)
+                try:
+                    self.claude.process.wait(timeout=60)
+                    log("Agent wrote handoff before shutdown")
+                except subprocess.TimeoutExpired:
+                    log("Shutdown timeout — terminating"); self.claude._terminate()
+            commit_kb(); set_status("off"); sys.exit(0)
         signal.signal(signal.SIGTERM, _shutdown)
         signal.signal(signal.SIGINT, _shutdown)
         session_established = False
@@ -180,9 +180,7 @@ class RelayRunner:
                 continue
             break
 
-        commit_kb()
-        set_status("off")
-        cleanup_context_file()
+        commit_kb(); set_status("off"); cleanup_context_file()
         log("Relay run complete")
         return 0
 
@@ -194,7 +192,6 @@ def main() -> int:
     finally:
         cleanup_pid_file()
         os.close(lock_fd)
-
 
 if __name__ == "__main__":
     sys.exit(main())
