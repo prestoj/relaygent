@@ -71,4 +71,31 @@ PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGEN
 echo $! > "$HUB_PID_FILE"
 
 echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
+
+# Restart background daemons so they pick up new code
+echo -e "  Restarting daemons..."
+for pat in "notifications/server.py" "slack-socket-listener" "email-poller" "notification-poller"; do
+    pkill -f "$pat" 2>/dev/null || true
+done
+sleep 2
+
+# On macOS, LaunchAgent KeepAlive auto-restarts killed processes.
+# On Linux (no LaunchAgents), manually restart.
+if [ "$(uname)" != "Darwin" ]; then
+    if [ -d "$SCRIPT_DIR/notifications/.venv" ]; then
+        RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" "$SCRIPT_DIR/notifications/.venv/bin/python3" \
+            "$SCRIPT_DIR/notifications/server.py" >> "$SCRIPT_DIR/logs/relaygent-notifications.log" 2>&1 &
+        echo $! > "$PID_DIR/notifications.pid"
+    fi
+    if [ -f "$HOME/.relaygent/slack/app-token" ]; then
+        node "$SCRIPT_DIR/notifications/slack-socket-listener.mjs" >> "$SCRIPT_DIR/logs/relaygent-slack-socket.log" 2>&1 &
+        echo $! > "$PID_DIR/slack-socket.pid"
+    fi
+    if [ -f "$HOME/.relaygent/gmail/credentials.json" ]; then
+        HUB_PORT="$HUB_PORT" node "$SCRIPT_DIR/email/email-poller.mjs" >> "$SCRIPT_DIR/logs/relaygent-email-poller.log" 2>&1 &
+        echo $! > "$PID_DIR/email-poller.pid"
+    fi
+fi
+echo -e "  Daemons: ${GREEN}restarted${NC}"
+
 echo -e "\n  ${GREEN}Done.${NC}"
