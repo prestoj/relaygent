@@ -49,6 +49,7 @@
 			{#if n.time}<span class="notif-time">{fmtRelative(n.time)}</span>{/if}
 		</div>
 		{/each}
+		<a href="/notifications" class="notif-history">View history</a>
 	</div>
 	{/if}
 </section>
@@ -71,4 +72,6 @@
 	.notif-icon.task { background: #10b98118; color: #10b981; }
 	.notif-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 	.notif-time { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; }
+	.notif-history { font-size: 0.75em; color: var(--text-muted); text-align: right; display: block; margin-top: 0.2em; }
+	.notif-history:hover { color: var(--link); }
 </style>

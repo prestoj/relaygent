@@ -7,7 +7,7 @@ import urllib.request
 from datetime import datetime, timedelta
 
 from notif_config import app
-from db import get_db
+from db import get_db, log_notification, get_notification_history, prune_notification_log
 from flask import jsonify, request
 from reminders import is_recurring_reminder_due
 import tasks_collector
@@ -50,7 +50,47 @@ def get_notifications():
                 collector(notifications)
             except Exception:
                 logger.exception(f"Failed in {name}")
+    _log_notifications(notifications)
     return jsonify(notifications)
+
+
+def _log_notifications(notifications):
+    """Persist non-empty notifications to the history log."""
+    if not notifications:
+        return
+    for n in notifications:
+        ntype = n.get("type", "unknown")
+        if ntype == "reminder":
+            log_notification(
+                "reminder", "reminder", n.get("message", "")[:200],
+                json.dumps(n), f"reminder-{n.get('id', '')}")
+        elif ntype == "message":
+            source = n.get("source", "chat")
+            msgs = n.get("messages", [])
+            summary = msgs[0]["content"][:200] if msgs else "New message"
+            for m in msgs:
+                log_notification(
+                    "message", source, m.get("content", "")[:200],
+                    json.dumps(m), f"chat-{m.get('timestamp', '')}")
+        elif ntype == "slack":
+            for m in n.get("messages", [n]):
+                ts = m.get("ts", m.get("timestamp", ""))
+                log_notification(
+                    "slack", n.get("channel_name", "slack"),
+                    m.get("text", "")[:200], json.dumps(m), f"slack-{ts}")
+        elif ntype in ("email", "github", "linear"):
+            key = n.get("id", n.get("url", ""))
+            log_notification(
+                ntype, ntype, n.get("title", n.get("message", ""))[:200],
+                json.dumps(n), f"{ntype}-{key}")
+        else:
+            log_notification(
+                ntype, ntype, str(n)[:200],
+                json.dumps(n), f"{ntype}-{hash(json.dumps(n, sort_keys=True))}")
+    try:
+        prune_notification_log()
+    except Exception:
+        logger.debug("Failed to prune notification log", exc_info=True)
 
 
 # Slow collectors — external API calls, skipped in fast mode.
@@ -137,6 +177,15 @@ _slow_collectors.append(("slack", slack_collector.collect))
 _slow_collectors.append(("email", email_collector.collect))
 _slow_collectors.append(("github", github_collector.collect))
 _slow_collectors.append(("linear", linear_collector.collect))
+
+
+@app.route("/notifications/history", methods=["GET"])
+def notification_history():
+    """Return notification history, newest first."""
+    limit = min(int(request.args.get("limit", 50)), 200)
+    offset = int(request.args.get("offset", 0))
+    entries = get_notification_history(limit, offset)
+    return jsonify({"entries": entries, "limit": limit, "offset": offset})
 
 
 @app.route("/health", methods=["GET"])
