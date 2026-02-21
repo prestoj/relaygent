@@ -102,6 +102,13 @@ def print_stats():
         print(f"  Run time: {fmt_duration(total_time)}")
         if ctx_vals:
             print(f"  Avg context: {sum(ctx_vals)/len(ctx_vals):.0f}%")
+        print(f"\n  {C['dim']}Timeline:{C['nc']}")
+        for i, s in enumerate(today_sessions, 1):
+            start = s["start"].strftime("%H:%M")
+            dur = fmt_duration(s["end"] - s["start"])
+            ctx_str = f" ctx:{s['ctx']:.0f}%" if s["ctx"] > 0 else ""
+            tag = f" {C['green']}(active){C['nc']}" if s.get("active") else ""
+            print(f"  {C['dim']}#{i}{C['nc']} {start}  {dur}{ctx_str}{tag}")
     else:
         print(f"  {C['dim']}No sessions today{C['nc']}")
 
