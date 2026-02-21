@@ -49,11 +49,24 @@ function getSetupChecks(config) {
 	return checks;
 }
 
+function getDiskUsage() {
+	try {
+		const out = execFileSync('df', ['-h', os.homedir()], { timeout: 2000 }).toString();
+		const line = out.split('\n')[1];
+		if (!line) return null;
+		const cols = line.split(/\s+/);
+		const pctIdx = cols.findIndex(c => c.endsWith('%'));
+		if (pctIdx < 0) return null;
+		return { used: cols[pctIdx - 2], total: cols[pctIdx - 3], pct: parseInt(cols[pctIdx]) };
+	} catch { return null; }
+}
+
 export async function load() {
 	const services = await getServiceHealth();
 	const upSec = os.uptime();
 	const days = Math.floor(upSec / 86400);
 	const hrs = Math.floor((upSec % 86400) / 3600);
+	const disk = getDiskUsage();
 	const system = {
 		hostname: os.hostname(),
 		platform: `${os.platform()} (${os.arch()})`,
@@ -63,6 +76,7 @@ export async function load() {
 		cpus: os.cpus().length,
 		memUsed: fmtBytes(os.totalmem() - os.freemem()),
 		memTotal: fmtBytes(os.totalmem()),
+		disk,
 	};
 	const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
 	let version = '';

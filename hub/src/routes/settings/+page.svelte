@@ -62,6 +62,7 @@
 		<div class="label">Uptime</div><div class="value">{data.system.uptime}</div>
 		<div class="label">CPUs</div><div class="value">{data.system.cpus}</div>
 		<div class="label">Memory</div><div class="value">{data.system.memUsed} / {data.system.memTotal}</div>
+		{#if data.system.disk}<div class="label">Disk</div><div class="value">{data.system.disk.used} / {data.system.disk.total} ({data.system.disk.pct}%)</div>{/if}
 		{#if data.version}<div class="label">Version</div><div class="value mono">{data.version}</div>{/if}
 	</div>
 </section>
