@@ -1,6 +1,6 @@
 // Setup helper functions extracted from setup.mjs to stay under 200 lines
 import { spawnSync } from 'child_process';
-import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { hostname } from 'os';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
