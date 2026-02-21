@@ -39,12 +39,12 @@ def log(msg: str) -> None:
 STATUS_FILE = REPO_DIR / "data" / "relay-status.json"
 
 
-def set_status(status: str) -> None:
+def set_status(status: str, **extra) -> None:
     """Write agent status to a JSON file for dashboard/monitoring."""
     import json
     try:
         STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"status": status, "updated": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        payload = {"status": status, "updated": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **extra}
         tmp = STATUS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload))
         tmp.rename(STATUS_FILE)

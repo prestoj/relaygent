@@ -64,7 +64,7 @@ class RelayRunner:
         crash_count = incomplete_count = idle_continuation_count = no_output_count = 0
 
         while not self.timer.is_expired():
-            set_status("working")
+            set_status("working", session_id=session_id)
             if session_established:
                 log_start = self.claude.resume(resume_reason)
             else:
@@ -75,7 +75,7 @@ class RelayRunner:
                 break
 
             if result.hung:
-                set_status("crashed")
+                set_status("crashed", session_id=session_id)
                 log("Hung, resuming...")
                 session_established = True
                 resume_reason = ("An API error was detected (no response or repeated failures). "
@@ -85,7 +85,7 @@ class RelayRunner:
 
             if result.rate_limited:
                 log("API rate limit — waiting 60s before retry")
-                set_status("rate_limited"); time.sleep(60)
+                set_status("rate_limited", session_id=session_id); time.sleep(60)
                 continue
 
             if result.no_output:
@@ -133,7 +133,7 @@ class RelayRunner:
                 continue
 
             if result.exit_code != 0:
-                set_status("crashed"); crash_count += 1
+                set_status("crashed", session_id=session_id); crash_count += 1
                 if crash_count > MAX_RETRIES:
                     log(f"Too many crashes ({crash_count}), giving up"); notify_crash(crash_count, result.exit_code); break
                 log(f"Crashed (exit={result.exit_code}), retrying ({crash_count}/{MAX_RETRIES})...")
