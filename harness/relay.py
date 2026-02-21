@@ -9,12 +9,13 @@ import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from config import (CONTEXT_THRESHOLD, HANG_CHECK_DELAY, INCOMPLETE_BASE_DELAY,
-                    MAX_IDLE_CONTINUATIONS, MAX_INCOMPLETE_RETRIES, MAX_RETRIES,
-                    SILENCE_TIMEOUT, Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
+from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
+                    Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
-from relay_utils import acquire_lock, cleanup_context_file, cleanup_pid_file, commit_kb, notify_crash, rotate_log, startup_init  # noqa: E501
+from relay_loop import Action, LoopState, handle_error
+from relay_utils import (acquire_lock, cleanup_context_file, cleanup_pid_file,
+                         commit_kb, notify_crash, rotate_log, startup_init)
 from session import SleepManager
 from wake_cycle import run_wake_cycle
 
@@ -26,16 +27,28 @@ class RelayRunner:
         self.sleep_mgr = SleepManager(self.timer)
         self.claude: ClaudeProcess | None = None
 
-    def _spawn_successor(self, workspace, reason):
-        """Spawn a successor session. Returns new session_id."""
+    def _spawn_successor(self, workspace, state, reason):
+        """Spawn a successor session."""
         log(f"{reason} ({self.timer.remaining() // 60} min remaining)")
         commit_kb()
         cleanup_context_file()
-        session_id = str(uuid.uuid4())
-        self.claude = ClaudeProcess(session_id, self.timer, workspace)
-        log(f"Successor session: {session_id}")
+        state.new_session()
+        state.crash_count = state.idle_continuation_count = 0
+        self.claude = ClaudeProcess(state.session_id, self.timer, workspace)
+        log(f"Successor session: {state.session_id}")
         time.sleep(3)
-        return session_id
+
+    def _apply_error(self, err, state):
+        """Execute side effects from an error result."""
+        if err.log_msg:
+            log(err.log_msg)
+        if err.status:
+            set_status(err.status, session_id=state.session_id)
+        if err.should_notify:
+            notify_crash(*err.notify_args)
+        if err.delay:
+            time.sleep(err.delay)
+        self.claude.session_id = state.session_id
 
     def run(self) -> int:
         """Main entry point. Returns exit code."""
@@ -48,10 +61,9 @@ class RelayRunner:
         timestamp_file = Path(__file__).parent / ".last_run_timestamp"
         timestamp_file.write_text(str(int(self.timer.start_time)))
 
-        session_id = str(uuid.uuid4())
-        log(f"Starting relay run (session: {session_id})")
-
-        self.claude = ClaudeProcess(session_id, self.timer, workspace)
+        state = LoopState(session_id=str(uuid.uuid4()))
+        log(f"Starting relay run (session: {state.session_id})")
+        self.claude = ClaudeProcess(state.session_id, self.timer, workspace)
 
         def _shutdown(*_):
             set_status("off")
@@ -60,122 +72,54 @@ class RelayRunner:
             sys.exit(1)
         signal.signal(signal.SIGTERM, _shutdown)
         signal.signal(signal.SIGINT, _shutdown)
-        session_established = False
-        resume_reason = ""
-        crash_count = incomplete_count = idle_continuation_count = no_output_count = 0
 
         while not self.timer.is_expired():
-            set_status("working", session_id=session_id)
-            if session_established:
-                log_start = self.claude.resume(resume_reason)
-            else:
-                log_start = self.claude.start_fresh()
+            set_status("working", session_id=state.session_id)
+            log_start = (self.claude.resume(state.resume_reason) if state.session_established
+                         else self.claude.start_fresh())
 
             result = self.claude.monitor(log_start)
             if self.timer.is_expired():
                 break
 
-            if result.hung:
-                set_status("crashed", session_id=session_id)
-                log("Hung, resuming...")
-                session_established = True
-                resume_reason = ("An API error was detected (no response or repeated failures). "
-                                 "Please proceed with the original instructions.")
-                time.sleep(15)
-                continue
-
-            if result.rate_limited:
-                log("API rate limit — waiting 60s before retry")
-                set_status("rate_limited", session_id=session_id); time.sleep(60)
-                continue
-
-            if result.no_output:
-                no_output_count += 1
-                if no_output_count > MAX_INCOMPLETE_RETRIES:
-                    log(f"Too many no-output exits ({no_output_count}), giving up")
-                    notify_crash(no_output_count, 0); break
-                delay = min(INCOMPLETE_BASE_DELAY * (2 ** (no_output_count - 1)), 60)
-                if session_established:
-                    log(f"Resume failed ({no_output_count}/{MAX_INCOMPLETE_RETRIES}), starting fresh...")
-                    session_id = str(uuid.uuid4()); self.claude.session_id = session_id
-                    session_established, resume_reason = False, ""
-                else:
-                    log(f"No output ({no_output_count}/{MAX_INCOMPLETE_RETRIES}), retrying in {delay}s...")
-                    session_established, resume_reason = True, "Your previous session exited without output. Please proceed."
-                time.sleep(delay); continue
-
-            if result.context_too_large:
-                log("Request too large or bad image — starting fresh session (not resuming)")
-                session_id = str(uuid.uuid4())
-                self.claude.session_id = session_id
-                session_established = False
-                incomplete_count = 0
-                resume_reason = ""
-                time.sleep(5)
-                continue
-
-            if result.incomplete:
-                incomplete_count += 1
-                if incomplete_count > MAX_INCOMPLETE_RETRIES:
-                    log(f"Too many incomplete exits ({incomplete_count}), starting fresh session...")
-                    session_id = str(uuid.uuid4())
-                    self.claude.session_id = session_id
-                    session_established = False
-                    resume_reason = ""
-                    incomplete_count = 0
-                    time.sleep(15)
-                else:
-                    delay = min(INCOMPLETE_BASE_DELAY * (2 ** (incomplete_count - 1)), 60)
-                    log(f"Exited mid-conversation ({incomplete_count}/{MAX_INCOMPLETE_RETRIES}), "
-                        f"resuming in {delay}s...")
-                    session_established = True
-                    resume_reason = "Continue where you left off."
-                    time.sleep(delay)
-                continue
-
-            if result.exit_code != 0:
-                set_status("crashed", session_id=session_id); crash_count += 1
-                if crash_count > MAX_RETRIES:
-                    log(f"Too many crashes ({crash_count}), giving up"); notify_crash(crash_count, result.exit_code); break
-                log(f"Crashed (exit={result.exit_code}), retrying ({crash_count}/{MAX_RETRIES})...")
-                session_id = str(uuid.uuid4()); self.claude.session_id = session_id
-                session_established, resume_reason = False, ""
-                time.sleep(15); continue
+            err = handle_error(result, state)
+            if err is not None:
+                self._apply_error(err, state)
+                if err.action == Action.CONTINUE:
+                    continue
+                break
 
             if not should_sleep(self.claude.session_id, self.claude.workspace):
                 log("Session incomplete (no stdout), resuming...")
-                session_established = True
-                resume_reason = (f"Your previous API call failed after {SILENCE_TIMEOUT} seconds. "
-                                 f"Please proceed with the original instructions.")
+                state.session_established = True
+                state.resume_reason = (f"Your previous API call failed after {SILENCE_TIMEOUT} seconds. "
+                                       f"Please proceed with the original instructions.")
                 time.sleep(2)
                 continue
 
-            session_established = True
-            incomplete_count = crash_count = no_output_count = 0
+            state.session_established = True
+            state.reset_counters()
 
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
-                session_id = self._spawn_successor(
-                    workspace, f"Context at {result.context_pct:.0f}%, spawning successor")
-                session_established = False
-                crash_count = idle_continuation_count = 0
+                self._spawn_successor(workspace, state,
+                    f"Context at {result.context_pct:.0f}%, spawning successor")
                 continue
 
             if (result.context_pct < CONTEXT_THRESHOLD
                     and last_output_is_idle(self.claude.session_id, self.claude.workspace)):
-                idle_continuation_count += 1
-                if idle_continuation_count <= MAX_IDLE_CONTINUATIONS:
-                    session_established, resume_reason = True, (
-                        f"Context at {result.context_pct:.0f}% — keep doing useful work until 85%, then write your handoff.")
+                state.idle_continuation_count += 1
+                if state.idle_continuation_count <= MAX_IDLE_CONTINUATIONS:
+                    state.resume_reason = (
+                        f"Context at {result.context_pct:.0f}% — keep doing useful work "
+                        f"until 85%, then write your handoff.")
                     continue
-                log(f"Idle output {idle_continuation_count} times in a row, going to sleep cycle")
-            idle_continuation_count = 0  # reset when going to sleep (idle limit or non-idle)
+                log(f"Idle output {state.idle_continuation_count} times in a row, going to sleep cycle")
+            state.idle_continuation_count = 0
             wake_result = run_wake_cycle(self.sleep_mgr, self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
-                session_id = self._spawn_successor(
-                    workspace, f"Context at {wake_result.context_pct:.0f}% after wake")
-                session_established = False
-                crash_count = 0
+                self._spawn_successor(workspace, state,
+                    f"Context at {wake_result.context_pct:.0f}% after wake")
                 continue
             break
 
@@ -185,8 +129,9 @@ class RelayRunner:
         log("Relay run complete")
         return 0
 
+
 def main() -> int:
-    lock_fd = acquire_lock()  # Must keep fd open or lock releases
+    lock_fd = acquire_lock()
     startup_init()
     try:
         return RelayRunner().run()
