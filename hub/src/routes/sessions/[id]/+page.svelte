@@ -10,19 +10,22 @@
 		catch { aiSummary = 'Failed to generate summary'; }
 		summaryLoading = false;
 	}
-
 	function toggle(i) {
 		const s = new Set(expanded);
 		s.has(i) ? s.delete(i) : s.add(i);
 		expanded = s;
 	}
-
 	function fmtTime(iso) {
 		if (!iso) return '';
 		try { return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); }
 		catch { return ''; }
 	}
-
+	function fmtTokens(n) {
+		if (!n) return '0';
+		if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M`;
+		if (n >= 1000) return `${(n/1000).toFixed(0)}K`;
+		return String(n);
+	}
 	const toolIcons = {
 		Bash: '⌨', Read: '📄', Edit: '✏️', Write: '💾', Grep: '🔍', Glob: '📂',
 		TodoWrite: '✅', WebFetch: '🌐', WebSearch: '🔎', Task: '🤖',
@@ -32,12 +35,9 @@
 		if (name.startsWith('mcp__')) return '🔌';
 		return '🔧';
 	}
-
 	const act = data.activity || [];
-	const toolCalls = act.filter(a => a.type === 'tool').length;
-	const textBlocks = act.filter(a => a.type === 'text').length;
-	const times = act.map(a => a.time).filter(Boolean);
-	const durationMin = times.length >= 2 ? Math.round((new Date(times[times.length-1]) - new Date(times[0])) / 60000) : null;
+	const st = data.stats || {};
+	const topTools = Object.entries(st.tools || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
 </script>
 
 <svelte:head><title>Session {data.displayTime} — Relaygent</title></svelte:head>
@@ -47,14 +47,20 @@
 	<h1>Session {data.displayTime}</h1>
 </div>
 
-{#if act.length > 0}
+{#if st.durationMin != null || st.totalTokens}
 <div class="stats-row">
-	{#if durationMin != null}<span class="stat"><strong>{durationMin}m</strong></span><span class="sep">·</span>{/if}
-	<span class="stat"><strong>{toolCalls}</strong> tools</span>
-	<span class="sep">·</span>
-	<span class="stat"><strong>{textBlocks}</strong> text blocks</span>
+	{#if st.durationMin != null}<span class="stat"><strong>{st.durationMin}m</strong> duration</span><span class="sep">·</span>{/if}
+	{#if st.turns}<span class="stat"><strong>{st.turns}</strong> turns</span><span class="sep">·</span>{/if}
+	{#if st.toolCalls}<span class="stat"><strong>{st.toolCalls}</strong> tool calls</span><span class="sep">·</span>{/if}
+	{#if st.totalTokens}<span class="stat"><strong>{fmtTokens(st.totalTokens)}</strong> tokens in</span><span class="sep">·</span>{/if}
+	{#if st.outputTokens}<span class="stat"><strong>{fmtTokens(st.outputTokens)}</strong> out</span>{/if}
 </div>
 {/if}
+
+{#if topTools.length > 0}
+<div class="tool-bar">{#each topTools as [name, count], i}{#if i > 0}<span class="sep">·</span>{/if}<span class="tb">{icon(name)} {name} <strong>{count}</strong></span>{/each}</div>
+{/if}
+
 {#if data.summary}<p class="sum">{data.summary}</p>{/if}
 <div class="sum-row">
 	<button class="sum-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : 'AI Summary'}</button>
@@ -94,9 +100,11 @@
 	.header { display: flex; align-items: baseline; gap: 1em; margin-bottom: 0.5em; }
 	h1 { margin: 0; font-size: 1.4em; }
 	.back { font-size: 0.9em; color: var(--text-muted); white-space: nowrap; }
-	.stats-row { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.75em; font-size: 0.85em; color: var(--text-muted); }
+	.stats-row { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.5em; font-size: 0.85em; color: var(--text-muted); }
 	.stats-row strong { color: var(--text); }
 	.sep { color: var(--border); }
+	.tool-bar { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.75em; font-size: 0.8em; color: var(--text-muted); }
+	.tb strong { color: var(--text); }
 	.sum { margin: 0 0 0.75em; font-size: 0.82em; color: var(--text-muted); }
 	.count { color: var(--text-muted); font-size: 0.85em; margin: 0 0 1em; }
 	.feed { display: flex; flex-direction: column; gap: 2px; }
