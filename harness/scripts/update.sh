@@ -86,13 +86,19 @@ if [ -n "$PORT_PIDS" ]; then
 fi
 
 # Start hub with new build
-mkdir -p "$SCRIPT_DIR/logs"
-PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" \
-    RELAYGENT_DATA_DIR="$SCRIPT_DIR/data" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" \
-    node "$SCRIPT_DIR/hub/ws-server.mjs" >> "$SCRIPT_DIR/logs/relaygent-hub.log" 2>&1 &
-echo $! > "$HUB_PID_FILE"
-
-echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
+# On macOS with LaunchAgent, KeepAlive auto-restarts the killed hub.
+# On Linux (or no LaunchAgent), manually start a new process.
+if [ "$(uname)" = "Darwin" ] && launchctl list com.relaygent.hub &>/dev/null; then
+    sleep 2  # Give LaunchAgent time to restart
+    echo -e "  Hub: ${GREEN}restarted via LaunchAgent on :$HUB_PORT${NC}"
+else
+    mkdir -p "$SCRIPT_DIR/logs"
+    PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" \
+        RELAYGENT_DATA_DIR="$SCRIPT_DIR/data" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" \
+        node "$SCRIPT_DIR/hub/ws-server.mjs" >> "$SCRIPT_DIR/logs/relaygent-hub.log" 2>&1 &
+    echo $! > "$HUB_PID_FILE"
+    echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
+fi
 
 # Restart background daemons so they pick up new code
 echo -e "  Restarting daemons..."
