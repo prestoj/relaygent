@@ -152,9 +152,10 @@ do_start() {
     # Relay — verify Claude auth before starting
     if ! claude -p 'hi' >/dev/null 2>&1; then
         echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
+    elif [ "$(uname)" = "Linux" ] && command -v systemctl &>/dev/null && systemctl --user is-system-running &>/dev/null; then
+        bash "$SCRIPT_DIR/scripts/install-relay-service.sh" && echo -e "  Relay: ${GREEN}managed by systemd (auto-restarts on crash)${NC}"
     else
-        start_service "Relay" "relay" \
-            python3 "$SCRIPT_DIR/harness/relay.py"
+        start_service "Relay" "relay" python3 "$SCRIPT_DIR/harness/relay.py"
     fi
     echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}\n  Logs: $SCRIPT_DIR/logs/\n"
     { sleep 2 && { [ "$(uname)" = "Darwin" ] && open "http://localhost:$HUB_PORT/" 2>/dev/null || { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "http://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &
@@ -163,7 +164,7 @@ do_start() {
 do_stop() {
     load_config 2>/dev/null || true
     echo -e "${CYAN}Stopping Relaygent...${NC}"
-    stop_process "Relay" "relay"
+    systemctl --user stop relaygent-relay.service 2>/dev/null || true; stop_process "Relay" "relay"
     local claude_pids; claude_pids=$(pgrep -f "claude.*--print.*--session-id" 2>/dev/null) || true
     [ -n "$claude_pids" ] && kill -TERM $claude_pids 2>/dev/null && echo -e "  Claude: ${YELLOW}cleaned up${NC}" || true
     for svc in Computer-use:computer-use Hub:hub Notifications:notifications Slack-socket:slack-socket Email-poller:email-poller; do
