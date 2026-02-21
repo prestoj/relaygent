@@ -133,6 +133,18 @@ function watchTrigger() {
 }
 watchTrigger();
 
+// Graceful shutdown — clean up watchers, intervals, and connections on SIGTERM/SIGINT
+function shutdown() {
+	console.log('Hub shutting down...');
+	if (fileWatcher) { fileWatcher.close(); fileWatcher = null; }
+	wss.clients.forEach(c => { try { c.close(); } catch {} });
+	wss.close();
+	server.close(() => process.exit(0));
+	setTimeout(() => process.exit(0), 3000); // Force exit if close hangs
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
 const PORT = parseInt(process.env.PORT || '8080', 10);
 server.listen(PORT, '0.0.0.0', () => {
 	console.log(`Hub listening on :${PORT} (WebSocket /ws enabled)`);
