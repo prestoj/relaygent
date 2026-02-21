@@ -99,7 +99,8 @@ fi
 SLACK_CACHE="/tmp/relaygent-slack-socket-cache.json"
 if pgrep -f "slack-socket-listener" >/dev/null 2>&1; then
     if [ -f "$SLACK_CACHE" ]; then
-        AGE=$(( $(date +%s) - $(stat -c %Y "$SLACK_CACHE" 2>/dev/null || date +%s) ))
+        MTIME=$(stat -c %Y "$SLACK_CACHE" 2>/dev/null || stat -f %m "$SLACK_CACHE" 2>/dev/null || date +%s)
+        AGE=$(( $(date +%s) - MTIME ))
         if [ "$AGE" -gt 900 ]; then
             echo -e "  Slack socket: ${YELLOW}stale cache (${AGE}s old)${NC}"
         else
