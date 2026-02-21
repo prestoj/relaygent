@@ -2,61 +2,44 @@
  * Unit tests for email-poller.mjs
  *
  * Uses dependency injection (poll(mockGmail)) — no mock.module() needed.
- * Uses a fake HTTP server to capture hub chat POSTs.
+ * Uses RELAYGENT_EMAIL_CACHE env var to isolate cache file per test.
  * Sets process.env.HOME per-test to isolate filesystem state.
  */
-import { test, before, after, beforeEach, afterEach } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import http from "node:http";
-import { mkdtempSync, rmSync, readFileSync, existsSync } from "fs";
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
-import { getLastTs, saveTs, postToHub, poll } from "./email-poller.mjs";
+import { getLastTs, saveTs, cacheFile, writeEmailCache, poll } from "./email-poller.mjs";
 
-// --- Fake hub chat server ---
-let hubServer;
-const hubCalls = [];
-
-before(async () => {
-	await new Promise((resolve) => {
-		hubServer = http.createServer((req, res) => {
-			let body = "";
-			req.on("data", (c) => (body += c));
-			req.on("end", () => {
-				try { hubCalls.push(JSON.parse(body)); } catch {}
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ id: 1 }));
-			});
-		});
-		hubServer.listen(0, "127.0.0.1", () => resolve());
-	});
-	process.env.HUB_PORT = String(hubServer.address().port);
-});
-
-after(() => hubServer?.close());
-
-let tmpHome;
+let tmpHome, tmpCache;
 beforeEach(() => {
 	tmpHome = mkdtempSync(join(tmpdir(), "email-test-"));
+	tmpCache = join(tmpHome, "email-cache.json");
 	process.env.HOME = tmpHome;
-	hubCalls.length = 0;
+	process.env.RELAYGENT_EMAIL_CACHE = tmpCache;
 });
 afterEach(() => {
 	try { rmSync(tmpHome, { recursive: true, force: true }); } catch {}
+	delete process.env.RELAYGENT_EMAIL_CACHE;
 });
 
-// Helper: build a fake Gmail client
-function fakeGmail({ messages = [], details = {} } = {}) {
+// Helper: build a fake Gmail client with optional header sets per message id
+function fakeGmail({ messages = [], headers = {} } = {}) {
 	return {
 		users: {
 			messages: {
 				list: async () => ({ data: { messages } }),
-				get: async ({ id }) => ({ data: details[id] || { payload: { headers: [] } } }),
+				get: async ({ id }) => ({
+					data: { payload: { headers: headers[id] || [] } },
+				}),
 			},
 		},
 	};
 }
+
+function h(pairs) { return Object.entries(pairs).map(([name, value]) => ({ name, value })); }
 
 // --- Timestamp helpers ---
 test("getLastTs returns 0 when file absent", () => {
@@ -75,49 +58,61 @@ test("saveTs creates missing directory", () => {
 	assert.equal(readFileSync(f, "utf-8").trim(), "42");
 });
 
-// --- postToHub ---
-test("postToHub sends POST with content and role:user", async () => {
-	await postToHub("hello world");
-	assert.equal(hubCalls.length, 1);
-	assert.equal(hubCalls[0].content, "hello world");
-	assert.equal(hubCalls[0].role, "user");
+// --- cacheFile ---
+test("cacheFile respects RELAYGENT_EMAIL_CACHE env var", () => {
+	assert.equal(cacheFile(), tmpCache);
 });
 
-test("postToHub survives hub unreachable", async () => {
-	const saved = process.env.HUB_PORT;
-	process.env.HUB_PORT = "1";
-	await assert.doesNotReject(() => postToHub("test"));
-	process.env.HUB_PORT = saved;
+// --- writeEmailCache ---
+test("writeEmailCache creates cache file with emails", () => {
+	const emails = [{ from: "a@b.com", subject: "Hi", received_at: 100 }];
+	writeEmailCache(emails);
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails.length, 1);
+	assert.equal(data.emails[0].from, "a@b.com");
+});
+
+test("writeEmailCache merges with existing entries", () => {
+	writeEmailCache([{ from: "a@b.com", subject: "First", received_at: 100 }]);
+	writeEmailCache([{ from: "c@d.com", subject: "Second", received_at: 200 }]);
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails.length, 2);
+	assert.equal(data.emails[0].from, "c@d.com"); // newest first
+});
+
+test("writeEmailCache caps at 50 entries", () => {
+	const initial = Array.from({ length: 48 }, (_, i) => ({ from: "x", subject: `e${i}`, received_at: i }));
+	writeEmailCache(initial);
+	writeEmailCache([{ from: "a", subject: "new1", received_at: 100 }, { from: "b", subject: "new2", received_at: 101 }, { from: "c", subject: "new3", received_at: 102 }]);
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails.length, 50);
 });
 
 // --- poll ---
 test("poll does nothing when Gmail list throws", async () => {
 	const broken = { users: { messages: { list: async () => { throw new Error("no creds"); } } } };
 	await poll(broken);
-	assert.equal(hubCalls.length, 0);
+	assert.ok(!existsSync(cacheFile()));
 });
 
 test("poll does nothing when no new messages", async () => {
 	await poll(fakeGmail({ messages: [] }));
-	assert.equal(hubCalls.length, 0);
+	assert.ok(!existsSync(cacheFile()));
 });
 
-test("poll notifies hub with sender and subject preview", async () => {
+test("poll writes cache with from and subject", async () => {
 	const gmail = fakeGmail({
 		messages: [{ id: "m1" }, { id: "m2" }],
-		details: {
-			m1: { payload: { headers: [{ name: "From", value: "Alice <a@x.com>" }, { name: "Subject", value: "Hi" }] } },
-			m2: { payload: { headers: [{ name: "From", value: "Bob <b@x.com>" }, { name: "Subject", value: "Yo" }] } },
+		headers: {
+			m1: h({ From: "Alice <a@x.com>", Subject: "Hi" }),
+			m2: h({ From: "Bob <b@x.com>", Subject: "Yo" }),
 		},
 	});
 	await poll(gmail);
-	assert.equal(hubCalls.length, 1);
-	const { content } = hubCalls[0];
-	assert.ok(content.includes("[Email]"));
-	assert.ok(content.includes("2 new email"));
-	assert.ok(content.includes("Alice"));
-	assert.ok(content.includes("Hi"));
-	assert.ok(content.includes("Bob"));
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails.length, 2);
+	assert.ok(data.emails.some(e => e.from.includes("Alice") && e.subject === "Hi"));
+	assert.ok(data.emails.some(e => e.from.includes("Bob") && e.subject === "Yo"));
 });
 
 test("poll saves timestamp after each run", async () => {
@@ -126,25 +121,56 @@ test("poll saves timestamp after each run", async () => {
 	assert.ok(getLastTs() >= before);
 });
 
-test("poll shows overflow count when >5 messages", async () => {
-	const gmail = fakeGmail({ messages: [1, 2, 3, 4, 5, 6].map((i) => ({ id: `m${i}` })) });
+test("poll skips automated emails (Auto-Submitted header)", async () => {
+	const gmail = fakeGmail({
+		messages: [{ id: "m1" }],
+		headers: { m1: h({ From: "slack@example.com", Subject: "Digest", "Auto-Submitted": "auto-generated" }) },
+	});
 	await poll(gmail);
-	assert.equal(hubCalls.length, 1);
-	assert.ok(hubCalls[0].content.includes("+1 more"));
+	assert.ok(!existsSync(cacheFile()));
+});
+
+test("poll skips bulk emails (Precedence: bulk)", async () => {
+	const gmail = fakeGmail({
+		messages: [{ id: "m1" }],
+		headers: { m1: h({ From: "news@example.com", Subject: "Newsletter", Precedence: "bulk" }) },
+	});
+	await poll(gmail);
+	assert.ok(!existsSync(cacheFile()));
+});
+
+test("poll skips emails with List-Unsubscribe header", async () => {
+	const gmail = fakeGmail({
+		messages: [{ id: "m1" }],
+		headers: { m1: h({ From: "promo@example.com", Subject: "Sale!", "List-Unsubscribe": "<mailto:unsub@example.com>" }) },
+	});
+	await poll(gmail);
+	assert.ok(!existsSync(cacheFile()));
+});
+
+test("poll keeps real emails alongside automated ones", async () => {
+	const gmail = fakeGmail({
+		messages: [{ id: "m1" }, { id: "m2" }],
+		headers: {
+			m1: h({ From: "alice@example.com", Subject: "Meeting tomorrow" }),
+			m2: h({ From: "slack@slack.com", Subject: "You have unread", "Auto-Submitted": "auto-generated" }),
+		},
+	});
+	await poll(gmail);
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails.length, 1);
+	assert.equal(data.emails[0].subject, "Meeting tomorrow");
 });
 
 test("poll handles missing headers gracefully", async () => {
-	const gmail = fakeGmail({
-		messages: [{ id: "m1" }],
-		details: { m1: { payload: { headers: [] } } },
-	});
+	const gmail = fakeGmail({ messages: [{ id: "m1" }], headers: { m1: [] } });
 	await poll(gmail);
-	assert.equal(hubCalls.length, 1);
-	assert.ok(hubCalls[0].content.includes("(no subject)"));
+	const data = JSON.parse(readFileSync(cacheFile(), "utf-8"));
+	assert.equal(data.emails[0].subject, "(no subject)");
+	assert.equal(data.emails[0].from, "?");
 });
 
 test("poll with null gmailOverride falls back to real client (no-creds path)", async () => {
-	// tmpHome has no Gmail credentials — getGmailClient should throw, poll should not throw
 	await assert.doesNotReject(() => poll(null));
-	assert.equal(hubCalls.length, 0);
+	assert.ok(!existsSync(cacheFile()));
 });
