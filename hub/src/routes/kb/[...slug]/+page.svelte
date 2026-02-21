@@ -1,17 +1,22 @@
 <script>
+	import { marked } from 'marked';
+	import { sanitizeHtml } from '$lib/sanitize.js';
 	let { data, form } = $props();
 	let editing = $state(false);
 	let editContent = $state('');
 	let newTitle = $state(data.slug || '');
 	let confirmDelete = $state(false);
+	let previewMode = $state(false);
+	let previewHtml = $derived(previewMode ? sanitizeHtml(marked.parse(editContent || '')) : '');
 
 	function toggleEdit() {
 		editing = !editing;
+		previewMode = false;
 		if (editing) editContent = data.rawContent;
 	}
 
 	$effect(() => {
-		if (form?.success) editing = false;
+		if (form?.success) { editing = false; previewMode = false; }
 	});
 </script>
 
@@ -61,7 +66,16 @@
 
 	{#if editing}
 		<form method="POST" action="?/save">
-			<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
+			<div class="edit-tabs">
+				<button type="button" class="tab" class:active={!previewMode} onclick={() => previewMode = false}>Write</button>
+				<button type="button" class="tab" class:active={previewMode} onclick={() => previewMode = true}>Preview</button>
+			</div>
+			{#if previewMode}
+				<input type="hidden" name="content" value={editContent} />
+				<article class="content preview-box">{@html previewHtml}</article>
+			{:else}
+				<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
+			{/if}
 			<div class="actions">
 				<button type="submit" class="save-btn">Save</button>
 				<button type="button" onclick={() => editing = false}>Cancel</button>
@@ -126,6 +140,10 @@
 		padding: 0.75em; border: 1px solid var(--border); border-radius: 6px;
 		box-sizing: border-box; background: var(--bg-surface); color: var(--text);
 	}
+	.edit-tabs { display: flex; gap: 0.25em; margin-bottom: 0.5em; }
+	.tab { padding: 0.35em 0.7em; border: 1px solid var(--border); border-radius: 6px 6px 0 0; background: var(--bg); color: var(--text-muted); cursor: pointer; font-size: 0.85em; }
+	.tab.active { background: var(--bg-surface); color: var(--text); font-weight: 600; border-bottom-color: var(--bg-surface); }
+	.preview-box { min-height: 10em; padding: 0.75em; border: 1px solid var(--border); border-radius: 0 6px 6px 6px; background: var(--bg-surface); }
 	.actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
 	.save-btn { background: var(--link); color: #fff; border: none; padding: 0.5em 1em; border-radius: 6px; cursor: pointer; }
 	.saved { color: #22c55e; }
