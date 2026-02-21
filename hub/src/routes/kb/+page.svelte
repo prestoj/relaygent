@@ -119,12 +119,20 @@
 		background: none; border: 1px solid var(--border); color: var(--link);
 		border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.85em; cursor: pointer; white-space: nowrap;
 	}
+	.new-btn:hover { border-color: var(--link); background: color-mix(in srgb, var(--link) 8%, transparent); }
+	.commit-btn {
+		background: none; border: 1px solid var(--border); color: var(--text-muted);
+		border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.85em; cursor: pointer; white-space: nowrap;
+	}
+	.commit-btn:hover { border-color: var(--link); color: var(--link); }
+	.commit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 	.new-form { display: flex; gap: 0.4em; align-items: center; }
 	.new-input {
 		padding: 0.35em 0.6em; border: 1px solid var(--border); border-radius: 6px;
 		font-size: 0.9em; background: var(--bg-surface); color: var(--text); width: 16em;
 	}
 	.new-submit { background: var(--link); color: #fff; border: none; border-radius: 6px; padding: 0.35em 0.7em; cursor: pointer; font-size: 0.85em; }
+	.new-submit:hover { opacity: 0.85; }
 	.new-cancel { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9em; padding: 0.2em; }
 	.count { font-weight: 400; color: var(--text-muted); font-size: 0.6em; }
 	.search {
