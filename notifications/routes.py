@@ -130,9 +130,11 @@ def _collect_chat_messages(notifications):
 
 import slack_collector  # noqa: E402
 import email_collector  # noqa: E402
+import github_collector  # noqa: E402
 
 _slow_collectors.append(("slack", slack_collector.collect))
 _slow_collectors.append(("email", email_collector.collect))
+_slow_collectors.append(("github", github_collector.collect))
 
 
 @app.route("/health", methods=["GET"])
