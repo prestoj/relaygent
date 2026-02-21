@@ -126,10 +126,8 @@ jobs:
           node-version: "22"
       - name: Install hub dependencies
         run: npm install --prefix hub
-      - name: Symlink hub node_modules for test resolution
-        run: ln -sfn hub/node_modules tests/hub/node_modules
       - name: Run hub tests
-        run: node --import=tests/hub/helpers/kit-loader.mjs --test tests/hub/*.test.js
+        run: node --import=./tests/hub/helpers/kit-loader.mjs --test tests/hub/*.test.js
 
   check-line-limits:
     name: File line limit (200)
