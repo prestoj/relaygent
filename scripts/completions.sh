@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats logs orient check health update cleanup clean-logs install-services set-password mcp archive-linear version help"
+_relaygent_commands="setup start stop restart status stats test logs orient check health update cleanup clean-logs install-services set-password mcp archive-linear version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_logs_flags="--list -f -n"
 
@@ -19,6 +19,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'restart:Restart all services'
             'status:Show running services'
             'stats:Session history and metrics'
+            'test:Run test suite (harness, hub, notifications, ...)'
             'logs:View logs (-f follow, -n lines, --list)'
             'orient:Quick system status snapshot'
             'check:Diagnose configuration'

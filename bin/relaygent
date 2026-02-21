@@ -56,6 +56,7 @@ print(s,t)
         ;;
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
+    test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
     mcp|orient|check|update|health|clean-logs|cleanup) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
@@ -77,6 +78,7 @@ print(s,t)
             "restart" "Restart all services" \
             "status" "Show what's running" \
             "stats" "Session history, errors, and context usage" \
+            "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
             "logs [service]" "View logs (-f follow, -n lines, --list)" \
             "orient" "Quick system status snapshot" \
             "check" "Diagnose configuration" \
