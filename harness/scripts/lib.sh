@@ -98,3 +98,38 @@ verify_service() {
     echo -e "    ${YELLOW}Warning: $name started but not responding after ${retries}s${NC}"
     return 1
 }
+
+# --- Check helpers (for check.sh and similar diagnostic scripts) ---
+_CK_PASS=0; _CK_FAIL=0; _CK_WARN=0
+ck_ok()   { echo -e "  ✓ $1: ${GREEN}$2${NC}";   _CK_PASS=$((_CK_PASS+1)); }
+ck_warn() { echo -e "  ⚠ $1: ${YELLOW}$2${NC}"; _CK_WARN=$((_CK_WARN+1)); }
+ck_fail() { echo -e "  ✗ $1: ${RED}$2${NC}";    _CK_FAIL=$((_CK_FAIL+1)); }
+
+ck_summary() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    if [ "$_CK_FAIL" -gt 0 ]; then
+        echo -e "  ${RED}$_CK_FAIL failed, $_CK_WARN warnings, $_CK_PASS passed.${NC}"
+        echo -e "  ${RED}Fix failures above before running: relaygent start${NC}"
+        return 1
+    elif [ "$_CK_WARN" -gt 0 ]; then
+        echo -e "  ${YELLOW}$_CK_WARN warnings, $_CK_PASS passed. System usable but review warnings.${NC}"
+    else
+        echo -e "  ${GREEN}All $_CK_PASS checks passed.${NC}"
+    fi
+}
+
+load_config_soft() {
+    HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""
+    [ ! -f "$CONFIG_FILE" ] && return 1
+    local cv
+    cv="$(python3 -c "
+import json,shlex,sys
+try:
+ c=json.load(open('$CONFIG_FILE'));s=c['services']
+ for k,v in[('HUB_PORT',c['hub']['port']),
+  ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
+  ('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
+except Exception: sys.exit(1)
+")" || return 1
+    eval "$cv"
+}
