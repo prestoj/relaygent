@@ -11,12 +11,15 @@ usage() {
     echo "  list                                    Show registered MCP servers"
     echo "  add <name> <command> [args] [--env K=V]  Register a new MCP server"
     echo "  remove <name>                            Unregister an MCP server"
+    echo "  test [name]                              Verify servers respond (all or one)"
     echo ""
     echo "Examples:"
     echo "  relaygent mcp list"
     echo "  relaygent mcp add jira node /path/to/jira-mcp.mjs"
     echo "  relaygent mcp add notion npx @notionhq/mcp --env NOTION_TOKEN=secret_xyz"
     echo "  relaygent mcp remove jira"
+    echo "  relaygent mcp test"
+    echo "  relaygent mcp test slack"
 }
 
 ensure_claude_json() {
@@ -150,10 +153,47 @@ print(f"\nRestart your Claude Code session to pick up the change.")
 PYEOF
 }
 
+cmd_test() {
+    ensure_claude_json
+    python3 - "$CLAUDE_JSON" "${1:-}" <<'PYEOF'
+import json, os, select, subprocess, sys
+config_path = sys.argv[1]
+filter_name = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else ""
+try: config = json.load(open(config_path))
+except: print("No MCP servers configured."); sys.exit(1)
+servers = config.get("mcpServers", {})
+if filter_name:
+    if filter_name not in servers: print(f"MCP server '{filter_name}' not found."); sys.exit(1)
+    servers = {filter_name: servers[filter_name]}
+ok = fail = 0
+INIT = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}}}\n'
+for name, cfg in sorted(servers.items()):
+    cmd, args = cfg.get("command", ""), cfg.get("args", [])
+    env = {**os.environ, **cfg.get("env", {})}
+    if subprocess.run(["which", cmd], capture_output=True).returncode != 0:
+        print(f"  \033[0;31m✗\033[0m {name}: command '{cmd}' not found"); fail += 1; continue
+    try:
+        p = subprocess.Popen([cmd]+args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        p.stdin.write(INIT.encode()); p.stdin.flush()
+        if select.select([p.stdout], [], [], 5)[0]:
+            line = p.stdout.readline().decode(errors="replace")
+            status = "\033[0;32m✓\033[0m" if "jsonrpc" in line else "\033[1;33m?\033[0m"
+            label = "responds" if "jsonrpc" in line else "started (unexpected response)"
+        else: status, label = "\033[1;33m?\033[0m", "started (no response in 5s)"
+        print(f"  {status} {name}: {label}"); ok += 1
+    except Exception as e: print(f"  \033[0;31m✗\033[0m {name}: {e}"); fail += 1
+    finally:
+        try: p.kill(); p.wait(timeout=2)
+        except: pass
+print(f"\n{ok+fail} tested: {ok} ok, {fail} failed"); sys.exit(1 if fail else 0)
+PYEOF
+}
+
 case "${1:-list}" in
     list|ls) cmd_list ;;
     add) shift; cmd_add "$@" ;;
     remove|rm) shift; cmd_remove "$@" ;;
+    test) shift; cmd_test "$@" ;;
     -h|--help|help) usage ;;
     *) echo "Unknown command: $1"; usage; exit 1 ;;
 esac
