@@ -32,7 +32,8 @@ run "hub" node --import="$ROOT/hub/tests/helpers/kit-loader.mjs" \
 run "secrets" node --test "$ROOT/secrets/test_vault.mjs"
 
 # --- Email (Node) ---
-run "email" node --test "$ROOT/email/test_email_poller.mjs"
+run "email" node --test "$ROOT/email/test_email_poller.mjs" \
+  "$ROOT/email/test_gmail_client.mjs"
 
 # --- Computer-use Python ---
 run "computer-use/python" python3 -m pytest \
