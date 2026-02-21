@@ -2,199 +2,46 @@
 set -euo pipefail
 _SELF="${BASH_SOURCE[0]}"; while [[ -L "$_SELF" ]]; do _d="$(cd "$(dirname "$_SELF")" && pwd)"; _l="$(readlink "$_SELF")"; [[ "$_l" == /* ]] && _SELF="$_l" || _SELF="$_d/$_l"; done
 SCRIPT_DIR="$(cd "$(dirname "$_SELF")/.." && pwd)"
-CONFIG_FILE="$HOME/.relaygent/config.json"
-PID_DIR="$HOME/.relaygent"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-
-load_config() {
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo -e "${RED}Not set up yet. Run: ./setup.sh${NC}"; exit 1
-    fi
-    local config_vars
-    config_vars="$(python3 -c "
-import json,shlex,sys
-try:
- c=json.load(open('$CONFIG_FILE'));s=c['services']
- for k,v in[('HUB_PORT',c['hub']['port']),
-  ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
-  ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
-except Exception: sys.exit(1)
-")" || { echo -e "${RED}Failed to parse $CONFIG_FILE. Re-run ./setup.sh${NC}"; exit 1; }
-    eval "$config_vars"
-    export RELAYGENT_DATA_DIR="$DATA_DIR" RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_HUB_PORT="$HUB_PORT"
-    export HAMMERSPOON_PORT="$HS_PORT" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT"
-}
-
-port_pids() { # prints PIDs listening on given port
-    if command -v lsof &>/dev/null; then lsof -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -3
-    elif command -v ss &>/dev/null; then ss -tlnp "sport = :$1" 2>/dev/null | awk 'NR>1{match($0,/pid=([0-9]+)/,a); if(a[1]) print a[1]}' | head -3; fi; }
-check_port() { local pids; pids=$(port_pids "$1")
-    [ -n "$pids" ] && { echo -e "  ${RED}Port $1 ($2) in use (pid $pids).${NC} Kill: ${YELLOW}kill $pids${NC}"; return 1; }; }
-
-ensure_venv() {
-    local dir=$1
-    if [ ! -d "$dir/.venv" ] || [ ! -f "$dir/.venv/bin/python3" ]; then
-        rm -rf "$dir/.venv" 2>/dev/null
-        if ! python3 -m venv "$dir/.venv" 2>/dev/null; then
-            echo -e "  ${RED}Failed to create venv in $dir${NC}"; return 1
-        fi
-        if ! "$dir/.venv/bin/pip" install -q -r "$dir/requirements.txt" 2>&1 | tail -1; then
-            echo -e "  ${RED}Failed to install deps in $dir${NC}"; return 1
-        fi
-    fi
-}
-
-start_service() {
-    local name=$1 pidfile="$PID_DIR/$2.pid" logfile="$SCRIPT_DIR/logs/relaygent-$2.log"
-    shift 2
-    mkdir -p "$SCRIPT_DIR/logs"
-    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-        echo -e "  $name: ${GREEN}already running${NC}"
-        return
-    fi
-    "$@" > "$logfile" 2>&1 &
-    echo $! > "$pidfile"
-    echo -e "  $name: ${GREEN}started${NC}"
-}
-
-stop_process() {
-    local name=$1 pidfile="$PID_DIR/$2.pid"
-    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-        local pid; pid=$(cat "$pidfile")
-        pkill -TERM -P "$pid" 2>/dev/null || true; kill -TERM "$pid" 2>/dev/null || true
-        for _ in 1 2 3; do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-        kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
-        echo -e "  $name: ${YELLOW}stopped${NC}"
-    else
-        echo -e "  $name: ${YELLOW}not running${NC}"
-    fi
-    rm -f "$pidfile" 2>/dev/null
-}
-
-check_process() { local n=$1 p="$PID_DIR/$2.pid"
-    [[ -f "$p" ]] && kill -0 "$(cat "$p")" 2>/dev/null && echo -e "  $n: ${GREEN}running${NC} (pid $(cat "$p"))" || echo -e "  $n: ${RED}stopped${NC}"; }
-
-do_start() {
-    load_config
-    echo -e "${CYAN}Starting Relaygent...${NC}"
-    local port_ok=true
-    check_port "$HUB_PORT" "Hub" || port_ok=false
-    check_port "$NOTIF_PORT" "Notifications" || port_ok=false
-    if [ "$port_ok" = false ]; then
-        echo -e "\n  ${RED}Fix port conflicts above, then try again.${NC}"; exit 1
-    fi
-    # Computer-use backend
-    if [ "$(uname)" = "Darwin" ]; then
-        if ! pgrep -x Hammerspoon >/dev/null 2>&1; then
-            if command -v open &>/dev/null && open -Ra Hammerspoon 2>/dev/null; then
-                open -a Hammerspoon
-                echo -e "  Hammerspoon: ${GREEN}launched${NC}"
-            else
-                echo -e "  Hammerspoon: ${YELLOW}not installed (computer-use unavailable)${NC}"
-            fi
-        else
-            echo -e "  Hammerspoon: ${GREEN}already running${NC}"
-        fi
-    elif [ "$(uname)" = "Linux" ]; then
-        local missing=""
-        for dep in xdotool scrot wmctrl convert; do
-            command -v "$dep" &>/dev/null || missing="$missing $dep"
-        done
-        python3 -c "import pyatspi" 2>/dev/null || missing="$missing python3-pyatspi"
-        if [ -n "$missing" ]; then
-            echo -e "  Computer-use: ${YELLOW}missing deps:${missing}${NC}"
-            echo -e "    ${YELLOW}Install: sudo apt install xdotool scrot wmctrl imagemagick python3-pyatspi at-spi2-core${NC}"
-        elif [ -z "${DISPLAY:-}" ]; then
-            if command -v Xvfb &>/dev/null; then
-                export DISPLAY=:99
-                Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp >> "$SCRIPT_DIR/logs/relaygent-xvfb.log" 2>&1 &
-                echo $! > "$PID_DIR/xvfb.pid"
-                sleep 0.5
-                echo -e "  Xvfb: ${GREEN}started${NC} (DISPLAY=:99)"
-            else
-                echo -e "  Computer-use: ${YELLOW}no DISPLAY set and Xvfb not found${NC}"
-            fi
-        fi
-        if [ -n "${DISPLAY:-}" ]; then
-            check_port "$HS_PORT" "Computer-use" || port_ok=false
-            if [ "$port_ok" = true ]; then
-                start_service "Computer-use (port $HS_PORT)" "computer-use" \
-                    env DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/computer-use/linux-server.py"
-                # Verify server started
-                sleep 0.5
-                if ! curl -sf "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
-                    echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
-                fi
-            fi
-        fi
-    else
-        echo -e "  Computer-use: ${YELLOW}unavailable (unsupported platform)${NC}"
-    fi
-    # Hub — build if needed
-    [ ! -d "$SCRIPT_DIR/hub/build" ] && echo "  Building hub..." && (cd "$SCRIPT_DIR/hub" && npm run build >/dev/null 2>&1)
-    start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" RELAY_STATUS_FILE="$SCRIPT_DIR/data/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$SCRIPT_DIR/data" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$SCRIPT_DIR/hub/ws-server.mjs"
-    # Notifications
-    ensure_venv "$SCRIPT_DIR/notifications"
-    start_service "Notifications (port $NOTIF_PORT)" "notifications" \
-        "$SCRIPT_DIR/notifications/.venv/bin/python3" "$SCRIPT_DIR/notifications/server.py"
-    [ -f "$HOME/.relaygent/slack/app-token" ] && start_service "Slack socket" "slack-socket" node "$SCRIPT_DIR/notifications/slack-socket-listener.mjs"
-    [ -f "$HOME/.relaygent/gmail/credentials.json" ] && start_service "Email poller" "email-poller" env HUB_PORT="$HUB_PORT" node "$SCRIPT_DIR/email/email-poller.mjs"
-    # Relay — verify Claude auth before starting
-    if ! claude -p 'hi' >/dev/null 2>&1; then
-        echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
-    elif [ "$(uname)" = "Linux" ] && command -v systemctl &>/dev/null && systemctl --user is-system-running &>/dev/null; then
-        bash "$SCRIPT_DIR/scripts/install-relay-service.sh" && echo -e "  Relay: ${GREEN}managed by systemd (auto-restarts on crash)${NC}"
-    else
-        start_service "Relay" "relay" python3 "$SCRIPT_DIR/harness/relay.py"
-    fi
-    echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}\n  Logs: $SCRIPT_DIR/logs/\n"
-    { sleep 2 && { [ "$(uname)" = "Darwin" ] && open "http://localhost:$HUB_PORT/" 2>/dev/null || { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "http://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &
-}
-
-do_stop() {
-    load_config 2>/dev/null || true
-    echo -e "${CYAN}Stopping Relaygent...${NC}"
-    systemctl --user stop relaygent-relay.service 2>/dev/null || true; stop_process "Relay" "relay"
-    local claude_pids; claude_pids=$(pgrep -f "claude.*--print.*--session-id" 2>/dev/null) || true
-    [ -n "$claude_pids" ] && kill -TERM $claude_pids 2>/dev/null && echo -e "  Claude: ${YELLOW}cleaned up${NC}" || true
-    for svc in Computer-use:computer-use Hub:hub Notifications:notifications Slack-socket:slack-socket Email-poller:email-poller; do
-        stop_process "${svc%%:*}" "${svc##*:}"
-    done
-    stop_process "Xvfb" "xvfb"
-    for pn in "${HUB_PORT:-8080}:Hub" "${NOTIF_PORT:-8083}:Notifications"; do
-        local pids; pids=$(port_pids "${pn%%:*}") || true
-        [ -n "$pids" ] && kill $pids 2>/dev/null && echo -e "  ${pn##*:} orphan: ${YELLOW}killed${NC}" || true
-    done
-    local mpids; mpids=$(pgrep -f "mcp-chat\.mjs|mcp-server\.mjs|notification-poller" 2>/dev/null) || true
-    [ -n "$mpids" ] && kill $mpids 2>/dev/null || true
-    pkill -f google-chrome 2>/dev/null && echo -e "  Chrome: ${YELLOW}stopped${NC}" || true; rm -f "$SCRIPT_DIR/harness/.relay.lock"
-}
-
-do_status() {
-    load_config
-    echo -e "${CYAN}Relaygent Status${NC}"
-    for svc in Relay:relay Hub:hub Notifications:notifications Slack-socket:slack-socket Email-poller:email-poller; do
-        check_process "${svc%%:*}" "${svc##*:}"
-    done
-    [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
-}
+CYAN='\033[0;36m'; NC='\033[0m'; RED='\033[0;31m'
 
 case "${1:-help}" in
-    start)   do_start ;;
-    stop)    do_stop; exit 0 ;;
-    status)  do_status ;;
-    restart) do_stop; sleep 1; do_start ;;
-    logs)    SVC="${2:-}"; [ -n "$SVC" ] && F="$SCRIPT_DIR/logs/relaygent-$SVC.log" || F="$SCRIPT_DIR/logs/relaygent*.log"; tail -f $F 2>/dev/null || echo -e "${RED}No logs found${NC}" ;;
+    start)   bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
+    stop)    bash "$SCRIPT_DIR/harness/scripts/stop.sh"; exit 0 ;;
+    restart) bash "$SCRIPT_DIR/harness/scripts/stop.sh"; sleep 1; bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
+    status)
+        source "$SCRIPT_DIR/harness/scripts/lib.sh"
+        load_config
+        echo -e "${CYAN}Relaygent Status${NC}"
+        check_process "Relay" "relay"
+        check_process "Hub" "hub" "$HUB_PORT"
+        check_process "Notifications" "notifications" "$NOTIF_PORT"
+        check_process "Slack-socket" "slack-socket"
+        check_process "Email-poller" "email-poller"
+        [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } \
+            || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
+        ;;
+    logs)
+        SVC="${2:-}"; [ -n "$SVC" ] && F="$SCRIPT_DIR/logs/relaygent-$SVC.log" || F="$SCRIPT_DIR/logs/relaygent*.log"
+        tail -f $F 2>/dev/null || echo -e "${RED}No logs found${NC}"
+        ;;
     orient|check|update|health|clean-logs) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
-    archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;; set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
+    archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
+    set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     help|--help|-h|*)
         echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
-        printf "  %-17s %s\n" "start" "Launch agent, dashboard, and all services" \
-            "stop" "Stop everything" "restart" "Restart all services" \
-            "status" "Show what's running" "logs [service]" "Tail live service logs" \
-            "orient" "Quick system status snapshot" "check" "Diagnose configuration" \
-            "health" "Ping all services and report status" "update" "Pull latest, rebuild, restart" \
+        printf "  %-17s %s\n" \
+            "start" "Launch agent, dashboard, and all services" \
+            "stop" "Stop everything" \
+            "restart" "Restart all services" \
+            "status" "Show what's running" \
+            "logs [service]" "Tail live service logs" \
+            "orient" "Quick system status snapshot" \
+            "check" "Diagnose configuration" \
+            "health" "Ping all services and report status" \
+            "update" "Pull latest, rebuild, restart" \
             "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
             "set-password" "Set/remove hub dashboard auth (--remove)" \
-            "archive-linear" "Archive old Linear issues (--dry-run, --days N)" ;; esac
+            "archive-linear" "Archive old Linear issues (--dry-run, --days N)"
+        ;;
+esac
