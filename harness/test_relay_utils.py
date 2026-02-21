@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from relay_utils import acquire_lock, cleanup_context_file, commit_kb, kill_orphaned_claudes, notify_crash, rotate_log
+from relay_utils import acquire_lock, cleanup_context_file, commit_kb, kill_orphaned_claudes, notify_crash, pull_latest, rotate_log
 
 
 class TestRotateLog:
@@ -91,61 +91,45 @@ class TestNotifyCrash:
             _send_slack_alert("test")  # Should not raise
 
     def test_send_chat_alert_swallows_network_errors(self):
-        """_send_chat_alert catches URLError/OSError so hub being down won't crash relay."""
         import urllib.error
-        with patch("urllib.request.urlopen",
-                   side_effect=urllib.error.URLError("connection refused")):
-            # Should not raise — hub being down is non-fatal
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("refused")):
             from relay_utils import _send_chat_alert
-            _send_chat_alert("test alert")
+            _send_chat_alert("test alert")  # Should not raise
 
+
+def _make_commit_script(tmp_path, mode=0o755):
+    s = tmp_path / "knowledge" / "commit.sh"
+    s.parent.mkdir(parents=True, exist_ok=True)
+    s.write_text("#!/bin/bash\nexit 0\n"); s.chmod(mode)
+    return s
 
 class TestCommitKb:
     def test_runs_commit_script_when_present(self, tmp_path, monkeypatch):
-        commit_script = tmp_path / "knowledge" / "commit.sh"
-        commit_script.parent.mkdir(parents=True)
-        commit_script.write_text("#!/bin/bash\nexit 0\n")
-        commit_script.chmod(0o755)
+        script = _make_commit_script(tmp_path)
         monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
-
-        with patch("relay_utils.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            commit_kb()
-        mock_run.assert_called_once()
-        args = mock_run.call_args[0][0]
-        assert str(commit_script) in args[0]
+        with patch("relay_utils.subprocess.run") as m:
+            m.return_value.returncode = 0; commit_kb()
+        m.assert_called_once()
+        assert str(script) in m.call_args[0][0][0]
 
     def test_skips_if_script_missing(self, tmp_path, monkeypatch):
         monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
-        with patch("relay_utils.subprocess.run") as mock_run:
-            commit_kb()
-        mock_run.assert_not_called()
+        with patch("relay_utils.subprocess.run") as m: commit_kb()
+        m.assert_not_called()
 
     def test_skips_if_not_executable(self, tmp_path, monkeypatch):
-        commit_script = tmp_path / "knowledge" / "commit.sh"
-        commit_script.parent.mkdir(parents=True)
-        commit_script.write_text("#!/bin/bash\nexit 0\n")
-        commit_script.chmod(0o644)  # not executable
+        _make_commit_script(tmp_path, mode=0o644)
         monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
-
-        with patch("relay_utils.subprocess.run") as mock_run:
-            commit_kb()
-        mock_run.assert_not_called()
+        with patch("relay_utils.subprocess.run") as m: commit_kb()
+        m.assert_not_called()
 
     def test_logs_failure_on_nonzero_exit(self, tmp_path, monkeypatch):
-        commit_script = tmp_path / "knowledge" / "commit.sh"
-        commit_script.parent.mkdir(parents=True)
-        commit_script.write_text("#!/bin/bash\nexit 1\n")
-        commit_script.chmod(0o755)
+        _make_commit_script(tmp_path)
         monkeypatch.setattr("relay_utils.REPO_DIR", tmp_path)
-
-        with patch("relay_utils.subprocess.run") as mock_run, \
-             patch("relay_utils.log") as mock_log:
-            mock_run.return_value.returncode = 1
-            mock_run.return_value.stderr = b"push failed"
+        with patch("relay_utils.subprocess.run") as m, patch("relay_utils.log") as ml:
+            m.return_value.returncode = 1; m.return_value.stderr = b"push failed"
             commit_kb()
-        logged = " ".join(str(c) for c in mock_log.call_args_list)
-        assert "failed" in logged.lower()
+        assert "failed" in " ".join(str(c) for c in ml.call_args_list).lower()
 
 
 class TestAcquireLock:
@@ -191,3 +175,17 @@ class TestKillOrphanedClaudes:
         monkeypatch.setattr("relay_utils.subprocess.run", lambda *a, **kw: mock_run)
         with patch("relay_utils.os.kill", side_effect=ProcessLookupError):
             kill_orphaned_claudes()  # Should not raise
+
+
+class TestPullLatest:
+    def test_calls_git_pull_ff_only(self, monkeypatch):
+        mock_run = MagicMock(); mock_run.returncode = 0; mock_run.stdout = "Already up to date."
+        monkeypatch.setattr("relay_utils.subprocess.run", mock_run)
+        pull_latest()
+        args = mock_run.call_args[0][0]
+        assert "pull" in args and "--ff-only" in args
+
+    def test_swallows_subprocess_error(self, monkeypatch):
+        import subprocess
+        monkeypatch.setattr("relay_utils.subprocess.run", MagicMock(side_effect=subprocess.TimeoutExpired("git", 30)))
+        pull_latest()  # Should not raise
