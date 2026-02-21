@@ -79,6 +79,12 @@
 			{/each}
 		</ul>
 	{/each}
+	{#if data.truncated}
+		<div class="show-all">
+			<span class="trunc-note">Showing {data.sessions.length} of {data.total} sessions</span>
+			<a href="/sessions?all=1" class="show-all-btn">Show all {data.total}</a>
+		</div>
+	{/if}
 {/if}
 
 <style>
@@ -97,4 +103,8 @@
 	.meta { font-size: 0.8em; color: var(--text-muted); }
 	.sum { margin: 0; font-size: 0.75em; color: var(--text-muted); padding-left: 0.2em; }
 	.current a { font-weight: 600; }
+	.show-all { display: flex; align-items: center; gap: 0.75em; margin-top: 1em; padding: 0.6em 0; }
+	.trunc-note { font-size: 0.8em; color: var(--text-muted); }
+	.show-all-btn { font-size: 0.8em; padding: 0.3em 0.7em; border: 1px solid var(--border); border-radius: 6px; color: var(--link); text-decoration: none; }
+	.show-all-btn:hover { border-color: var(--link); background: color-mix(in srgb, var(--link) 8%, transparent); }
 </style>
