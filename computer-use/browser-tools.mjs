@@ -1,13 +1,14 @@
 // Browser automation tools via CDP — registers browser_navigate, browser_eval, browser_coords, etc.
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs } from "./cdp.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected } from "./cdp.mjs";
 import { COORD_EXPR, CLICK_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const actionRes = async (text, delay) => ({ content: [{ type: "text", text }, ...await takeScreenshot(delay ?? 1500)] });
 // Claude sometimes serializes booleans as strings ("true"/"false") — coerce safely
 const bool = z.preprocess(v => v === "true" ? true : v === "false" ? false : v, z.boolean().optional());
+const cdpErr = (sel) => cdpConnected() ? `Element not found: ${sel}` : `CDP not connected — use browser_navigate to open a page first`;
 
 export function registerBrowserTools(server, IS_LINUX) {
   server.tool("browser_navigate",
@@ -16,7 +17,8 @@ export function registerBrowserTools(server, IS_LINUX) {
       new_tab: bool.describe("Open in new tab") },
     async ({ url, new_tab }) => {
       if (!new_tab && await cdpNavigate(url)) {
-        await hsCall("POST", "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
+        // Focus existing Chrome window — launch would open a new tab on Linux
+        await hsCall("POST", IS_LINUX ? "/focus" : "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
         return actionRes(`Navigated to ${url}`, 800);
       }
       const mod = IS_LINUX ? "ctrl" : "cmd";
@@ -46,7 +48,7 @@ export function registerBrowserTools(server, IS_LINUX) {
       frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
     async ({ selector, frame }) => {
       const raw = await cdpEval(COORD_EXPR(selector, frame));
-      if (!raw) return jsonRes({ error: `Element not found: ${selector}` });
+      if (!raw) return jsonRes({ error: cdpErr(selector) });
       try {
         const c = JSON.parse(raw), sf = scaleFactor();
         if (sf !== 1) { c.sx = Math.round(c.sx / sf); c.sy = Math.round(c.sy / sf); }
@@ -78,7 +80,7 @@ export function registerBrowserTools(server, IS_LINUX) {
       frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
     async ({ selector, frame }) => {
       const raw = await cdpEval(CLICK_EXPR(selector, frame));
-      if (!raw) return jsonRes({ error: `Element not found: ${selector}` });
+      if (!raw) return jsonRes({ error: cdpErr(selector) });
       let coords;
       try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
       return actionRes(`Clicked ${selector} at (${coords.sx},${coords.sy})`, 1000);
@@ -92,7 +94,7 @@ export function registerBrowserTools(server, IS_LINUX) {
       frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
     async ({ text, index = 0, frame }) => {
       const raw = await cdpEval(TEXT_CLICK_EXPR(text, index, frame));
-      if (!raw) return jsonRes({ error: `No elements found containing: ${text}` });
+      if (!raw) return jsonRes({ error: cdpConnected() ? `No elements found containing: ${text}` : `CDP not connected — use browser_navigate to open a page first` });
       let coords;
       try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
       if (coords.error) return jsonRes(coords);

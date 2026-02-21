@@ -69,6 +69,33 @@ if ! pgrep -f "slack-socket-listener" &>/dev/null; then
     fi
 fi
 
+# Ensure hub is running (auto-restart if crashed — same pattern as poller/socket)
+HUB_PID_FILE="$HOME/.relaygent/hub.pid"
+hub_alive=false
+[ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE" 2>/dev/null)" 2>/dev/null && hub_alive=true
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ "$hub_alive" = false ] && [ -f "$REPO_DIR/hub/build/handler.js" ]; then
+    HUB_CRASH_FILE="/tmp/relaygent-hub-last-start"
+    hub_ok=true
+    if [[ -f "$HUB_CRASH_FILE" ]]; then
+        h_last=$(cat "$HUB_CRASH_FILE" 2>/dev/null || echo 0)
+        (( $(date +%s) - h_last < 30 )) && hub_ok=false
+    fi
+    if [[ "$hub_ok" = true ]]; then
+        date +%s > "$HUB_CRASH_FILE"
+        CFG="$HOME/.relaygent/config.json"
+        HP=$(python3 -c "import json; print(json.load(open('$CFG'))['hub']['port'])" 2>/dev/null || echo 8080)
+        NP=$(python3 -c "import json; print(json.load(open('$CFG'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
+        KD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['kb'])" 2>/dev/null || echo "$REPO_DIR/knowledge/topics")
+        DD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
+        mkdir -p "$REPO_DIR/logs"
+        PORT="$HP" RELAY_STATUS_FILE="$DD/relay-status.json" RELAYGENT_KB_DIR="$KD" \
+            RELAYGENT_DATA_DIR="$DD" RELAYGENT_NOTIFICATIONS_PORT="$NP" \
+            nohup node "$REPO_DIR/hub/ws-server.mjs" >> "$REPO_DIR/logs/relaygent-hub.log" 2>&1 &
+        echo $! > "$HUB_PID_FILE"
+    fi
+fi
+
 # Build context string: always include time
 TIME=$(date '+%H:%M:%S %Z')
 CTX="Current time: $TIME"
