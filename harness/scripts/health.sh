@@ -45,7 +45,6 @@ fi
 
 # Background daemons
 check_process "Notification poller" "notification-poller"
-check_process "Slack socket" "slack-socket-listener"
 [ -f "$HOME/.relaygent/gmail/credentials.json" ] && check_process "Email poller" "email-poller"
 
 # Relay harness
