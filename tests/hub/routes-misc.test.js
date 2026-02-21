@@ -1,5 +1,5 @@
 /**
- * Tests for /api/health, /api/logs, /api/model, /api/notifications route handlers.
+ * Tests for /api/health, /api/logs, /api/notifications route handlers.
  * Run: node --import=./tests/helpers/kit-loader.mjs --test tests/routes-misc.test.js
  */
 import { test } from 'node:test';
@@ -15,7 +15,6 @@ process.env.RELAYGENT_NOTIFICATIONS_PORT = '19999';
 
 const { GET: healthGet } = await import('../../hub/src/routes/api/health/+server.js');
 const { GET: logsGet } = await import('../../hub/src/routes/api/logs/+server.js');
-const { GET: modelGet, POST: modelPost } = await import('../../hub/src/routes/api/model/+server.js');
 const { GET: notifGet, POST: notifPost, DELETE: notifDelete } =
 	await import('../../hub/src/routes/api/notifications/+server.js');
 
@@ -67,35 +66,6 @@ test('GET /api/logs: defaults to relaygent when file omitted', async () => {
 	const res = await logsGet(urlReq('/api/logs'));
 	assert.equal(res.status, 200);
 	assert.equal((await res.json()).file, 'relaygent');
-});
-
-// --- Model ---
-test('GET /api/model returns model list', async () => {
-	const res = modelGet();
-	assert.equal(res.status, 200);
-	const body = await res.json();
-	assert.ok(Array.isArray(body.models));
-	assert.ok(body.models.includes('claude-sonnet-4-6'));
-});
-
-test('POST /api/model: invalid model returns 400', async () => {
-	const res = await modelPost(postReq({ model: 'gpt-4' }));
-	assert.equal(res.status, 400);
-	assert.match((await res.json()).error, /Invalid model/);
-});
-
-test('POST /api/model: invalid JSON returns 400', async () => {
-	const res = await modelPost({ request: new Request('http://localhost/', {
-		method: 'POST', body: 'bad' }) });
-	assert.equal(res.status, 400);
-});
-
-test('POST /api/model: valid model returns 200 with model echoed', async () => {
-	const res = await modelPost(postReq({ model: 'claude-sonnet-4-6' }));
-	assert.equal(res.status, 200);
-	const body = await res.json();
-	assert.equal(body.model, 'claude-sonnet-4-6');
-	assert.equal(body.status, 'ok');
 });
 
 // --- Notifications ---
