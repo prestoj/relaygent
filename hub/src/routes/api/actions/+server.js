@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
 import { execFile } from 'node:child_process';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
-const BIN = join(process.env.HOME || '/tmp', 'bin', 'relaygent');
+const BIN = process.env.RELAYGENT_BIN || join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..', 'bin', 'relaygent');
 
 const ACTIONS = {
 	health: ['health'],

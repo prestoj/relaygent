@@ -16,6 +16,7 @@ process.env.HOME = tmpHome;
 const binDir = path.join(tmpHome, 'bin');
 fs.mkdirSync(binDir, { recursive: true });
 const fakeBin = path.join(binDir, 'relaygent');
+process.env.RELAYGENT_BIN = fakeBin;
 fs.writeFileSync(fakeBin, '#!/bin/bash\necho "ran: $*"');
 fs.chmodSync(fakeBin, 0o755);
 
