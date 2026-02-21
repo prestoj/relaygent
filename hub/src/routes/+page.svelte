@@ -6,6 +6,7 @@
 	import ScreenStream from '$lib/components/ScreenStream.svelte';
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
+	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -150,27 +151,7 @@
 		<div class="waiting-text">Agent is starting up...</div>
 		<div class="waiting-hint">The dashboard will update automatically when the agent begins working.</div>
 	{:else}
-		<div class="waiting-icon">&#128075;</div>
-		<div class="waiting-text">Welcome to Relaygent</div>
-		<div class="waiting-hint">Your AI agent runs autonomously on this machine. Here's how to get started:</div>
-		<div class="onboard">
-			<a href="/chat" class="ob-card">
-				<span class="ob-icon">&#128172;</span>
-				<span class="ob-label">Chat</span>
-				<span class="ob-desc">Send messages to your agent</span>
-			</a>
-			<a href="/intent" class="ob-card">
-				<span class="ob-icon">&#127919;</span>
-				<span class="ob-label">Set Intent</span>
-				<span class="ob-desc">Tell the agent what to work on</span>
-			</a>
-			<a href="/kb" class="ob-card">
-				<span class="ob-icon">&#128218;</span>
-				<span class="ob-label">Knowledge Base</span>
-				<span class="ob-desc">Persistent memory across sessions</span>
-			</a>
-		</div>
-		<div class="start-hint">Click <strong>Start</strong> above to launch the agent, or run <code>relaygent start</code></div>
+		<WelcomeCard />
 	{/if}
 </section>
 {:else}
@@ -197,12 +178,7 @@
 	.att-item { display: flex; justify-content: space-between; gap: 0.5em; padding: 0.4em 0.6em; background: var(--code-bg); border-radius: 4px; margin-bottom: 0.3em; font-size: 0.88em; }  .att-item :global(strong) { color: var(--link); }
 	.x, .clear-all { background: none; border: none; color: var(--text-muted); cursor: pointer; }  .x:hover, .clear-all:hover { color: var(--text); }  .clear-all { font-size: 0.75em; border: 1px solid var(--border); padding: 0.2em 0.4em; border-radius: 4px; }
 	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; }
-	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); margin-bottom: 1.5em; }  .screen-toggle { margin-bottom: 1em; }
-	.onboard { display: flex; gap: 1em; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5em; }
-	.ob-card { display: flex; flex-direction: column; align-items: center; gap: 0.3em; padding: 1em 1.2em; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; min-width: 140px; transition: border-color 0.15s, box-shadow 0.15s; }
-	.ob-card:hover { border-color: var(--link); box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; }
-	.ob-icon { font-size: 1.5em; }  .ob-label { font-weight: 600; color: var(--text); font-size: 0.9em; }  .ob-desc { color: var(--text-muted); font-size: 0.75em; }
-	.start-hint { font-size: 0.8em; color: var(--text-muted); }
+	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
 	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
 	.summary-section { margin-bottom: 1em; }
 	.summary-btn { padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.82em; font-weight: 600; color: var(--text-muted); }
