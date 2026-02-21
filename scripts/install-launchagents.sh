@@ -120,13 +120,24 @@ do_install() {
         echo -e "  com.relaygent.email-poller: ${YELLOW}skipped (no Gmail creds)${NC}"
     fi
 
+    # Relay harness
+    write_plist "com.relaygent.relay" "$PYTHON3" "$REPO_DIR/harness/relay.py" \
+"        <key>RELAYGENT_HUB_PORT</key>
+        <string>$HUB_PORT</string>
+        <key>RELAYGENT_KB_DIR</key>
+        <string>$KB_DIR</string>
+        <key>RELAYGENT_DATA_DIR</key>
+        <string>$DATA_DIR</string>
+        <key>RELAYGENT_NOTIFICATIONS_PORT</key>
+        <string>$NOTIF_PORT</string>"
+
     echo -e "\n  ${GREEN}Done.${NC} Services auto-restart on crash and start on login."
     echo -e "  Uninstall: $0 --uninstall"
 }
 
 do_uninstall() {
     echo -e "${CYAN}Removing LaunchAgents...${NC}"
-    for label in com.relaygent.hub com.relaygent.notifications com.relaygent.slack-socket com.relaygent.email-poller; do
+    for label in com.relaygent.hub com.relaygent.notifications com.relaygent.relay com.relaygent.slack-socket com.relaygent.email-poller; do
         local plist="$AGENTS_DIR/${label}.plist"
         if [ -f "$plist" ]; then
             launchctl bootout "$GUID" "$plist" 2>/dev/null || true
@@ -140,7 +151,7 @@ do_uninstall() {
 do_status() {
     echo -e "${CYAN}LaunchAgent Status${NC}"
     local all_agents; all_agents=$(launchctl list 2>/dev/null)
-    for label in com.relaygent.hub com.relaygent.notifications com.relaygent.slack-socket com.relaygent.email-poller com.relaygent.hub-autobuild; do
+    for label in com.relaygent.hub com.relaygent.notifications com.relaygent.relay com.relaygent.slack-socket com.relaygent.email-poller com.relaygent.hub-autobuild; do
         local line; line=$(echo "$all_agents" | grep "	${label}$" 2>/dev/null || true)
         if [ -n "$line" ]; then
             local pid; pid=$(echo "$line" | awk '{print $1}')
