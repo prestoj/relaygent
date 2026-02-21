@@ -39,7 +39,15 @@
 		return groups;
 	}
 	const st = data.stats;
-	const groups = groupSessions(data.sessions);
+	let query = $state('');
+	let filtered = $derived(query.trim()
+		? data.sessions.filter(s => {
+			const q = query.toLowerCase();
+			return s.id.includes(q) || (s.summary || '').toLowerCase().includes(q)
+				|| (s.displayTime || '').toLowerCase().includes(q);
+		})
+		: data.sessions);
+	let groups = $derived(groupSessions(filtered));
 </script>
 
 <svelte:head><title>Sessions — Relaygent</title></svelte:head>
@@ -58,8 +66,15 @@
 </div>
 {/if}
 
-{#if data.sessions.length === 0}
-	<p style="color: var(--text-muted)">No sessions found.</p>
+{#if data.sessions.length > 5}
+<div class="search-bar">
+	<input type="text" bind:value={query} placeholder="Search sessions..." class="search-input" />
+	{#if query}<button class="search-clear" onclick={() => query = ''}>x</button>{/if}
+</div>
+{/if}
+
+{#if filtered.length === 0}
+	<p style="color: var(--text-muted)">{query ? 'No matching sessions.' : 'No sessions found.'}</p>
 {:else}
 	{#each groups as group}
 		<h2 class="group-label">{group.label}</h2>
@@ -107,4 +122,9 @@
 	.trunc-note { font-size: 0.8em; color: var(--text-muted); }
 	.show-all-btn { font-size: 0.8em; padding: 0.3em 0.7em; border: 1px solid var(--border); border-radius: 6px; color: var(--link); text-decoration: none; }
 	.show-all-btn:hover { border-color: var(--link); background: color-mix(in srgb, var(--link) 8%, transparent); }
+	.search-bar { display: flex; align-items: center; gap: 0.4em; margin-bottom: 1em; }
+	.search-input { flex: 1; padding: 0.4em 0.7em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); color: var(--text); font-size: 0.85em; outline: none; }
+	.search-input:focus { border-color: var(--link); }
+	.search-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85em; padding: 0.2em 0.4em; }
+	.search-clear:hover { color: var(--text); }
 </style>
