@@ -1,6 +1,6 @@
 /**
  * Tests for the main dashboard page loader (+page.server.js).
- * Tests getCurrentTasks, getAttentionItems, getContextPct, isRelayRunning,
+ * Tests getAttentionItems, getContextPct, isRelayRunning,
  * and the overall load() shape.
  *
  * Run: node --import=./tests/hub/helpers/kit-loader.mjs --test tests/hub/pages-dashboard.test.js
@@ -40,7 +40,6 @@ test('dashboard load returns expected keys', async () => {
 	const data = await load();
 	assert.ok('topicCount' in data);
 	assert.ok('attentionItems' in data);
-	assert.ok('currentTasks' in data);
 	assert.ok('relayActivity' in data);
 	assert.ok('contextPct' in data);
 	assert.ok('services' in data);
@@ -57,14 +56,6 @@ test('dashboard load: topicCount reflects KB files', async () => {
 	const data = await load();
 	assert.equal(data.topicCount, 1);
 	fs.unlinkSync(path.join(tmpKb, 'test-topic.md'));
-});
-
-// --- getCurrentTasks ---
-
-test('dashboard load: currentTasks is empty array without Linear API key', async () => {
-	const data = await load();
-	assert.ok(Array.isArray(data.currentTasks));
-	assert.equal(data.currentTasks.length, 0);
 });
 
 // --- getAttentionItems ---
