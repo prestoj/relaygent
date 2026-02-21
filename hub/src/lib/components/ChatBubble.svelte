@@ -1,13 +1,9 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
-	import { marked } from 'marked';
-	import { sanitizeHtml } from '$lib/sanitize.js';
+	import { initAudio, playChime, notifyDesktop } from './chatAudio.js';
+	import { renderMsg, fmtTime } from './chatUtils.js';
 	import './ChatBubble.css';
-	function renderMsg(m) {
-		if (m.role === 'assistant') return sanitizeHtml(marked.parse(m.content || ''));
-		return (m.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-	}
 
 	let open = $state(false);
 	let messages = $state([]);
@@ -20,45 +16,14 @@
 	let chatEl = $state(null);
 	let textareaEl = $state(null);
 	let autoScroll = true;
-	let audioCtx = null;
 	let defaultTitle = '';
-
-	function initAudio() {
-		if (audioCtx) return;
-		try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
-		document.removeEventListener('click', initAudio); document.removeEventListener('keydown', initAudio);
-		if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
-	}
-
-	function playChime() {
-		try {
-			initAudio();
-			if (!audioCtx || audioCtx.state === 'suspended') return;
-			const now = audioCtx.currentTime;
-			[659.25, 783.99].forEach((freq, i) => {
-				const osc = audioCtx.createOscillator();
-				const gain = audioCtx.createGain();
-				osc.type = 'sine';
-				osc.frequency.value = freq;
-				gain.gain.setValueAtTime(0.15, now + i * 0.12);
-				gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
-				osc.connect(gain);
-				gain.connect(audioCtx.destination);
-				osc.start(now + i * 0.12);
-				osc.stop(now + i * 0.12 + 0.4);
-			});
-		} catch {}
-	}
 
 	function updateTabTitle() {
 		if (!browser) return;
 		document.title = tabUnread > 0 ? `(${tabUnread}) ${defaultTitle}` : defaultTitle;
 	}
 
-	function clearUnread() {
-		tabUnread = 0;
-		updateTabTitle();
-	}
+	function clearUnread() { tabUnread = 0; updateTabTitle(); }
 
 	async function loadHistory() {
 		try {
@@ -80,7 +45,11 @@
 			const data = await res.json();
 			const older = (data.messages || []).reverse();
 			if (older.length < 50) hasMore = false;
-			if (older.length) { messages = [...older, ...messages]; await tick(); if (chatEl) chatEl.scrollTop = chatEl.scrollHeight - prev; }
+			if (older.length) {
+				messages = [...older, ...messages];
+				await tick();
+				if (chatEl) chatEl.scrollTop = chatEl.scrollHeight - prev;
+			}
 		} catch {}
 		loadingOlder = false;
 	}
@@ -105,7 +74,7 @@
 					tabUnread++;
 					updateTabTitle();
 					playChime();
-					if (typeof Notification !== 'undefined' && Notification.permission === 'granted') try { new Notification('Relaygent', { body: (msg.data.content || '').substring(0, 120), icon: '/favicon.svg' }); } catch {}
+					notifyDesktop(msg.data.content);
 				}
 			}
 			await tick();
@@ -134,10 +103,6 @@
 		const el = e.target; el.style.height = 'auto';
 		const max = (parseFloat(getComputedStyle(el).lineHeight) || 20) * 4 + 20;
 		el.style.height = Math.min(el.scrollHeight, max) + 'px';
-	}
-
-	function fmtTime(iso) {
-		return new Date(iso.endsWith('Z') ? iso : iso + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
 
 	function toggle() {
