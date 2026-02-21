@@ -7,7 +7,7 @@
     "prebuild": "bash ../scripts/check-file-length.sh",
     "build": "vite build",
     "preview": "vite preview --port 8081",
-    "test": "node --import=./tests/helpers/kit-loader.mjs --test tests/*.test.js"
+    "test": "node --import=../tests/hub/helpers/kit-loader.mjs --test '../tests/hub/*.test.js'"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.0",
