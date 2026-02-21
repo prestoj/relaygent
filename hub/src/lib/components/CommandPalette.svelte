@@ -15,6 +15,8 @@
 		{ name: 'Logs', path: '/logs', keys: ['logs', 'debug'] },
 		{ name: 'Files', path: '/files', keys: ['files', 'browse'] },
 		{ name: 'Search', path: '/search', keys: ['search', 'find'] },
+		{ name: 'Notifications', path: '/notifications', keys: ['notifications', 'alerts'] },
+		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 	];
 
 	let kbResults = $state([]);
