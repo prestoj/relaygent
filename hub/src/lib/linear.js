@@ -36,7 +36,7 @@ export async function listIssues({ teamId, first = 50, after } = {}) {
 	const vars = { first };
 	if (teamId) vars.teamId = teamId;
 	if (after) vars.after = after;
-	const teamDecl = teamId ? ', $teamId: String!' : '';
+	const teamDecl = teamId ? ', $teamId: ID!' : '';
 	const teamFilter = teamId ? ', filter: { team: { id: { eq: $teamId } } }' : '';
 	const afterDecl = after ? ', $after: String' : '';
 	const afterArg = after ? ', after: $after' : '';
@@ -89,7 +89,7 @@ export async function updateIssue(id, updates) {
 }
 
 export async function listStates(teamId) {
-	const data = await gql(`query($teamId: String!) {
+	const data = await gql(`query($teamId: ID!) {
 		workflowStates(filter: { team: { id: { eq: $teamId } } }) {
 			nodes { id name color type position }
 		}
@@ -99,7 +99,7 @@ export async function listStates(teamId) {
 
 export async function listLabels(teamId) {
 	if (teamId) {
-		const data = await gql(`query($teamId: String!) {
+		const data = await gql(`query($teamId: ID!) {
 			issueLabels(filter: { team: { id: { eq: $teamId } } }) { nodes { id name color } }
 		}`, { teamId });
 		return data.issueLabels.nodes;
