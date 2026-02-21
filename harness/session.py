@@ -77,14 +77,13 @@ class SleepManager:
 
         return timestamps
 
-    def _ack_slack(self) -> None:
-        """Tell notifications server to advance Slack read marker."""
+    def _ack_source(self, source: str) -> None:
+        """Tell notifications server to ack a source (slack, github, etc.)."""
         try:
-            ack_url = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/ack-slack"
-            req = urllib.request.Request(ack_url, method="POST", data=b"")
-            urllib.request.urlopen(req, timeout=3)
+            url = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/ack-{source}"
+            urllib.request.urlopen(urllib.request.Request(url, method="POST", data=b""), timeout=3)
         except (urllib.error.URLError, OSError):
-            pass  # Best-effort
+            pass
 
     def _wait_for_wake(self) -> tuple[bool, list]:
         """Poll cache file for wake condition. Returns (woken, notifications)."""
@@ -133,9 +132,10 @@ class SleepManager:
         if not woken:
             return SleepResult(woken=False)
 
-        # Ack Slack notifications so they don't re-trigger on next sleep
-        if any(n.get("source") == "slack" for n in notifications):
-            self._ack_slack()
+        # Ack notifications so they don't re-trigger on next sleep
+        for src in ("slack", "github"):
+            if any(n.get("source") == src for n in notifications):
+                self._ack_source(src)
 
         wake_message = format_notifications(notifications)
         current_time = datetime.now().strftime("%H:%M:%S %Z")
