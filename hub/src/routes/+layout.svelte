@@ -42,17 +42,15 @@
 		<span class="bar" class:open={menuOpen}></span>
 	</button>
 	<div class="links" class:open={menuOpen}>
-		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Hub</a>
+		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Dashboard</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB{#if deadKbLinks > 0}<span class="unread-badge">{deadKbLinks}</span>{/if}</a>
-		<a href="/stream" class:active={isActive('/stream')} onclick={closeMenu}>Screen</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
-		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">
 			{darkMode ? 'Light' : 'Dark'}

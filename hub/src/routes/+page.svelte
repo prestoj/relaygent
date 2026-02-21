@@ -105,7 +105,7 @@
 </section>
 
 {#if hookCtx}
-<div class="hook-ctx">{hookCtx}</div>
+<div class="hook-ctx"><span class="hook-label">Agent context</span>{hookCtx}</div>
 {/if}
 
 {#if data.mainGoal}
@@ -168,7 +168,8 @@
 	.indicator.pulse { background: #22c55e; animation: pulse 2s infinite; }
 	@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 	.badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 10px; background: #fee2e2; color: #dc2626; }  .badge.on { background: #dcfce7; color: #16a34a; }
-	.hook-ctx { font-size: 0.72em; color: var(--text-muted); padding: 0.3em 1em; background: var(--code-bg); border-radius: 6px; margin-bottom: 0.75em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.hook-ctx { font-size: 0.72em; color: var(--text-muted); padding: 0.3em 1em; background: var(--code-bg); border-radius: 6px; margin-bottom: 0.75em; font-family: monospace; white-space: pre-wrap; word-break: break-word; }
+	.hook-label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.6em; font-size: 0.9em; }
 	.relay-toggle { font-size: 0.78em; padding: 0.2em 0.6em; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; background: var(--bg-surface); color: var(--text-muted); }
 	.relay-toggle:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }  .relay-toggle:disabled { opacity: 0.5; cursor: wait; }
 	.relay-toggle.stopping { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }  .relay-toggle.stopping:hover:not(:disabled) { background: #fee2e2; }
