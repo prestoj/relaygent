@@ -41,9 +41,7 @@ run "email" node --test "$ROOT/tests/email/test_email_poller.mjs" \
   "$ROOT/tests/email/test_gmail_client.mjs"
 
 # --- Computer-use Python ---
-run "computer-use/python" python3 -m pytest \
-  "$ROOT/tests/computer-use/test_linux_input.py" \
-  "$ROOT/tests/computer-use/test_linux_display.py" -q
+run "computer-use/python" python3 -m pytest "$ROOT/tests/computer-use/" -q
 
 # --- Computer-use Node ---
 # test_cdp.mjs is mac-only (requires Chrome on port 9223 with mac CDP profile)
