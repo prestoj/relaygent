@@ -18,33 +18,33 @@ run() {
 }
 
 # --- Harness (Python, system python3) ---
-run "harness" python3 -m pytest "$ROOT/harness/" -q
+run "harness" python3 -m pytest "$ROOT/tests/harness/" -q
 
 # --- Notifications (Python, venv) ---
 run "notifications" "$ROOT/notifications/.venv/bin/python" -m pytest \
-  "$ROOT/notifications/" -q
+  "$ROOT/tests/notifications/" -q
 
 # --- Hub (Node) ---
-run "hub" node --import="$ROOT/hub/tests/helpers/kit-loader.mjs" \
-  --test "$ROOT/hub/tests/"*.test.js
+run "hub" node --import="$ROOT/tests/hub/helpers/kit-loader.mjs" \
+  --test "$ROOT/tests/hub/"*.test.js
 
 # --- Secrets (Node) ---
-run "secrets" node --test "$ROOT/secrets/test_vault.mjs"
+run "secrets" node --test "$ROOT/tests/secrets/test_vault.mjs"
 
 # --- Email (Node) ---
-run "email" node --test "$ROOT/email/test_email_poller.mjs" \
-  "$ROOT/email/test_gmail_client.mjs"
+run "email" node --test "$ROOT/tests/email/test_email_poller.mjs" \
+  "$ROOT/tests/email/test_gmail_client.mjs"
 
 # --- Computer-use Python ---
 run "computer-use/python" python3 -m pytest \
-  "$ROOT/computer-use/test_linux_input.py" \
-  "$ROOT/computer-use/test_linux_display.py" -q
+  "$ROOT/tests/computer-use/test_linux_input.py" \
+  "$ROOT/tests/computer-use/test_linux_display.py" -q
 
 # --- Computer-use Node ---
 # test_cdp.mjs is mac-only (requires Chrome on port 9223 with mac CDP profile)
-CU_NODE_TESTS=("$ROOT/computer-use/test_hammerspoon.mjs" "$ROOT/computer-use/test_browser_exprs.mjs")
+CU_NODE_TESTS=("$ROOT/tests/computer-use/test_hammerspoon_unit.mjs" "$ROOT/tests/computer-use/test_browser_exprs.mjs")
 if [[ "$(uname)" == "Darwin" ]]; then
-  CU_NODE_TESTS+=("$ROOT/computer-use/test_cdp.mjs")
+  CU_NODE_TESTS+=("$ROOT/tests/computer-use/test_cdp.mjs")
 fi
 run "computer-use/node" node --test "${CU_NODE_TESTS[@]}"
 
