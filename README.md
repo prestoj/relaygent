@@ -148,6 +148,7 @@ relaygent/
 ├── hammerspoon/      # Lua scripts for screen control (copied to ~/.hammerspoon)
 ├── notifications/    # Reminder + wake trigger service (Python/Flask + MCP)
 ├── email/            # Gmail MCP server (OAuth2, 6 tools)
+├── slack/            # Slack MCP server + Socket Mode listener
 ├── secrets/          # Credential store (dotfile JSON + MCP)
 ├── hooks/            # PostToolUse hook (time, notifications, context tracking)
 ├── templates/        # Starter KB files for new installations
