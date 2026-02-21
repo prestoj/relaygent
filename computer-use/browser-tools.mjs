@@ -1,7 +1,7 @@
 // Browser automation tools via CDP — registers browser_navigate, browser_eval, browser_coords, etc.
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected } from "./cdp.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp } from "./cdp.mjs";
 import { COORD_EXPR, CLICK_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
@@ -163,6 +163,17 @@ export function registerBrowserTools(server, IS_LINUX) {
       const r = await cdpEval(`JSON.stringify({url:location.href,title:document.title})`);
       if (!r) return jsonRes({ error: 'CDP not connected — use browser_navigate first' });
       try { return jsonRes(JSON.parse(r)); } catch { return jsonRes({ url: r }); }
+    }
+  );
+
+  server.tool("browser_tabs",
+    "List all open Chrome tabs with URLs and titles.",
+    {},
+    async () => {
+      const tabs = await cdpHttp("/json/list");
+      if (!tabs) return jsonRes({ error: "CDP not available — Chrome may not be running" });
+      const pages = tabs.filter(t => t.type === "page").map(t => ({ id: t.id, title: t.title, url: t.url }));
+      return jsonRes({ tabs: pages, count: pages.length });
     }
   );
 }

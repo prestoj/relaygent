@@ -196,3 +196,4 @@ async function _denyPerms() {
 }
 export function cdpConnected() { return _ws && _ws.readyState === 1; }
 export const cdpAvailable = async () => { const t = await cdpHttp("/json/list"); return t !== null && Array.isArray(t); };
+export { cdpHttp };
