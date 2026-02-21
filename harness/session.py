@@ -133,7 +133,7 @@ class SleepManager:
             return SleepResult(woken=False)
 
         # Ack notifications so they don't re-trigger on next sleep
-        for source, endpoint in [("slack", "ack-slack"), ("github", "ack-github")]:
+        for source, endpoint in [("slack", "ack-slack"), ("github", "ack-github"), ("linear", "ack-linear")]:
             if any(n.get("source") == source for n in notifications):
                 self._ack_notification(endpoint)
 
