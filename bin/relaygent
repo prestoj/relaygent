@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$_SELF")/.." && pwd)"
 CYAN='\033[0;36m'; NC='\033[0m'; RED='\033[0;31m'
 
 case "${1:-help}" in
+    setup)   bash "$SCRIPT_DIR/setup.sh" ;;
     start)   bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
     stop)    bash "$SCRIPT_DIR/harness/scripts/stop.sh"; exit 0 ;;
     restart) bash "$SCRIPT_DIR/harness/scripts/stop.sh"; sleep 1; bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
@@ -68,6 +69,7 @@ print(s,t)
     help|--help|-h|*)
         echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
         printf "  %-19s %s\n" \
+            "setup" "Interactive first-time setup wizard" \
             "start" "Launch agent, dashboard, and all services" \
             "stop" "Stop everything" \
             "restart" "Restart all services" \
