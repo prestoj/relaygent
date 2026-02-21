@@ -48,7 +48,7 @@ export function compactActivity(activity, maxItems = 40) {
 /** Run claude CLI with haiku to summarize text. Returns the summary string. */
 function callHaiku(prompt) {
 	return new Promise((resolve, reject) => {
-		execFile(CLAUDE_BIN, ['-p', prompt, '--model', 'claude-haiku-4-5-20251001'], {
+		const child = execFile(CLAUDE_BIN, ['-p', '-', '--model', 'claude-haiku-4-5-20251001'], {
 			timeout: 30000,
 			maxBuffer: 1024 * 64,
 			env: cleanEnv(),
@@ -56,6 +56,8 @@ function callHaiku(prompt) {
 			if (err) return reject(err);
 			resolve(stdout.trim());
 		});
+		child.stdin.write(prompt);
+		child.stdin.end();
 	});
 }
 
