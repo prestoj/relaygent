@@ -196,5 +196,5 @@ case "${1:-help}" in
     restart) do_stop; sleep 1; do_start ;;
     logs)    SVC="${2:-}"; [ -n "$SVC" ] && F="$SCRIPT_DIR/logs/relaygent-$SVC.log" || F="$SCRIPT_DIR/logs/relaygent*.log"; tail -f $F 2>/dev/null || echo -e "${RED}No logs found${NC}" ;;
     orient|check|update|health) bash "$SCRIPT_DIR/harness/scripts/$1.sh" ;;
-    archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
-    *)       echo "Usage: relaygent {start|stop|status|restart|logs|orient|check|update|health|archive-linear}" ;; esac
+    archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;; set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
+    *)       echo "Usage: relaygent {start|stop|status|restart|logs|orient|check|update|health|archive-linear|set-password}" ;; esac

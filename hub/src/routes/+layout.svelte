@@ -55,6 +55,7 @@
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">
 			{darkMode ? 'Light' : 'Dark'}
 		</button>
+		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="theme-toggle" type="submit">Logout</button></form>{/if}
 	</div>
 </nav>
 
