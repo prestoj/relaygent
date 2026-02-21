@@ -47,6 +47,19 @@ class TestBuildPrompt:
         assert str(kb).encode() in result
         assert b"{KB_DIR}" not in result
 
+    def test_substitutes_hub_port(self, tmp_path):
+        home = _make_config(tmp_path, extras={"hub": {"port": 9090}})
+        self.prompt_file.write_bytes(b"Web UI at http://localhost:{HUB_PORT}/kb")
+        result = self._call(home)
+        assert b"9090" in result
+        assert b"{HUB_PORT}" not in result
+
+    def test_hub_port_defaults_to_8080(self, tmp_path):
+        home = _make_config(tmp_path)  # no hub.port in config
+        self.prompt_file.write_bytes(b"Web UI at http://localhost:{HUB_PORT}/kb")
+        result = self._call(home)
+        assert b"8080" in result
+
     def test_appends_memory_when_present(self, tmp_path):
         home = _make_config(tmp_path)
         kb = tmp_path / "kb"
