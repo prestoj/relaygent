@@ -1,6 +1,15 @@
 <script>
 	let { data } = $props();
 	let expanded = $state(new Set());
+	let aiSummary = $state('');
+	let summaryLoading = $state(false);
+	async function fetchSummary() {
+		if (summaryLoading) return;
+		summaryLoading = true; aiSummary = '';
+		try { const d = await (await fetch(`/api/summary?session=${data.id}`)).json(); aiSummary = d.summary || d.error || 'No summary available'; }
+		catch { aiSummary = 'Failed to generate summary'; }
+		summaryLoading = false;
+	}
 
 	function toggle(i) {
 		const s = new Set(expanded);
@@ -47,6 +56,10 @@
 </div>
 {/if}
 {#if data.summary}<p class="sum">{data.summary}</p>{/if}
+<div class="sum-row">
+	<button class="sum-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : 'AI Summary'}</button>
+	{#if aiSummary}<p class="ai-sum">{aiSummary}</p>{/if}
+</div>
 
 {#if !data.activity || data.activity.length === 0}
 	<p style="color: var(--text-muted)">No activity recorded for this session.</p>
@@ -98,4 +111,8 @@
 	.tool-input { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-family: monospace; font-size: 0.9em; }
 	.chevron { font-size: 0.7em; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
 	.result { margin: 0; padding: 0.5em; font-size: 0.8em; background: var(--code-bg); border-top: 1px solid var(--border); max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+	.sum-row { margin-bottom: 0.75em; }
+	.sum-btn { padding: 0.35em 0.7em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--text-muted); }
+	.sum-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .sum-btn:disabled { opacity: 0.6; cursor: wait; }
+	.ai-sum { margin: 0.4em 0 0; padding: 0.5em 0.7em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.82em; line-height: 1.5; }
 </style>

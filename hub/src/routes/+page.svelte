@@ -19,6 +19,15 @@
 	let services = $state(data.services || []);
 	let relayRunning = $state(data.relayRunning ?? true);
 	let relayActionPending = $state(false);
+	let summaryText = $state('');
+	let summaryLoading = $state(false);
+	async function fetchSummary() {
+		if (summaryLoading) return;
+		summaryLoading = true; summaryText = '';
+		try { const d = await (await fetch('/api/summary?session=current')).json(); summaryText = d.summary || d.error || 'No summary available'; }
+		catch { summaryText = 'Failed to generate summary'; }
+		summaryLoading = false;
+	}
 	async function toggleRelay() {
 		if (relayActionPending) return;
 		relayActionPending = true;
@@ -118,6 +127,13 @@
 	{/if}
 </section>
 
+{#if sessionStatus === 'found'}
+<section class="summary-section">
+	<button class="summary-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : "What's happening?"}</button>
+	{#if summaryText}<div class="summary-text">{summaryText}</div>{/if}
+</section>
+{/if}
+
 {#if attentionItems?.length > 0}
 <section class="attention">
 	<div class="att-hdr"><h3>Attention</h3><button class="clear-all" onclick={clearAllAttention}>Clear</button></div>
@@ -159,6 +175,10 @@
 	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; animation: pulse 2s infinite; }
 	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
 	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
+	.summary-section { margin-bottom: 1em; }
+	.summary-btn { padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.82em; font-weight: 600; color: var(--text-muted); }
+	.summary-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .summary-btn:disabled { opacity: 0.6; cursor: wait; }
+	.summary-text { margin-top: 0.5em; padding: 0.6em 0.8em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; line-height: 1.5; color: var(--text); }
 @media (max-width: 768px) {
 		.goal { flex-direction: column; gap: 0.25em; }
 	}
