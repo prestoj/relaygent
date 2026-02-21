@@ -1,7 +1,15 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
+	import { marked } from 'marked';
+	import { sanitizeHtml } from '$lib/sanitize.js';
 	import './ChatBubble.css';
+
+	function renderMsg(m) {
+		if (m.role === 'assistant') return sanitizeHtml(marked.parse(m.content || ''));
+		const esc = (m.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return esc.replace(/\n/g, '<br>');
+	}
 
 	let open = $state(false);
 	let messages = $state([]);
@@ -166,7 +174,7 @@
 				{#if loadingOlder}<div class="cb-loading">Loading...</div>{/if}
 				{#each messages as m}
 					<div class="cb-msg" class:human={m.role==='human'} class:bot={m.role==='assistant'}>
-						<div class="cb-bub"><span>{m.content}</span><span class="cb-time">{fmtTime(m.created_at)}</span></div>
+						<div class="cb-bub"><span class="cb-text">{@html renderMsg(m)}</span><span class="cb-time">{fmtTime(m.created_at)}</span></div>
 					</div>
 				{:else}<div class="cb-empty">No messages yet</div>{/each}
 			</div>
