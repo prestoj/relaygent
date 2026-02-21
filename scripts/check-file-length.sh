@@ -31,7 +31,7 @@ is_source_file() {
     return 1
 }
 
-for dir in harness hub/src hooks notifications computer-use hammerspoon bin; do
+for dir in harness hub/src hooks notifications computer-use hammerspoon bin setup; do
     full_path="$REPO_DIR/$dir"
     [ -d "$full_path" ] || continue
     while IFS= read -r file; do
@@ -40,7 +40,7 @@ for dir in harness hub/src hooks notifications computer-use hammerspoon bin; do
 done
 
 # Also check top-level scripts
-for file in "$REPO_DIR"/setup.mjs "$REPO_DIR"/setup.sh "$REPO_DIR"/setup-helpers.mjs "$REPO_DIR"/setup-utils.mjs; do
+for file in "$REPO_DIR"/setup.sh; do
     [ -f "$file" ] && check_file "$file"
 done
 

@@ -22,7 +22,7 @@ before(() => {
 after(() => rmSync(TEST_DIR, { recursive: true, force: true }));
 
 const { checkPortConflict, printSetupComplete, setupCliSymlink } =
-	await import('../../setup-utils.mjs');
+	await import('../../setup/setup-utils.mjs');
 
 const C = { reset: '', bold: '', dim: '', cyan: '', green: '', yellow: '', red: '' };
 

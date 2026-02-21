@@ -60,4 +60,4 @@ echo -e "${GREEN}Dependencies OK${NC} — Node $(node -v), Python $(python3 --ve
 echo ""
 
 # Launch the Node.js TUI
-exec node "$SCRIPT_DIR/setup.mjs" "$SCRIPT_DIR"
+exec node "$SCRIPT_DIR/setup/setup.mjs" "$SCRIPT_DIR"
