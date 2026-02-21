@@ -2,10 +2,12 @@
 // Connects to Chrome on CDP_PORT (default 9223) for reliable web content clicks
 
 import http from "node:http";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { spawn } from "node:child_process";
 
 const CDP_PORT = 9223;
-const CHROME_PREFS = `${process.env.HOME}/data/chrome-debug-profile/Default/Preferences`;
+const CHROME_DATA = `${process.env.HOME}/data/chrome-debug-profile`;
+const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
 
 let _ws = null;
@@ -75,6 +77,17 @@ function waitForEvent(method, timeoutMs = 10000) {
   });
 }
 
+let _chromeStarting = false;
+async function ensureChrome() {
+  if (_chromeStarting) return; _chromeStarting = true;
+  const bin = existsSync("/Applications/Google Chrome.app")
+    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
+  try { spawn(bin, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"],
+    { detached: true, stdio: "ignore" }).unref();
+    log("auto-launched Chrome with CDP"); await new Promise(r => setTimeout(r, 4000));
+  } catch (e) { log(`Chrome launch failed: ${e.message}`); } finally { _chromeStarting = false; }
+}
+
 export async function getConnection() {
   if (_ws && _ws.readyState === 1) {
     try {
@@ -87,7 +100,8 @@ export async function getConnection() {
     log("health check failed, reconnecting");
     try { _ws.close(); } catch {} _ws = null;
   }
-  const tabs = await cdpHttp("/json/list");
+  let tabs = await cdpHttp("/json/list");
+  if (!tabs) { await ensureChrome(); tabs = await cdpHttp("/json/list"); }
   if (!tabs) return null;
   const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
   if (!pages.length) return null;
@@ -177,12 +191,8 @@ export function patchChromePrefs() {
   try {
     const prefs = JSON.parse(readFileSync(CHROME_PREFS, "utf8"));
     prefs.profile = { ...prefs.profile, exit_type: "Normal", exited_cleanly: true };
-    writeFileSync(CHROME_PREFS, JSON.stringify(prefs));
-    log("patched Chrome prefs: exit_type=Normal");
+    writeFileSync(CHROME_PREFS, JSON.stringify(prefs)); log("patched Chrome prefs");
   } catch (e) { log(`patchChromePrefs failed: ${e.message}`); }
 }
 
-export async function cdpAvailable() {
-  const tabs = await cdpHttp("/json/list");
-  return tabs !== null && Array.isArray(tabs);
-}
+export const cdpAvailable = async () => { const t = await cdpHttp("/json/list"); return t !== null && Array.isArray(t); };
