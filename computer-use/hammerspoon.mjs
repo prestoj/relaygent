@@ -8,7 +8,7 @@ import http from "node:http";
 
 const IS_LINUX = platform() === "linux";
 const PORT = parseInt(process.env.HAMMERSPOON_PORT || "8097", 10);
-const agent = new http.Agent({ keepAlive: false, maxSockets: 1 });
+const agent = new http.Agent({ keepAlive: false, maxSockets: 3 });
 let tail = Promise.resolve();
 
 const SCREENSHOT_PATH = "/tmp/claude-screenshot.png";
@@ -42,22 +42,24 @@ export function readScreenshot(nativeWidth) {
 
 function hsCallOnce(method, path, body, timeoutMs) {
 	return new Promise(resolve => {
+		let done = false;
+		const finish = (v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+		const timer = setTimeout(() => { finish({ error: `Timeout after ${timeoutMs}ms on ${path}` }); try { req.destroy(); } catch {} }, timeoutMs);
 		const data = body ? JSON.stringify(body) : null;
 		const headers = { "Content-Type": "application/json" };
 		if (data) headers["Content-Length"] = Buffer.byteLength(data);
 		const req = http.request(
-			{ hostname: "localhost", port: PORT, path, method, agent, headers, timeout: timeoutMs },
+			{ hostname: "localhost", port: PORT, path, method, agent, headers },
 			res => {
 				const chunks = [];
 				res.on("data", c => chunks.push(c));
 				res.on("end", () => {
-					try { resolve(JSON.parse(Buffer.concat(chunks))); }
-					catch { resolve({ error: "bad json" }); }
+					try { finish(JSON.parse(Buffer.concat(chunks))); }
+					catch { finish({ error: "bad json" }); }
 				});
 			}
 		);
-		req.on("error", e => resolve({ error: `Hammerspoon unreachable: ${e.message}` }));
-		req.on("timeout", () => { req.destroy(); resolve({ error: `Timeout after ${timeoutMs}ms on ${path}` }); });
+		req.on("error", e => finish({ error: `Hammerspoon unreachable: ${e.message}` }));
 		if (data) req.write(data);
 		req.end();
 	});
