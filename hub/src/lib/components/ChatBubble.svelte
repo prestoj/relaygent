@@ -6,8 +6,7 @@
 	import './ChatBubble.css';
 	function renderMsg(m) {
 		if (m.role === 'assistant') return sanitizeHtml(marked.parse(m.content || ''));
-		const esc = (m.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-		return esc.replace(/\n/g, '<br>');
+		return (m.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
 	}
 
 	let open = $state(false);
@@ -26,12 +25,9 @@
 
 	function initAudio() {
 		if (audioCtx) return;
-		try {
-			audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-			if (audioCtx.state === 'suspended') audioCtx.resume();
-			document.removeEventListener('click', initAudio);
-			document.removeEventListener('keydown', initAudio);
-		} catch {}
+		try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
+		document.removeEventListener('click', initAudio); document.removeEventListener('keydown', initAudio);
+		if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
 	}
 
 	function playChime() {
@@ -109,6 +105,7 @@
 					tabUnread++;
 					updateTabTitle();
 					playChime();
+					if (typeof Notification !== 'undefined' && Notification.permission === 'granted') try { new Notification('Relaygent', { body: (msg.data.content || '').substring(0, 120), icon: '/favicon.svg' }); } catch {}
 				}
 			}
 			await tick();
