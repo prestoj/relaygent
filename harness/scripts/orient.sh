@@ -77,9 +77,16 @@ if [ "$PENDING_COUNT" -gt 0 ] 2>/dev/null; then
     echo -e "\033[1;33mReminders:\033[0m $PENDING_COUNT due"
 fi
 
-# Disk
+# Relay status + context
+STATUS_FILE="$REPO_DIR/data/relay-status.json"
+if [ -f "$STATUS_FILE" ]; then
+    RELAY_ST=$(python3 -c "import json; d=json.load(open('$STATUS_FILE')); print(d.get('status','?'))" 2>/dev/null || echo "?")
+    CTX_PCT=$(cat /tmp/relaygent-context-pct 2>/dev/null || echo "")
+    RELAY_INFO="$RELAY_ST"; [ -n "$CTX_PCT" ] && RELAY_INFO="$RELAY_INFO, context ${CTX_PCT}%"
+    echo -e "\n\033[0;34mRelay:\033[0m $RELAY_INFO"
+fi
 DISK_USED=$(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')
-echo -e "\n\033[0;34mDisk:\033[0m ${DISK_USED:-unknown}"
+echo -e "\033[0;34mDisk:\033[0m ${DISK_USED:-unknown}"
 
 # KB stats
 if [ -d "$KB_DIR" ]; then
