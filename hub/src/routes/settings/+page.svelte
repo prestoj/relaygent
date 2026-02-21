@@ -80,6 +80,23 @@
 	<p class="hint">Manage with <code>relaygent mcp add|remove</code></p>
 </section>
 
+{#if data.codeHealth?.files.length > 0}
+<section class="card">
+	<h2>Code Health</h2>
+	<p class="ch-summary">{data.codeHealth.files.length} file{data.codeHealth.files.length !== 1 ? 's' : ''} near the {data.codeHealth.limit}-line limit</p>
+	<div class="ch-list">
+		{#each data.codeHealth.files as f}
+			<div class="ch-row">
+				<span class="ch-bar" style="width: {Math.min(f.pct, 100)}%; background: {f.lines >= 180 ? 'var(--error)' : f.lines >= 170 ? 'var(--warning)' : 'var(--success)'}"></span>
+				<span class="ch-file">{f.path}</span>
+				<span class="ch-count" class:danger={f.lines >= 180} class:warn={f.lines >= 170 && f.lines < 180}>{f.lines}</span>
+			</div>
+		{/each}
+	</div>
+	<p class="hint">Files over {data.codeHealth.threshold} lines shown. Extract to stay under {data.codeHealth.limit}.</p>
+</section>
+{/if}
+
 <section class="card">
 	<h2>Configuration</h2>
 	<div class="grid">
@@ -118,6 +135,14 @@
 	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.check-label { font-weight: 600; min-width: 5em; }
 	.check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
+	.ch-summary { font-size: 0.82em; color: var(--text-muted); margin: 0 0 0.75em; }
+	.ch-list { display: flex; flex-direction: column; gap: 0.3em; }
+	.ch-row { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 0.3em 0.5em; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); overflow: hidden; font-size: 0.85em; }
+	.ch-bar { position: absolute; left: 0; top: 0; bottom: 0; opacity: 0.12; border-radius: 4px; }
+	.ch-file { font-family: monospace; z-index: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.ch-count { font-family: monospace; font-weight: 600; z-index: 1; flex-shrink: 0; margin-left: 0.5em; }
+	.ch-count.danger { color: var(--error); }
+	.ch-count.warn { color: var(--warning); }
 	@media (max-width: 600px) {
 		.grid { grid-template-columns: 7em 1fr; gap: 0.25em 0.5em; font-size: 0.85em; }
 	}
