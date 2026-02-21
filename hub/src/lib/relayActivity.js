@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { parseSessionStats } from './relayStats.js';
+import { parseSessionStats, flushStatsCache } from './relayStats.js';
 export { summarizeInput, extractResultText, summarizeResult } from './activityFormat.js';
 import { summarizeInput, extractResultText, summarizeResult } from './activityFormat.js';
 
@@ -134,6 +134,7 @@ export function listSessions() {
 			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 		}
 	} catch { /* ignore */ }
+	flushStatsCache();
 	const result = sessions.sort((a, b) => b.id.localeCompare(a.id));
 	_sessionsCache = { home, time: Date.now(), result };
 	return result;
