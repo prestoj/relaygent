@@ -79,11 +79,22 @@ stop_process() {
 }
 
 check_process() {
-    local n=$1 p="$PID_DIR/$2.pid" port=${3:-}
+    local n=$1 svc=$2 p="$PID_DIR/$2.pid" port=${3:-}
     if [[ -f "$p" ]] && kill -0 "$(cat "$p")" 2>/dev/null; then
         echo -e "  $n: ${GREEN}running${NC} (pid $(cat "$p"))"
     elif [[ -n "$port" ]] && port_pids "$port" &>/dev/null; then
         echo -e "  $n: ${GREEN}running${NC} (port $port)"
+    elif [ "$(uname)" = "Darwin" ]; then
+        local la; la=$(launchctl list 2>/dev/null | grep "	com\.relaygent\.${svc}$" || true)
+        if [ -n "$la" ] && [ "$(echo "$la" | awk '{print $1}')" != "-" ]; then
+            echo -e "  $n: ${GREEN}running${NC} (LaunchAgent)"
+        elif [ -n "$la" ]; then
+            echo -e "  $n: ${YELLOW}loaded but crashed${NC}"
+        else
+            echo -e "  $n: ${RED}stopped${NC}"
+        fi
+    elif systemctl --user is-active --quiet "relaygent-${svc}.service" 2>/dev/null; then
+        echo -e "  $n: ${GREEN}running${NC} (systemd)"
     else
         echo -e "  $n: ${RED}stopped${NC}"
     fi
