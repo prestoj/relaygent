@@ -48,6 +48,31 @@ function getSetupChecks(config) {
 	return checks;
 }
 
+function getCodeHealth(repoRoot) {
+	const THRESHOLD = 150, LIMIT = 200;
+	const dirs = ['harness', 'hub/src', 'hooks', 'notifications', 'computer-use', 'hammerspoon', 'bin', 'setup'];
+	const exts = new Set(['.py', '.js', '.mjs', '.svelte', '.ts', '.sh', '.bash']);
+	const skip = new Set(['node_modules', '.svelte-kit', 'build', '.venv']);
+	const files = [];
+	function walk(dir) {
+		let entries;
+		try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+		for (const e of entries) {
+			if (skip.has(e.name)) continue;
+			const full = path.join(dir, e.name);
+			if (e.isDirectory()) { walk(full); continue; }
+			if (!e.isFile() || !exts.has(path.extname(e.name))) continue;
+			try {
+				const lines = fs.readFileSync(full, 'utf-8').split('\n').length - 1;
+				if (lines >= THRESHOLD) files.push({ path: full.slice(repoRoot.length + 1), lines, pct: Math.round(lines / LIMIT * 100) });
+			} catch { /* skip */ }
+		}
+	}
+	for (const d of dirs) walk(path.join(repoRoot, d));
+	files.sort((a, b) => b.lines - a.lines);
+	return { files, threshold: THRESHOLD, limit: LIMIT };
+}
+
 export async function load() {
 	const services = await getServiceHealth();
 	const upSec = os.uptime();
@@ -63,13 +88,14 @@ export async function load() {
 		memUsed: fmtBytes(os.totalmem() - os.freemem()),
 		memTotal: fmtBytes(os.totalmem()),
 	};
+	const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
 	let version = '';
 	try {
-		const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
 		const hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
 		const date = execFileSync('git', ['log', '-1', '--format=%cd', '--date=short'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
 		version = `${hash} (${date})`;
 	} catch { /* not in git repo */ }
 	const config = loadConfig();
-	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config) };
+	const codeHealth = getCodeHealth(repoRoot);
+	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config), codeHealth };
 }
