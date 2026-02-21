@@ -37,9 +37,19 @@ else
     git -C "$SCRIPT_DIR" log --oneline "${BEFORE}..${AFTER}" | while IFS= read -r line; do echo "    $line"; done
 fi
 
+# Install deps for all services (fast no-op when already up to date)
+for svc in hub notifications computer-use email slack secrets; do
+    [ -f "$SCRIPT_DIR/$svc/package.json" ] && npm install -q --prefix "$SCRIPT_DIR/$svc" 2>/dev/null
+done
+# Update Python venv if requirements changed
+NOTIF_VENV="$SCRIPT_DIR/notifications/.venv"
+if [ -d "$NOTIF_VENV" ] && [ -f "$SCRIPT_DIR/notifications/requirements.txt" ]; then
+    "$NOTIF_VENV/bin/pip" install -q -r "$SCRIPT_DIR/notifications/requirements.txt" 2>/dev/null || true
+fi
+
 # Rebuild hub
 echo -e "  Rebuilding hub..."
-if npm install -q --prefix "$SCRIPT_DIR/hub" && (cd "$SCRIPT_DIR/hub" && npx vite build >/dev/null 2>&1); then
+if (cd "$SCRIPT_DIR/hub" && npx vite build >/dev/null 2>&1); then
     echo -e "  Hub: ${GREEN}built${NC}"
     git -C "$SCRIPT_DIR" rev-parse HEAD > "$SCRIPT_DIR/data/hub-build-commit" 2>/dev/null || true
 else

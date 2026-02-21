@@ -36,6 +36,7 @@ relaygent orient         # Quick system status snapshot
 relaygent check          # Diagnose configuration and service health
 relaygent update         # Pull latest code and rebuild hub
 relaygent health         # Check all services in one shot
+relaygent set-password   # Set/remove dashboard authentication
 relaygent archive-linear # Archive old completed Linear issues
 ```
 
