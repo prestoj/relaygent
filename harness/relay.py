@@ -85,7 +85,7 @@ class RelayRunner:
 
             if result.rate_limited:
                 log("API rate limit — waiting 60s before retry")
-                time.sleep(60)
+                set_status("rate_limited"); time.sleep(60)
                 continue
 
             if result.no_output:
