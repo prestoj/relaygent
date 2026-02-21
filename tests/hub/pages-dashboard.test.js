@@ -1,6 +1,6 @@
 /**
  * Tests for the main dashboard page loader (+page.server.js).
- * Tests getMainGoal, getAttentionItems, getContextPct, isRelayRunning,
+ * Tests getCurrentTasks, getAttentionItems, getContextPct, isRelayRunning,
  * and the overall load() shape.
  *
  * Run: node --import=./tests/hub/helpers/kit-loader.mjs --test tests/hub/pages-dashboard.test.js
@@ -40,7 +40,7 @@ test('dashboard load returns expected keys', async () => {
 	const data = await load();
 	assert.ok('topicCount' in data);
 	assert.ok('attentionItems' in data);
-	assert.ok('mainGoal' in data);
+	assert.ok('currentTasks' in data);
 	assert.ok('relayActivity' in data);
 	assert.ok('contextPct' in data);
 	assert.ok('services' in data);
@@ -59,31 +59,12 @@ test('dashboard load: topicCount reflects KB files', async () => {
 	fs.unlinkSync(path.join(tmpKb, 'test-topic.md'));
 });
 
-// --- getMainGoal ---
+// --- getCurrentTasks ---
 
-test('dashboard load: mainGoal is null without HANDOFF.md', async () => {
+test('dashboard load: currentTasks is empty array without Linear API key', async () => {
 	const data = await load();
-	assert.equal(data.mainGoal, null);
-});
-
-test('dashboard load: mainGoal extracted from HANDOFF.md', async () => {
-	fs.writeFileSync(path.join(tmpKb, 'HANDOFF.md'), [
-		'---',
-		'title: Handoff',
-		'---',
-		'## MAIN GOAL FOR NEXT CLAUDE',
-		'',
-		'**Build the widget system.**',
-		'',
-		'**WHY**: Users need widgets.',
-		'',
-		'---',
-		'## What happened',
-	].join('\n'));
-	const data = await load();
-	assert.ok(data.mainGoal, 'mainGoal should not be null');
-	assert.ok(data.mainGoal.includes('Build the widget system'), `got: ${data.mainGoal}`);
-	fs.unlinkSync(path.join(tmpKb, 'HANDOFF.md'));
+	assert.ok(Array.isArray(data.currentTasks));
+	assert.equal(data.currentTasks.length, 0);
 });
 
 // --- getAttentionItems ---

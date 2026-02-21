@@ -108,10 +108,10 @@
 <div class="hook-ctx"><span class="hook-label">Agent context</span>{hookCtx}</div>
 {/if}
 
-{#if data.mainGoal}
+{#if data.currentTasks?.length}
 <section class="goal">
-	<div class="gl">Focus</div>
-	<div class="gt">{data.mainGoal}</div>
+	<div class="gl">Current</div>
+	<div class="gt">{#each data.currentTasks as task, i}{#if i > 0} · {/if}<span class="task-id">{task.identifier}</span> {task.title}{#if task.assignee} <span class="task-assignee">({task.assignee})</span>{/if}{/each}</div>
 </section>
 {/if}
 
@@ -178,6 +178,7 @@
 	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; } .relay-detail { opacity: 0.7; font-size: 0.9em; margin-left: 0.1em; }
 	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
 	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }  .gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
+	.task-id { font-family: monospace; font-size: 0.9em; font-weight: 600; color: var(--link); }  .task-assignee { color: var(--text-muted); font-size: 0.9em; }
 	.attention { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.75em 1em; margin-bottom: 1em; }  .att-hdr { display: flex; justify-content: space-between; align-items: center; }  .attention h3 { margin: 0 0 0.3em; font-size: 0.9em; color: var(--text-muted); }
 	.att-item { display: flex; justify-content: space-between; gap: 0.5em; padding: 0.4em 0.6em; background: var(--code-bg); border-radius: 4px; margin-bottom: 0.3em; font-size: 0.88em; }  .att-item :global(strong) { color: var(--link); }
 	.x, .clear-all { background: none; border: none; color: var(--text-muted); cursor: pointer; }  .x:hover, .clear-all:hover { color: var(--text); }  .clear-all { font-size: 0.75em; border: 1px solid var(--border); padding: 0.2em 0.4em; border-radius: 4px; }
