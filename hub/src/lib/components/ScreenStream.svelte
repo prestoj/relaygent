@@ -10,7 +10,8 @@
 	let lastAction = $state('');
 	let interval = null;
 	let pending = false;
-	let dragState = null; // { startX, startY } when dragging
+	let dragState = null; // { startX, startY, moved } when dragging
+	let justDragged = false; // prevents click from firing after drag
 
 	function refresh() {
 		if (!imgEl || pending) return;
@@ -56,21 +57,21 @@
 	function handleMouseUp(e) {
 		if (!dragState) return;
 		if (dragState.moved) {
+			justDragged = true;
 			const { x, y } = toNative(e);
 			sendAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y });
 			lastAction = `drag ${dragState.startX},${dragState.startY} → ${x},${y}`;
+			setTimeout(() => { justDragged = false; }, 100);
 		}
 		dragState = null;
 	}
 
 	function handleClick(e) {
-		if (!interactive || !imgEl) return;
+		if (!interactive || !imgEl || justDragged) return;
 		e.preventDefault();
-		if (dragState?.moved) return; // drag handled in mouseup
 		const { x, y } = toNative(e);
-		const right = e.button === 2;
-		sendAction({ action: 'click', x, y, right: right || undefined });
-		lastAction = `click ${x},${y}${right ? ' (right)' : ''}`;
+		sendAction({ action: 'click', x, y });
+		lastAction = `click ${x},${y}`;
 	}
 
 	function handleDblClick(e) {
@@ -81,7 +82,14 @@
 		lastAction = `dblclick ${x},${y}`;
 	}
 
-	function handleContextMenu(e) { if (interactive) e.preventDefault(); }
+	function handleContextMenu(e) {
+		if (!interactive) return;
+		e.preventDefault();
+		if (!imgEl) return;
+		const { x, y } = toNative(e);
+		sendAction({ action: 'click', x, y, right: true });
+		lastAction = `right-click ${x},${y}`;
+	}
 
 	function handleKeyDown(e) {
 		if (!interactive) return;
