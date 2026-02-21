@@ -19,6 +19,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
 const HOOK_OUTPUT = '/tmp/relaygent-hook-output.json';
 
+// Raise SvelteKit adapter-node body limit from default 512KB to 50MB (for file uploads)
+if (!process.env.BODY_SIZE_LIMIT) process.env.BODY_SIZE_LIMIT = String(50 * 1024 * 1024);
+
 const { handler } = await import('./build/handler.js');
 const server = createServer(handler);
 const wss = new WebSocketServer({ noServer: true });
