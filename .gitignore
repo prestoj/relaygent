@@ -26,6 +26,11 @@ harness/.relay.lock
 credentials.json
 secrets.json
 
+# Test artifacts
+.coverage
+*.coverage
+htmlcov/
+
 # SQLite temp files
 *.db-shm
 *.db-wal
