@@ -1,6 +1,14 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
+	import { marked } from 'marked';
+	import { sanitizeHtml } from '$lib/sanitize.js';
+
+	function renderMsg(msg) {
+		if (msg.role === 'assistant') return sanitizeHtml(marked.parse(msg.content || ''));
+		const escaped = (msg.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return escaped.replace(/\n/g, '<br>');
+	}
 
 	let messages = $state([]);
 	let input = $state('');
@@ -138,7 +146,7 @@
 			{/if}
 			<div class="msg" class:human={msg.role === 'human'} class:assistant={msg.role === 'assistant'}>
 				<div class="bubble">
-					<span class="text">{msg.content}</span><span class="time">{formatTime(msg.created_at)}</span>
+					<span class="text">{@html renderMsg(msg)}</span><span class="time">{formatTime(msg.created_at)}</span>
 				</div>
 			</div>
 		{:else}
@@ -167,12 +175,14 @@
 	.loading { padding: 0.5em; }
 	.date-sep { margin: 0.75em 0 0.25em; }
 	.date-sep span { background: var(--code-bg); padding: 0.2em 0.75em; border-radius: 10px; }
-	.msg { display: flex; }
-	.msg.human { justify-content: flex-end; }
-	.msg.assistant { justify-content: flex-start; }
-	.bubble { max-width: 75%; padding: 0.4em 0.7em; border-radius: 16px; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; }
-	.msg.human .bubble { background: var(--link); color: white; border-bottom-right-radius: 4px; }
+	.msg { display: flex; }  .msg.human { justify-content: flex-end; }  .msg.assistant { justify-content: flex-start; }
+	.bubble { max-width: 75%; padding: 0.4em 0.7em; border-radius: 16px; line-height: 1.4; word-wrap: break-word; }
+	.msg.human .bubble { white-space: pre-wrap; background: var(--link); color: white; border-bottom-right-radius: 4px; }
 	.msg.assistant .bubble { background: var(--code-bg); color: var(--text); border-bottom-left-radius: 4px; }
+	.msg.assistant .bubble :global(p) { margin: 0.3em 0; }  .msg.assistant .bubble :global(p:first-child) { margin-top: 0; }  .msg.assistant .bubble :global(p:last-child) { margin-bottom: 0; }
+	.msg.assistant .bubble :global(code) { background: rgba(0,0,0,0.15); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.88em; }
+	.msg.assistant .bubble :global(pre) { background: rgba(0,0,0,0.2); padding: 0.5em; border-radius: 6px; overflow-x: auto; margin: 0.4em 0; }  .msg.assistant .bubble :global(pre code) { background: none; padding: 0; font-size: 0.85em; }
+	.msg.assistant .bubble :global(a) { color: var(--link); text-decoration: underline; }  .msg.assistant .bubble :global(ul), .msg.assistant .bubble :global(ol) { margin: 0.3em 0; padding-left: 1.5em; }  .msg.assistant .bubble :global(li) { margin: 0.15em 0; }
 	.text { font-size: 0.9em; }
 	.time { display: inline; float: right; font-size: 0.65em; opacity: 0.5; margin-left: 0.75em; margin-top: 0.35em; }
 	.empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic; }

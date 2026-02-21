@@ -28,9 +28,15 @@
 .cb-msg { display: flex; }
 .cb-msg.human { justify-content: flex-end; }
 .cb-msg.bot { justify-content: flex-start; }
-.cb-bub { max-width: 80%; padding: 0.35em 0.6em; border-radius: 14px; line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; font-size: 0.85em; }
-.cb-msg.human .cb-bub { background: var(--link, #2563eb); color: white; border-bottom-right-radius: 4px; }
+.cb-bub { max-width: 80%; padding: 0.35em 0.6em; border-radius: 14px; line-height: 1.35; word-wrap: break-word; font-size: 0.85em; }
+.cb-msg.human .cb-bub { background: var(--link, #2563eb); color: white; border-bottom-right-radius: 4px; white-space: pre-wrap; }
 .cb-msg.bot .cb-bub { background: var(--code-bg, #f0f0f0); color: var(--text, #1a1a1a); border-bottom-left-radius: 4px; }
+.cb-msg.bot .cb-bub p { margin: 0.25em 0; } .cb-msg.bot .cb-bub p:first-child { margin-top: 0; } .cb-msg.bot .cb-bub p:last-child { margin-bottom: 0; }
+.cb-msg.bot .cb-bub code { background: rgba(0,0,0,0.12); padding: 0.1em 0.25em; border-radius: 3px; font-size: 0.88em; }
+.cb-msg.bot .cb-bub pre { background: rgba(0,0,0,0.15); padding: 0.4em; border-radius: 5px; overflow-x: auto; margin: 0.3em 0; white-space: pre-wrap; }
+.cb-msg.bot .cb-bub pre code { background: none; padding: 0; }
+.cb-msg.bot .cb-bub a { color: var(--link, #2563eb); text-decoration: underline; }
+.cb-msg.bot .cb-bub ul, .cb-msg.bot .cb-bub ol { margin: 0.25em 0; padding-left: 1.3em; } .cb-msg.bot .cb-bub li { margin: 0.1em 0; }
 .cb-time { display: inline; float: right; font-size: 0.6em; opacity: 0.5; margin-left: 0.5em; margin-top: 0.3em; }
 .cb-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted, #555); font-style: italic; font-size: 0.85em; }
 .cb-inp { display: flex; gap: 0.4em; padding: 0.5em; border-top: 1px solid var(--border, #e5e5e5); background: var(--bg, #fafafa); }
