@@ -17,8 +17,8 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install pytest
-      - name: Run harness tests
-        run: pytest harness/ computer-use/ -v
+      - name: Run harness + computer-use tests
+        run: pytest tests/harness/ tests/computer-use/ -v
 
   test-notifications:
     name: Notifications tests (Python)
@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest -r notifications/requirements.txt
       - name: Run notifications tests
-        run: pytest notifications/test_notifications.py -v
+        run: pytest tests/notifications/ -v
 
   lint-python:
     name: Python syntax check
@@ -55,7 +55,33 @@ jobs:
       - name: Install secrets dependencies
         run: npm install --prefix secrets
       - name: Run vault tests
-        run: node --test secrets/test_vault.mjs
+        run: node --test tests/secrets/test_vault.mjs
+
+  test-email:
+    name: Email tests (JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install email dependencies
+        run: npm install --prefix email
+      - name: Run email tests
+        run: node --test tests/email/test_email_poller.mjs tests/email/test_gmail_client.mjs
+
+  test-slack:
+    name: Slack tests (JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install slack dependencies
+        run: npm install --prefix slack
+      - name: Run slack tests
+        run: node --test tests/slack/test_slack_helpers.mjs tests/slack/test_slack_client.mjs
 
   lint-js:
     name: JS syntax check
@@ -91,8 +117,10 @@ jobs:
           node-version: "22"
       - name: Install hub dependencies
         run: npm install --prefix hub
+      - name: Symlink hub node_modules for test resolution
+        run: ln -sfn hub/node_modules tests/hub/node_modules
       - name: Run hub tests
-        run: npm test --prefix hub
+        run: node --import=tests/hub/helpers/kit-loader.mjs --test tests/hub/*.test.js
 
   check-line-limits:
     name: File line limit (200)
