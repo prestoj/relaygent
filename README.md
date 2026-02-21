@@ -27,14 +27,16 @@ cd relaygent
 Setup handles everything: dependency installation, hub build, Hammerspoon configuration, and Claude CLI authentication. After setup:
 
 ```bash
-relaygent start     # Launch the agent + dashboard + services
-relaygent stop      # Stop everything
-relaygent status    # Check what's running
-relaygent restart   # Restart all services
-relaygent logs      # Tail service logs
-relaygent orient    # Quick system status snapshot
-relaygent check     # Diagnose configuration and service health
-relaygent update    # Pull latest code and rebuild hub
+relaygent start          # Launch the agent + dashboard + services
+relaygent stop           # Stop everything
+relaygent status         # Check what's running
+relaygent restart        # Restart all services
+relaygent logs           # Tail service logs
+relaygent orient         # Quick system status snapshot
+relaygent check          # Diagnose configuration and service health
+relaygent update         # Pull latest code and rebuild hub
+relaygent health         # Check all services in one shot
+relaygent archive-linear # Archive old completed Linear issues
 ```
 
 Open `http://localhost:8080` to watch your agent work.
@@ -70,9 +72,11 @@ A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 - **Screen** — collapsible live view of what the agent sees (via Hammerspoon screenshots)
 - **Knowledge Base** — browse, create, edit, and delete the agent's long-term memory (Markdown + wiki-links)
 - **Tasks** — manage recurring and one-off tasks; add tasks directly from the dashboard
-- **Sessions** — browsable history of past relay sessions with stats and search
+- **Sessions** — browsable history grouped by date, with stats, tool breakdown, and search
+- **Current Tasks** — live Linear integration showing what the agent is working on
 - **Intent** — your priorities file, visible to the agent, editable only by you
 - **Context Bar** — how full the current session's context window is
+- **Authentication** — optional password protection via `relaygent set-password`
 
 ## How the Relay Works
 
@@ -98,13 +102,13 @@ When the agent sleeps, the harness takes over: it polls for pending notification
 
 ## Computer Use
 
-The agent interacts with your screen through 19 MCP tools:
+The agent interacts with your screen through 33 MCP tools:
 
 - **Screenshots** — full screen or cropped regions, returned as inline images
 - **Click / Type / Scroll** — precise input events with modifier key support
 - **Accessibility tree** — find UI elements by role or title, click them programmatically
 - **App management** — launch, focus, and list windows
-- **Browser** — navigate to URLs
+- **Browser** — 14 tools via Chrome DevTools Protocol: navigate, click, type, fill forms, hover, select, scroll, wait, read text, evaluate JS
 - **AppleScript** — run arbitrary AppleScript (macOS only)
 
 On macOS, these are backed by Hammerspoon. On Linux, they use xdotool (input), scrot + ImageMagick (screenshots), wmctrl (windows), and pyatspi2 (accessibility). The MCP server is the same on both — it talks to a platform-specific HTTP backend on port 8097.
@@ -147,6 +151,7 @@ relaygent/
 ├── computer-use/     # MCP server wrapping Hammerspoon (19 tools)
 ├── hammerspoon/      # Lua scripts for screen control (copied to ~/.hammerspoon)
 ├── notifications/    # Reminder + wake trigger service (Python/Flask + MCP)
+├── linear/           # Linear MCP server + auto-archive script
 ├── email/            # Gmail MCP server (OAuth2, 6 tools)
 ├── slack/            # Slack MCP server + Socket Mode listener
 ├── secrets/          # Credential store (dotfile JSON + MCP)
@@ -154,7 +159,7 @@ relaygent/
 ├── templates/        # Starter KB files for new installations
 ├── setup/            # Interactive onboarding (setup.mjs + helpers)
 ├── scripts/          # Pre-commit hook (200-line file limit enforcement)
-└── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check)
+└── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check/health)
 ```
 
 ## License
