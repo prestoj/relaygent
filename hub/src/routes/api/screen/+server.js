@@ -20,12 +20,17 @@ function scaleImage(srcPath, dstPath, maxWidth) {
 
 export async function GET() {
 	try {
-		await fetch(HAMMERSPOON_URL, {
+		const hsRes = await fetch(HAMMERSPOON_URL, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ path: SCREENSHOT_PATH }),
 			signal: AbortSignal.timeout(8000),
 		});
+		// Hammerspoon returns point coordinates (logical), not pixel coordinates.
+		// On Retina displays, PNG pixels are 2-4x larger than point coords.
+		// Clicks must use point coords, so send those as X-Native-Width.
+		const hsData = await hsRes.json();
+		const nativeWidth = hsData.width || 0;
 		let imgPath = SCREENSHOT_PATH;
 		const hdr = Buffer.alloc(24);
 		const fd = fs.openSync(SCREENSHOT_PATH, 'r');
@@ -41,7 +46,7 @@ export async function GET() {
 			headers: {
 				'Content-Type': 'image/png',
 				'Cache-Control': 'no-cache, no-store',
-				'X-Native-Width': String(pngWidth),
+				'X-Native-Width': String(nativeWidth || pngWidth),
 			}
 		});
 	} catch {
