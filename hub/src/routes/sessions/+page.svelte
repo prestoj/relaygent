@@ -40,13 +40,18 @@
 	}
 	const st = data.stats;
 	let query = $state('');
-	let filtered = $derived(query.trim()
-		? data.sessions.filter(s => {
+	let hideEmpty = $state(true);
+	let filtered = $derived.by(() => {
+		let list = data.sessions;
+		if (hideEmpty) list = list.filter(s => s.toolCalls > 0);
+		if (query.trim()) {
 			const q = query.toLowerCase();
-			return s.id.includes(q) || (s.summary || '').toLowerCase().includes(q)
-				|| (s.displayTime || '').toLowerCase().includes(q);
-		})
-		: data.sessions);
+			list = list.filter(s => s.id.includes(q) || (s.summary || '').toLowerCase().includes(q)
+				|| (s.displayTime || '').toLowerCase().includes(q));
+		}
+		return list;
+	});
+	let hiddenCount = $derived(hideEmpty ? data.sessions.length - data.sessions.filter(s => s.toolCalls > 0).length : 0);
 	let groups = $derived(groupSessions(filtered));
 </script>
 
@@ -70,6 +75,9 @@
 <div class="search-bar">
 	<input type="text" bind:value={query} placeholder="Search sessions..." class="search-input" />
 	{#if query}<button class="search-clear" onclick={() => query = ''}>x</button>{/if}
+	<button class="filter-btn" class:active={hideEmpty} onclick={() => hideEmpty = !hideEmpty}>
+		{hideEmpty ? `Hiding ${hiddenCount} empty` : 'Show all'}
+	</button>
 </div>
 {/if}
 
@@ -127,4 +135,7 @@
 	.search-input:focus { border-color: var(--link); }
 	.search-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85em; padding: 0.2em 0.4em; }
 	.search-clear:hover { color: var(--text); }
+	.filter-btn { padding: 0.3em 0.6em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); color: var(--text-muted); font-size: 0.78em; cursor: pointer; white-space: nowrap; }
+	.filter-btn:hover { border-color: var(--text-muted); color: var(--text); }
+	.filter-btn.active { border-color: var(--link); color: var(--link); background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); }
 </style>
