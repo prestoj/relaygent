@@ -10,6 +10,7 @@
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
+	import PrWidget from '$lib/components/PrWidget.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -102,6 +103,7 @@
 <ContextBar pct={contextPct} />
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <TodoWidget {activities} />
+<PrWidget />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
