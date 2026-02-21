@@ -115,7 +115,7 @@ try:
             previews = n.get('previews', [])
             if previews:
                 prev = previews[0]
-                parts.append(f'{count} new {noun}: From: {prev.get("from","?")} Subject: {prev.get("subject","")}')
+                parts.append(f'{count} new {noun}: From: {prev.get(\"from\",\"?\")} Subject: {prev.get(\"subject\",\"\")}')
             else:
                 parts.append(f'{count} new {noun}')
         elif n.get('type') == 'message':
