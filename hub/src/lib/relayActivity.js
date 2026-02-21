@@ -15,21 +15,24 @@ export function findLatestSession() {
 	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
 	const prefix = getRunsPrefix();
 	let latestSession = null;
-	let latestTime = 0;
+	let latestId = '';
 
 	try {
 		for (const dir of fs.readdirSync(claudeProjects)) {
 			if (prefix && !dir.startsWith(prefix)) continue;
 			const fullPath = path.join(claudeProjects, dir);
 			try { if (!fs.statSync(fullPath).isDirectory()) continue; } catch { continue; }
+			const m = dir.match(/(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})$/);
+			if (!m) continue;
+			const id = m[1];
+			if (id <= latestId) continue;
+			let best = null, maxSize = 0;
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
-				const fstat = fs.statSync(path.join(fullPath, f));
-				if (fstat.mtimeMs > latestTime && fstat.size > 200) {
-					latestTime = fstat.mtimeMs;
-					latestSession = path.join(fullPath, f);
-				}
+				const sz = fs.statSync(path.join(fullPath, f)).size;
+				if (sz > maxSize) { maxSize = sz; best = path.join(fullPath, f); }
 			}
+			if (best && maxSize > 200) { latestId = id; latestSession = best; }
 		}
 	} catch { /* ignore */ }
 
