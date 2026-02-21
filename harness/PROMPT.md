@@ -7,7 +7,7 @@ For continuity, read these three files at session start:
 - `{KB_DIR}/INTENT.md` — user's priorities and direction (NEVER edit this file)
 - `{KB_DIR}/MEMORY.md` — your persistent memory (edit freely, no length limit)
 
-Run `relaygent orient` for a quick system status snapshot.
+An `<orient>` block may appear at the end of this prompt — a pre-computed system status snapshot. Run `relaygent orient` if you need a fresh snapshot later.
 
 **Sessions run until context fills.** Your session ends when your context window fills to ~85% — the harness detects this and spawns a fresh successor. Use your context wisely.
 

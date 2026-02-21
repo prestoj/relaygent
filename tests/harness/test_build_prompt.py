@@ -37,7 +37,8 @@ class TestBuildPrompt:
         if memory_content is not None:
             (kb_dir / "MEMORY.md").write_text(memory_content)
         with patch("harness_env.PROMPT_FILE", self.prompt_file), \
-             patch("harness_env.Path.home", return_value=home):
+             patch("harness_env.Path.home", return_value=home), \
+             patch("harness_env._run_orient", return_value=""):
             return build_prompt()
 
     def test_substitutes_kb_dir(self, tmp_path):
@@ -84,7 +85,8 @@ class TestBuildPrompt:
         home.mkdir()
         (home / ".relaygent").mkdir()
         with patch("harness_env.PROMPT_FILE", self.prompt_file), \
-             patch("harness_env.Path.home", return_value=home):
+             patch("harness_env.Path.home", return_value=home), \
+             patch("harness_env._run_orient", return_value=""):
             from harness_env import build_prompt
             result = build_prompt()
         assert result == b"Hello {KB_DIR} world"
@@ -99,6 +101,21 @@ class TestBuildPrompt:
         kb = tmp_path / "kb"
         result = self._call(home, kb_dir=kb, memory_content="   \n  ")
         assert b"<memory>" not in result
+
+    def test_orient_appended_when_available(self, tmp_path):
+        home = _make_config(tmp_path)
+        from harness_env import build_prompt
+        with patch("harness_env.PROMPT_FILE", self.prompt_file), \
+             patch("harness_env.Path.home", return_value=home), \
+             patch("harness_env._run_orient", return_value="Services OK"):
+            result = build_prompt()
+        assert b"<orient>" in result
+        assert b"Services OK" in result
+        assert b"</orient>" in result
+
+    def test_orient_not_appended_when_empty(self, tmp_path):
+        result = self._call(_make_config(tmp_path))
+        assert b"<orient>" not in result
 
 
 class TestEnsureSettings:
