@@ -1,44 +1,62 @@
 <script>
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	let { data } = $props();
-	let kbCount = $derived(data.results.filter(r => r.type === 'topic').length);
-	let sessionCount = $derived(data.results.filter(r => r.type === 'session').length);
-	function highlight(text, query) {
-		if (!text || !query) return sanitizeHtml(text || '');
-		const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	let query = $state(data.query || '');
+	let results = $state(data.results || []);
+	let searching = $state(false);
+	let debounceTimer;
+	let kbCount = $derived(results.filter(r => r.type === 'topic').length);
+	let sessionCount = $derived(results.filter(r => r.type === 'session').length);
+
+	function highlight(text, q) {
+		if (!text || !q) return sanitizeHtml(text || '');
+		const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		return sanitizeHtml(text).replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+	}
+
+	async function doSearch() {
+		if (query.trim().length < 2) { results = []; return; }
+		searching = true;
+		try {
+			const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&full=1`);
+			if (res.ok) results = (await res.json()).results;
+		} catch { /* ignore */ }
+		searching = false;
+	}
+
+	function onInput() {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(doSearch, 200);
 	}
 </script>
 
-<svelte:head><title>Search{data.query ? `: ${data.query}` : ''}</title></svelte:head>
+<svelte:head><title>Search{query ? `: ${query}` : ''}</title></svelte:head>
 
 <h1>Search</h1>
 
-<form action="/search" method="GET">
-	<input type="search" name="q" value={data.query} placeholder="Search knowledge base and sessions..." class="search" />
-</form>
+<input type="search" bind:value={query} oninput={onInput} placeholder="Search knowledge base and sessions..." class="search" autofocus />
 
-{#if data.query}
+{#if query.trim().length >= 2}
 	<p class="count">
-		{data.results.length} result{data.results.length !== 1 ? 's' : ''}
+		{searching ? 'Searching...' : `${results.length} result${results.length !== 1 ? 's' : ''}`}
 		{#if kbCount && sessionCount}
 			<span class="breakdown">({kbCount} KB · {sessionCount} session{sessionCount !== 1 ? 's' : ''})</span>
 		{/if}
 	</p>
 	<ul class="results">
-		{#each data.results as r}
+		{#each results as r}
 			<li>
 				{#if r.type === 'session'}
-					<a href="/sessions/{r.id}">{@html highlight(r.displayTime, data.query)}</a>
+					<a href="/sessions/{r.id}">{@html highlight(r.displayTime, query)}</a>
 					<span class="type-badge session">Session</span>
 				{:else}
-					<a href="/kb/{r.slug}">{@html highlight(r.title || r.slug, data.query)}</a>
+					<a href="/kb/{r.slug}">{@html highlight(r.title || r.slug, query)}</a>
 					<span class="type-badge topic">KB</span>
 				{/if}
-				{#if r.snippet}<p class="snippet">{@html highlight(r.snippet, data.query)}</p>{/if}
+				{#if r.snippet}<p class="snippet">{@html highlight(r.snippet, query)}</p>{/if}
 			</li>
 		{:else}
-			<li class="empty">No results found.</li>
+			{#if !searching}<li class="empty">No results found.</li>{/if}
 		{/each}
 	</ul>
 {/if}
@@ -50,6 +68,7 @@
 		font-size: 1em; box-sizing: border-box;
 		background: var(--bg-surface); color: var(--text);
 	}
+	.search:focus { outline: none; border-color: var(--link); }
 	.count { color: var(--text-muted); font-size: 0.9em; }
 	.breakdown { color: var(--text-muted); font-size: 0.9em; }
 	.results { list-style: none; padding: 0; }
