@@ -17,8 +17,13 @@
 		<span class="ob-label">Knowledge Base</span>
 		<span class="ob-desc">Persistent memory across sessions</span>
 	</a>
+	<a href="/help" class="ob-card">
+		<span class="ob-icon">&#10067;</span>
+		<span class="ob-label">Help Guide</span>
+		<span class="ob-desc">Concepts, shortcuts, CLI reference</span>
+	</a>
 </div>
-<div class="start-hint">Click <strong>Start</strong> above to launch the agent, or run <code>relaygent start</code></div>
+<div class="start-hint">Click <strong>Start</strong> above to launch the agent, or run <code>relaygent start</code>. First time? Check <a href="/settings">Settings</a> for setup status.</div>
 
 <style>
 	.waiting-icon { font-size: 2em; margin-bottom: 0.5em; }
