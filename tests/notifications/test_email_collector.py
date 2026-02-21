@@ -87,7 +87,7 @@ class TestCollect:
         notifications = []
         ec.collect(notifications)
         assert len(notifications) == 1
-        assert notifications[0]["type"] == "message"
+        assert notifications[0]["type"] == "email"
         assert notifications[0]["source"] == "email"
         assert notifications[0]["count"] == 2
 
