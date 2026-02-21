@@ -22,11 +22,15 @@
 
 	let statusMsg = $state('');
 	const postJson = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const runAction = async (name) => { const r = await postJson('/api/actions', { action: name }); const d = await r.json(); statusMsg = d.output?.split('\n')[0] || 'Done'; };
 	const actions = [
 		{ name: 'Open Chat', keys: ['chat', 'message', 'talk'], type: 'action', hint: 'Send a message to the agent', action: () => window.dispatchEvent(new CustomEvent('open-chat')) },
 		{ name: 'Start Agent', keys: ['start', 'launch', 'run'], type: 'action', hint: 'Launch the relay agent', action: async () => { await postJson('/api/relay', { action: 'start' }); statusMsg = 'Agent starting...'; } },
 		{ name: 'Stop Agent', keys: ['stop', 'kill', 'halt'], type: 'action', hint: 'Stop the relay agent', action: async () => { await postJson('/api/relay', { action: 'stop' }); statusMsg = 'Agent stopping...'; } },
-		{ name: 'Health Check', keys: ['health', 'ping', 'check'], type: 'action', hint: 'Ping all services', action: async () => { const r = await postJson('/api/actions', { command: 'health' }); const d = await r.json(); statusMsg = d.output?.split('\n')[0] || 'Done'; } },
+		{ name: 'Health Check', keys: ['health', 'ping', 'check'], type: 'action', hint: 'Ping all services', action: () => runAction('health') },
+		{ name: 'System Status', keys: ['status', 'services'], type: 'action', hint: 'Show what\'s running', action: () => runAction('status') },
+		{ name: 'Daily Digest', keys: ['digest', 'summary', 'recap'], type: 'action', hint: 'PRs, commits, and status', action: () => runAction('digest') },
+		{ name: 'Run Diagnostics', keys: ['diagnose', 'doctor'], type: 'action', hint: 'Check configuration', action: () => runAction('check') },
 	];
 
 	let kbResults = $state([]);
