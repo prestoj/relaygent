@@ -48,6 +48,10 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
     `var allVis=[...ROOT.querySelectorAll('*')].filter(function(e){return e.offsetParent!==null&&norm(e.innerText||'').trim().includes(t)&&e.children.length===0});` +
     `allVis.forEach(function(leaf){var e=leaf;while(e&&e!==ROOT){var c=window.getComputedStyle(e).cursor;if(e.onclick||e.getAttribute('onclick')||c==='pointer'||e.getAttribute('role')||e.matches('[class*="-control"],[class*="__control"],[data-testid]')){matches.push(e);break;}e=e.parentElement;}});` +
   `}` +
+  `if(!matches.length){` +
+    `var tw=document.createTreeWalker(ROOT,NodeFilter.SHOW_TEXT,null);var tn;` +
+    `while(tn=tw.nextNode()){if(norm(tn.textContent||'').trim().includes(t)){var p=tn.parentElement;if(p&&p.offsetParent!==null){matches.push(p);break;}}}` +
+  `}` +
   `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
   `el.scrollIntoView({block:'nearest'});` +
   `_clk(el);` +
