@@ -6,9 +6,11 @@ source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 echo -e "${CYAN}Updating Relaygent...${NC}"
 
-# Stash uncommitted changes to avoid losing work
+# Stash tracked changes to avoid losing work (skip if only untracked files)
 STASHED=false
-if [ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]; then
+if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
+    : # No tracked modifications — skip stash (untracked files like .coverage are fine)
+elif [ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]; then
     git -C "$REPO_DIR" stash push -m "relaygent-update-$(date +%s)" -q 2>/dev/null && STASHED=true
     [ "$STASHED" = true ] && echo -e "  ${YELLOW}Stashed uncommitted changes${NC}"
 fi
@@ -135,7 +137,10 @@ if [ "$STASHED" = true ]; then
     if git -C "$REPO_DIR" stash pop -q 2>/dev/null; then
         echo -e "  ${GREEN}Restored stashed changes${NC}"
     else
-        echo -e "  ${YELLOW}Could not auto-restore stash (conflicts?) — use: git stash pop${NC}"
+        # Drop the conflicting stash to prevent recurring conflicts in future updates
+        git -C "$REPO_DIR" checkout -- . 2>/dev/null || true
+        git -C "$REPO_DIR" stash drop -q 2>/dev/null || true
+        echo -e "  ${YELLOW}Stash conflicted with new code — dropped (changes were pre-update)${NC}"
     fi
 fi
 
