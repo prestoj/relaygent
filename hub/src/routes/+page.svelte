@@ -7,6 +7,7 @@
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import { marked } from 'marked';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
+	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
@@ -119,6 +120,7 @@
 
 <ContextBar pct={contextPct} />
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
+<TodoWidget {activities} />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
