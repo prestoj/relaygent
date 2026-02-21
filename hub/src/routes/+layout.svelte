@@ -53,6 +53,7 @@
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
+		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
 		</button>
