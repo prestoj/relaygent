@@ -53,6 +53,10 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 run "computer-use/node" node --test "${CU_NODE_TESTS[@]}"
 
+# --- Setup (Node) ---
+run "setup" node --test "$ROOT/tests/setup/test_setup_helpers.mjs" \
+  "$ROOT/tests/setup/test_setup_utils.mjs"
+
 # --- Summary ---
 printf '\n================================\n'
 printf 'Suites passed: %d  failed: %d\n' "$PASS" "$FAIL"
