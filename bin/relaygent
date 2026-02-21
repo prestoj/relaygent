@@ -195,6 +195,6 @@ case "${1:-help}" in
     status)  do_status ;;
     restart) do_stop; sleep 1; do_start ;;
     logs)    SVC="${2:-}"; [ -n "$SVC" ] && F="$SCRIPT_DIR/logs/relaygent-$SVC.log" || F="$SCRIPT_DIR/logs/relaygent*.log"; tail -f $F 2>/dev/null || echo -e "${RED}No logs found${NC}" ;;
-    orient)  bash "$SCRIPT_DIR/harness/orient.sh" ;; check) bash "$SCRIPT_DIR/harness/check.sh" ;;
-    update)  bash "$SCRIPT_DIR/harness/update.sh" ;;
+    orient)  bash "$SCRIPT_DIR/harness/scripts/orient.sh" ;; check) bash "$SCRIPT_DIR/harness/scripts/check.sh" ;;
+    update)  bash "$SCRIPT_DIR/harness/scripts/update.sh" ;;
     *)       echo "Usage: relaygent {start|stop|status|restart|logs [relay|hub|...]|orient|check|update}" ;; esac
