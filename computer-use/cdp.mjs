@@ -1,6 +1,4 @@
-// Chrome DevTools Protocol client for browser automation
-// Connects to Chrome on CDP_PORT (default 9223) for reliable web content clicks
-
+// Chrome DevTools Protocol — connects to Chrome for browser automation with auto-reconnect
 import http from "node:http";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -9,24 +7,28 @@ const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT || "9223", 10);
 const CHROME_DATA = `${process.env.HOME}/data/chrome-debug-profile`;
 const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
-
-let _ws = null;
-let _msgId = 0;
-let _pending = new Map();
-let _events = [];  // one-shot CDP event listeners [{method, cb}]
+let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null;
+const _pending = new Map();
+let _events = [];
 let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
-
 function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
-
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
-
+// Background reconnect with exponential backoff (1s → 2s → 4s → 8s → 16s)
+function _scheduleReconnect(delay = 1000) {
+	if (_reconnectTimer || _connectPromise) return;
+	_reconnectTimer = setTimeout(async () => {
+		_reconnectTimer = null;
+		const conn = await getConnection().catch(() => null);
+		if (!conn && delay < 16000) _scheduleReconnect(delay * 2);
+	}, delay);
+}
+function _cancelReconnect() { if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; } }
 const cdpActivate = (tabId) => new Promise(resolve => {
   const req = http.request({ hostname: "localhost", port: CDP_PORT, path: `/json/activate/${tabId}`, timeout: 2000 }, res => {
     res.on("data", () => {}); res.on("end", () => resolve(res.statusCode === 200));
   });
   req.on("error", () => resolve(false)); req.end();
 });
-
 const cdpHttp = (path) => new Promise(resolve => {
   const req = http.request({ hostname: "localhost", port: CDP_PORT, path, timeout: 3000 }, res => {
     const chunks = [];
@@ -46,19 +48,16 @@ async function connectTab(wsUrl) {
     ws.addEventListener("message", ({ data }) => {
       try {
         const msg = JSON.parse(data);
-        if (msg.id && _pending.has(msg.id)) {
-          _pending.get(msg.id)(msg);
-          _pending.delete(msg.id);
-        } else if (msg.method) {
+        if (msg.id && _pending.has(msg.id)) { _pending.get(msg.id)(msg); _pending.delete(msg.id); }
+        else if (msg.method) {
           const idx = _events.findIndex(e => e.method === msg.method);
           if (idx >= 0) { _events.splice(idx, 1)[0].cb(); }
         }
       } catch {}
     });
-    ws.addEventListener("close", () => { _ws = null; });
+    ws.addEventListener("close", () => { _ws = null; _scheduleReconnect(); });
   });
 }
-
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
     if (!_ws || _ws.readyState !== 1) { reject(new Error("CDP not connected")); return; }
@@ -68,7 +67,6 @@ function send(method, params = {}) {
     setTimeout(() => { _pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 10000);
   });
 }
-
 function waitForEvent(method, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => { _events = _events.filter(e => e !== entry); reject(new Error(`Event timeout: ${method}`)); }, timeoutMs);
@@ -76,7 +74,6 @@ function waitForEvent(method, timeoutMs = 10000) {
     _events.push(entry);
   });
 }
-
 let _chromeStarting = false;
 async function ensureChrome() {
   if (_chromeStarting) return; _chromeStarting = true;
@@ -88,7 +85,14 @@ async function ensureChrome() {
   } catch (e) { log(`Chrome launch failed: ${e.message}`); } finally { _chromeStarting = false; }
 }
 
+// Serialized — prevents races when multiple tools call getConnection() simultaneously
 export async function getConnection() {
+  if (_connectPromise) return _connectPromise;
+  _connectPromise = _getConnectionImpl();
+  try { return await _connectPromise; } finally { _connectPromise = null; }
+}
+async function _getConnectionImpl() {
+  _cancelReconnect();
   if (_ws && _ws.readyState === 1) {
     try {
       const r = await Promise.race([
@@ -102,6 +106,7 @@ export async function getConnection() {
   }
   let tabs = await cdpHttp("/json/list");
   if (!tabs) { await ensureChrome(); tabs = await cdpHttp("/json/list"); }
+  if (!tabs) { await new Promise(r => setTimeout(r, 2000)); tabs = await cdpHttp("/json/list"); }
   if (!tabs) return null;
   const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
   if (!pages.length) return null;
@@ -132,7 +137,6 @@ export async function cdpClick(x, y) {
     return true;
   } catch (e) { log(`click error: ${e.message}`); _ws = null; return false; }
 }
-
 async function _eval(expression, awaitPromise = false) {
   const conn = await getConnection();
   if (!conn) return null;
@@ -143,7 +147,6 @@ async function _eval(expression, awaitPromise = false) {
 }
 export const cdpEval = (expr) => _eval(expr);
 export const cdpEvalAsync = (expr) => _eval(expr, true);
-
 export async function cdpNavigate(url) {
   const conn = await getConnection();
   if (!conn) return false;
@@ -157,12 +160,11 @@ export async function cdpNavigate(url) {
     return true;
   } catch (e) { log(`navigate error: ${e.message}`); return false; }
 }
-
 export function cdpDisconnect() {
+  _cancelReconnect();
   if (_ws) { try { _ws.close(); } catch {} _ws = null; }
   _saveTabId(null);
 }
-
 export async function cdpSyncToVisibleTab(url) {
   cdpDisconnect();
   await new Promise(r => setTimeout(r, 800));
@@ -187,7 +189,6 @@ export function patchChromePrefs() {
     log("patched Chrome prefs: exit_type=Normal, permissions=blocked");
   } catch (e) { log(`patchChromePrefs failed: ${e.message}`); }
 }
-
 let _permsDenied = false;
 async function _denyPerms() {
   if (_permsDenied) return; _permsDenied = true;
