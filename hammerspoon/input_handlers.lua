@@ -126,7 +126,8 @@ function M.type_input(params)
 end
 
 function M.scroll(params)
-    local dy = -(params.amount or 3)
+    local amt = params.amount or 3
+    local dy = (params.direction == "up") and amt or -amt
     local reps = params["repeat"] or 1
     if params.x and params.y then
         hs.mouse.absolutePosition(hs.geometry.point(params.x, params.y))
