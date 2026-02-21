@@ -132,6 +132,9 @@ if [ "$MCP_CHANGED" = true ]; then
     echo -e "  session start — restart your Claude Code session to pick up changes.${NC}"
 fi
 
+# Clean up old logs
+bash "$SCRIPT_DIR/harness/scripts/clean-logs.sh" 2>/dev/null || true
+
 # Restore stashed changes if we stashed earlier
 if [ "$STASHED" = true ]; then
     if git -C "$SCRIPT_DIR" stash pop -q 2>/dev/null; then
