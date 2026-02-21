@@ -38,6 +38,7 @@ def _make_runner(tmp_path, idle_side_effect):
         patch("relay.should_sleep", return_value=True),
         patch("relay.time.sleep"),
         patch("relay.last_output_is_idle", side_effect=idle_side_effect),
+        patch("relay.run_wake_cycle", return_value=None) as wake_mock,
     ):
         r = RelayRunner()
         r.timer = MagicMock()
@@ -46,7 +47,7 @@ def _make_runner(tmp_path, idle_side_effect):
         r.timer.has_successor_time.return_value = False
         r.timer.is_expired.return_value = False
         r.sleep_mgr = MagicMock()
-        r.sleep_mgr.run_wake_cycle.return_value = None
+        r._wake_cycle_mock = wake_mock
         yield r
 
 
@@ -84,7 +85,7 @@ class TestIdleContinuationLimit:
         _, mock_claude = _run(r, results)
         # Should have resumed MAX_IDLE_CONTINUATIONS times (not gone to sleep)
         assert mock_claude.resume.call_count >= MAX_IDLE_CONTINUATIONS
-        r.sleep_mgr.run_wake_cycle.assert_called_once()  # only on the non-idle
+        r._wake_cycle_mock.assert_called_once()  # only on the non-idle
 
     def test_idle_exceeds_limit_goes_to_sleep(self, tmp_path):
         """More than MAX_IDLE_CONTINUATIONS consecutive idle exits → sleep cycle."""
@@ -95,7 +96,7 @@ class TestIdleContinuationLimit:
         results = [_result()] * (MAX_IDLE_CONTINUATIONS + 2)
         _, mock_claude = _run(r, results)
         # Sleep cycle must have been called after limit exceeded
-        r.sleep_mgr.run_wake_cycle.assert_called()
+        r._wake_cycle_mock.assert_called()
 
     def test_idle_count_resets_after_non_idle(self, tmp_path):
         """Non-idle output resets idle counter — can go through MAX_IDLE_CONTINUATIONS again."""

@@ -32,6 +32,7 @@ def runner(tmp_path):
         patch("relay.set_status"),
         patch("relay.should_sleep", return_value=True),
         patch("relay.time.sleep"),
+        patch("relay.run_wake_cycle", return_value=None),
     ):
         r = RelayRunner()
         r.timer = MagicMock()
@@ -40,7 +41,6 @@ def runner(tmp_path):
         r.timer.has_successor_time.return_value = False
         r.timer.is_expired.return_value = False
         r.sleep_mgr = MagicMock()
-        r.sleep_mgr.run_wake_cycle.return_value = None
         yield r, tmp_path
 
 

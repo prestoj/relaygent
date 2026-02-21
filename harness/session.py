@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    CONTEXT_THRESHOLD, INCOMPLETE_BASE_DELAY, MAX_INCOMPLETE_RETRIES,
     SLEEP_POLL_INTERVAL, Timer, log, set_status,
 )
 from notify_format import format_notifications
@@ -77,14 +76,14 @@ class SleepManager:
 
         return timestamps
 
-    def _ack_slack(self) -> None:
-        """Tell notifications server to advance Slack read marker."""
+    def _ack_notification(self, endpoint: str) -> None:
+        """Tell notifications server to acknowledge a source (best-effort)."""
         try:
-            ack_url = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/ack-slack"
-            req = urllib.request.Request(ack_url, method="POST", data=b"")
+            url = f"http://127.0.0.1:{NOTIFICATIONS_PORT}/notifications/{endpoint}"
+            req = urllib.request.Request(url, method="POST", data=b"")
             urllib.request.urlopen(req, timeout=3)
         except (urllib.error.URLError, OSError):
-            pass  # Best-effort
+            pass
 
     def _wait_for_wake(self) -> tuple[bool, list]:
         """Poll cache file for wake condition. Returns (woken, notifications)."""
@@ -133,9 +132,10 @@ class SleepManager:
         if not woken:
             return SleepResult(woken=False)
 
-        # Ack Slack notifications so they don't re-trigger on next sleep
-        if any(n.get("source") == "slack" for n in notifications):
-            self._ack_slack()
+        # Ack notifications so they don't re-trigger on next sleep
+        for source, endpoint in [("slack", "ack-slack"), ("github", "ack-github")]:
+            if any(n.get("source") == source for n in notifications):
+                self._ack_notification(endpoint)
 
         wake_message = format_notifications(notifications)
         current_time = datetime.now().strftime("%H:%M:%S %Z")
@@ -145,53 +145,3 @@ class SleepManager:
         log("Waking agent...")
         return SleepResult(woken=True, wake_message=wake_message)
 
-    def run_wake_cycle(self, claude):
-        """Sleep/wake loop with retry limits. Returns ClaudeResult if context-full."""
-        oserror_retries = 0
-        while True:
-            result = self.auto_sleep_and_wake()
-            if not result or not result.woken:
-                return None
-            time.sleep(3)
-            try:
-                log_start = claude.resume(result.wake_message)
-            except OSError as e:
-                oserror_retries += 1
-                if oserror_retries > MAX_INCOMPLETE_RETRIES:
-                    log(f"Resume failed too many times ({oserror_retries}): {e}")
-                    return None
-                log(f"Resume failed on wake ({oserror_retries}/{MAX_INCOMPLETE_RETRIES}): {e}, retrying...")
-                time.sleep(5)
-                continue
-            claude_result = claude.monitor(log_start)
-            if claude_result.timed_out:
-                return None
-            wake_retries = 0
-            while claude_result.incomplete or claude_result.hung or claude_result.no_output:
-                if self.timer.is_expired():
-                    return None
-                wake_retries += 1
-                if wake_retries > MAX_INCOMPLETE_RETRIES:
-                    log(f"Too many wake retries ({wake_retries}), giving up on this wake cycle")
-                    break
-                delay = min(INCOMPLETE_BASE_DELAY * (2 ** (wake_retries - 1)), 60)
-                kind = "Hung" if claude_result.hung else ("Incomplete" if claude_result.incomplete else "No output")
-                resume_msg = ("An API error was detected. Continue where you left off." if claude_result.hung
-                              else "Continue where you left off.")
-                log(f"{kind} during wake ({wake_retries}/{MAX_INCOMPLETE_RETRIES}), resuming in {delay}s...")
-                time.sleep(delay)
-                try: log_start = claude.resume(resume_msg)
-                except OSError as e: log(f"Resume failed in wake retry: {e}"); break
-                claude_result = claude.monitor(log_start)
-                if claude_result.timed_out:
-                    return None
-            if claude_result.context_too_large:
-                log("Request too large or bad image — returning for fresh session")
-                return claude_result
-            if claude_result.exit_code != 0:
-                log(f"Crashed during wake (exit={claude_result.exit_code}), resuming...")
-                time.sleep(3)
-                log_start = claude.resume("You crashed and were resumed. Continue where you left off.")
-                claude_result = claude.monitor(log_start)
-            if claude_result.context_pct >= CONTEXT_THRESHOLD:
-                return claude_result
