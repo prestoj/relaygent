@@ -1,7 +1,6 @@
 import { listTopics, getKbDir } from '$lib/kb.js';
 import { getRelayActivity } from '$lib/relayActivity.js';
 import { getServiceHealth } from '$lib/serviceHealth.js';
-import { isConfigured as linearConfigured, listIssues } from '$lib/linear.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -14,16 +13,6 @@ function isRelayRunning() {
 		process.kill(pid, 0);
 		return true;
 	} catch { return false; }
-}
-
-async function getCurrentTasks() {
-	if (!linearConfigured()) return [];
-	try {
-		const { nodes } = await listIssues({ first: 10 });
-		return nodes
-			.filter(n => n.state?.name === 'In Progress')
-			.map(n => ({ identifier: n.identifier, title: n.title, assignee: n.assignee?.name || null }));
-	} catch { return []; }
 }
 
 function getAttentionItems() {
@@ -65,12 +54,9 @@ export async function load() {
 	const relayActivity = getRelayActivity();
 	const services = await getServiceHealth();
 
-	const currentTasks = await getCurrentTasks();
-
 	return {
 		topicCount: topics.length,
 		attentionItems: getAttentionItems(),
-		currentTasks,
 		relayActivity: relayActivity?.recentActivity || [],
 		contextPct: getContextPct(),
 		services,

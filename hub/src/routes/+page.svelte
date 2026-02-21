@@ -8,7 +8,6 @@
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
-	import NotificationsWidget from '$lib/components/NotificationsWidget.svelte';
 	import SummaryButton from '$lib/components/SummaryButton.svelte';
 	import AttentionBanner from '$lib/components/AttentionBanner.svelte';
 	let { data } = $props();
@@ -89,18 +88,9 @@
 <div class="hook-ctx"><span class="hook-label">Agent context</span>{hookCtx}</div>
 {/if}
 
-{#if data.currentTasks?.length}
-<section class="goal">
-	<div class="gl">Current</div>
-	<div class="gt">{#each data.currentTasks as task, i}{#if i > 0} · {/if}<span class="task-id">{task.identifier}</span> {task.title}{#if task.assignee} <span class="task-assignee">({task.assignee})</span>{/if}{/each}</div>
-</section>
-{/if}
-
-
 <ContextBar pct={contextPct} />
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <TodoWidget {activities} />
-<NotificationsWidget />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
@@ -136,9 +126,6 @@
 	.hook-label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.6em; font-size: 0.9em; }
 	.handoff-goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }
 	.hg-label { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap; }  .hg-text { color: var(--text); font-size: 0.88em; line-height: 1.4; }
-	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
-	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }  .gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
-	.task-id { font-family: monospace; font-size: 0.9em; font-weight: 600; color: var(--link); }  .task-assignee { color: var(--text-muted); font-size: 0.9em; }
 	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; }
 	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
 	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
