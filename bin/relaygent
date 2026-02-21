@@ -168,7 +168,7 @@ do_stop() {
     done
     local mpids; mpids=$(pgrep -f "mcp-chat\.mjs|mcp-server\.mjs|notification-poller" 2>/dev/null) || true
     [ -n "$mpids" ] && kill $mpids 2>/dev/null || true
-    rm -f "$SCRIPT_DIR/harness/.relay.lock"
+    pkill -f google-chrome 2>/dev/null && echo -e "  Chrome: ${YELLOW}stopped${NC}" || true; rm -f "$SCRIPT_DIR/harness/.relay.lock"
 }
 
 do_status() {

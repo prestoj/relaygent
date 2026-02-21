@@ -9,10 +9,22 @@ GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 
 echo -e "${CYAN}Updating Relaygent...${NC}"
 
+# Stash uncommitted changes to avoid losing work
+STASHED=false
+if [ -n "$(git -C "$SCRIPT_DIR" status --porcelain 2>/dev/null)" ]; then
+    git -C "$SCRIPT_DIR" stash push -m "relaygent-update-$(date +%s)" -q 2>/dev/null && STASHED=true
+    [ "$STASHED" = true ] && echo -e "  ${YELLOW}Stashed uncommitted changes${NC}"
+fi
+# Switch to main if on a different branch
+ORIG_BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
+if [ -n "$ORIG_BRANCH" ] && [ "$ORIG_BRANCH" != "main" ]; then
+    echo -e "  ${YELLOW}Switching from $ORIG_BRANCH to main${NC}"
+    git -C "$SCRIPT_DIR" checkout main -q 2>/dev/null || true
+fi
 # Pull latest — ff-only preferred, fall back to fetch+reset if diverged
 BEFORE=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
 if ! git -C "$SCRIPT_DIR" pull --ff-only 2>/dev/null; then
-    echo -e "  ${YELLOW}Local commits diverged from origin/main — resetting to origin/main${NC}"
+    echo -e "  ${YELLOW}Local diverged from origin/main — resetting${NC}"
     git -C "$SCRIPT_DIR" fetch origin main
     git -C "$SCRIPT_DIR" reset --hard origin/main
 fi
@@ -112,5 +124,14 @@ fi
 
 # Clean up old logs
 bash "$SCRIPT_DIR/harness/scripts/clean-logs.sh" 2>/dev/null || true
+
+# Restore stashed changes if we stashed earlier
+if [ "$STASHED" = true ]; then
+    if git -C "$SCRIPT_DIR" stash pop -q 2>/dev/null; then
+        echo -e "  ${GREEN}Restored stashed changes${NC}"
+    else
+        echo -e "  ${YELLOW}Could not auto-restore stash (conflicts?) — use: git stash pop${NC}"
+    fi
+fi
 
 echo -e "\n  ${GREEN}Done.${NC}"
