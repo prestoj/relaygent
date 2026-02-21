@@ -28,8 +28,9 @@ async function main() {
 	checkPrerequisites(C);
 	console.log(`Sets up a persistent AI agent with a web dashboard.\n`);
 
-	const agentName = 'relaygent'; const hubPort = 8080;
+	const agentName = 'relaygent'; const hubPort = 8080; const notifPort = 8083;
 	await checkPortConflict(hubPort, C);
+	await checkPortConflict(notifPort, C);
 
 	console.log(`${C.yellow}Setting up directories...${C.reset}`);
 	mkdirSync(CONFIG_DIR, { recursive: true });
