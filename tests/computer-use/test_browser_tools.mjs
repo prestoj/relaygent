@@ -77,11 +77,11 @@ function textContent(result) {
 describe("tool registration", () => {
 	const EXPECTED = [
 		"browser_navigate", "browser_eval", "browser_coords", "browser_type",
-		"browser_click", "browser_click_text", "browser_select", "browser_scroll",
+		"browser_click", "browser_click_text", "browser_hover", "browser_select", "browser_scroll",
 		"browser_wait", "browser_get_text", "browser_url", "browser_tabs",
 	];
 
-	it("registers all 12 browser tools", () => {
+	it("registers all 13 browser tools", () => {
 		for (const name of EXPECTED) assert.ok(handlers[name], `missing: ${name}`);
 		assert.equal(Object.keys(handlers).length, EXPECTED.length);
 	});
@@ -123,6 +123,16 @@ describe("browser_click", () => {
 describe("browser_click_text", () => {
 	it("returns CDP error when disconnected", async () => {
 		const r = await handlers.browser_click_text({ text: "Submit" });
+		const data = jsonContent(r);
+		assert.ok(data.error);
+		assert.ok(data.error.includes("CDP not connected"));
+	});
+});
+
+// ── browser_hover ───────────────────────────────────────────────────────────
+describe("browser_hover", () => {
+	it("returns CDP error when disconnected", async () => {
+		const r = await handlers.browser_hover({ selector: ".dropdown-trigger" });
 		const data = jsonContent(r);
 		assert.ok(data.error);
 		assert.ok(data.error.includes("CDP not connected"));
