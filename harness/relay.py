@@ -61,7 +61,7 @@ class RelayRunner:
         signal.signal(signal.SIGINT, _shutdown)
         session_established = False
         resume_reason = ""
-        crash_count = incomplete_count = idle_continuation_count = 0
+        crash_count = incomplete_count = idle_continuation_count = no_output_count = 0
 
         while not self.timer.is_expired():
             set_status("working")
@@ -83,20 +83,25 @@ class RelayRunner:
                 time.sleep(15)
                 continue
 
-            if result.no_output:
-                if session_established:
-                    log("Resume failed (no session), starting fresh...")
-                    session_id = str(uuid.uuid4())
-                    self.claude.session_id = session_id
-                    session_established = False
-                    resume_reason = ""
-                else:
-                    log("Exited without output, resuming...")
-                    session_established = True
-                    resume_reason = ("Your previous session exited without producing output. "
-                                     "Please proceed with the original instructions.")
-                time.sleep(5)
+            if result.rate_limited:
+                log("API rate limit — waiting 60s before retry")
+                time.sleep(60)
                 continue
+
+            if result.no_output:
+                no_output_count += 1
+                if no_output_count > MAX_INCOMPLETE_RETRIES:
+                    log(f"Too many no-output exits ({no_output_count}), giving up")
+                    notify_crash(no_output_count, 0); break
+                delay = min(INCOMPLETE_BASE_DELAY * (2 ** (no_output_count - 1)), 60)
+                if session_established:
+                    log(f"Resume failed ({no_output_count}/{MAX_INCOMPLETE_RETRIES}), starting fresh...")
+                    session_id = str(uuid.uuid4()); self.claude.session_id = session_id
+                    session_established, resume_reason = False, ""
+                else:
+                    log(f"No output ({no_output_count}/{MAX_INCOMPLETE_RETRIES}), retrying in {delay}s...")
+                    session_established, resume_reason = True, "Your previous session exited without output. Please proceed."
+                time.sleep(delay); continue
 
             if result.context_too_large:
                 log("Request too large or bad image — starting fresh session (not resuming)")
@@ -128,19 +133,13 @@ class RelayRunner:
                 continue
 
             if result.exit_code != 0:
-                set_status("crashed")
-                crash_count += 1
+                set_status("crashed"); crash_count += 1
                 if crash_count > MAX_RETRIES:
-                    log(f"Too many crashes ({crash_count}), giving up")
-                    notify_crash(crash_count, result.exit_code)
-                    break
+                    log(f"Too many crashes ({crash_count}), giving up"); notify_crash(crash_count, result.exit_code); break
                 log(f"Crashed (exit={result.exit_code}), retrying ({crash_count}/{MAX_RETRIES})...")
-                session_id = str(uuid.uuid4())
-                self.claude.session_id = session_id
-                session_established = False
-                resume_reason = ""
-                time.sleep(15)
-                continue
+                session_id = str(uuid.uuid4()); self.claude.session_id = session_id
+                session_established, resume_reason = False, ""
+                time.sleep(15); continue
 
             if not should_sleep(self.claude.session_id, self.claude.workspace):
                 log("Session incomplete (no stdout), resuming...")
@@ -151,8 +150,7 @@ class RelayRunner:
                 continue
 
             session_established = True
-            incomplete_count = 0
-            crash_count = 0
+            incomplete_count = crash_count = no_output_count = 0
 
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
                 session_id = self._spawn_successor(

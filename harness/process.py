@@ -6,11 +6,8 @@ from pathlib import Path
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, PROMPT_FILE, SILENCE_TIMEOUT, Timer, log
 from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size, strip_old_images
 def _configured_model() -> str | None:
-    """Read model from ~/.relaygent/config.json, or None for default."""
-    try:
-        return json.loads((Path.home() / ".relaygent" / "config.json").read_text()).get("model")
-    except (OSError, json.JSONDecodeError, KeyError):
-        return None
+    try: return json.loads((Path.home() / ".relaygent" / "config.json").read_text()).get("model")
+    except (OSError, json.JSONDecodeError, KeyError): return None
 
 def _build_prompt() -> bytes:
     """Return PROMPT.md bytes, with {KB_DIR} substituted and KB MEMORY.md appended if present."""
@@ -51,6 +48,7 @@ class ClaudeResult:
     no_output: bool = False
     incomplete: bool = False
     context_too_large: bool = False
+    rate_limited: bool = False
     context_pct: float = 0.0
 class ClaudeProcess:
     """Manages Claude subprocess with hang detection."""
@@ -64,9 +62,7 @@ class ClaudeProcess:
         self._context_warning_sent = False
 
     def _get_log_lines(self) -> int:
-        try:
-            if not LOG_FILE.exists(): return 0
-            with open(LOG_FILE) as f: return sum(1 for _ in f)
+        try: return sum(1 for _ in open(LOG_FILE)) if LOG_FILE.exists() else 0
         except OSError: return 0
 
     def _check_for_hang(self, log_start: int) -> bool:
@@ -189,12 +185,15 @@ class ClaudeProcess:
                 except subprocess.TimeoutExpired: log("WARNING: Process did not die")
         no_output = get_jsonl_size(self.session_id, self.workspace) == initial_jsonl_size
         incomplete, _ = check_incomplete_exit(self.session_id, self.workspace)
-        context_too_large = False
+        context_too_large = rate_limited = False
         try:
             lines = open(LOG_FILE).readlines()[log_start:]
             if any('Request too large' in l or 'Could not process image' in l for l in lines):
                 context_too_large = True; log('Context too large or bad image — will start fresh')
+            if any('hit your limit' in l.lower() or 'usage limit' in l.lower() for l in lines):
+                rate_limited = True; log('API rate limit detected')
         except OSError: pass
         return ClaudeResult(exit_code=(self.process.returncode if self.process else 0) or 0, hung=hung,
             timed_out=timed_out, no_output=no_output, incomplete=incomplete,
-            context_too_large=context_too_large, context_pct=self.get_context_fill())
+            context_too_large=context_too_large, rate_limited=rate_limited,
+            context_pct=self.get_context_fill())
