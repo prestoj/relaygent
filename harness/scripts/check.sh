@@ -178,6 +178,14 @@ else ck_warn "Linear" "no API key (optional — needed for issue tracking)"; fi
 if [ -f "$REPO_DIR/CLAUDE.md" ]; then ck_ok "CLAUDE.md" "project instructions present"
 else ck_warn "CLAUDE.md" "missing — run: ./setup.sh to generate"; fi
 
+# MCP servers
+if [ -f "$HOME/.claude.json" ]; then
+    MCP_COUNT=$(python3 -c "import json; print(len(json.load(open('$HOME/.claude.json')).get('mcpServers',{})))" 2>/dev/null || echo 0)
+    if [ "${MCP_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+        ck_ok "MCP servers" "$MCP_COUNT configured (verify: relaygent mcp test)"
+    else ck_warn "MCP servers" "none configured — run: relaygent mcp add"; fi
+else ck_warn "MCP config" "~/.claude.json not found — run: relaygent setup"; fi
+
 # --- Summary ---
 echo ""
 ck_summary
