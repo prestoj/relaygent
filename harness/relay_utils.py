@@ -108,10 +108,28 @@ def _send_slack_alert(message: str) -> None:
         log("Slack alert failed (token or network issue)")
 
 
+def pull_latest() -> None:
+    """Pull latest code from origin/main (best-effort, fast-forward only)."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "pull", "--ff-only", "origin", "main"],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0:
+            output = result.stdout.strip()
+            if "Already up to date" not in output:
+                log(f"Pulled latest: {output.splitlines()[-1]}")
+        else:
+            log(f"Git pull skipped: {result.stderr.strip()[:200]}")
+    except (subprocess.SubprocessError, OSError) as e:
+        log(f"Git pull failed: {e}")
+
+
 def startup_init() -> None:
-    """Run all startup tasks: pid file, orphan cleanup, hub check, Slack ack."""
+    """Run all startup tasks: pid file, orphan cleanup, pull, hub check, Slack ack."""
     write_pid_file()
     kill_orphaned_claudes()
+    pull_latest()
     check_and_rebuild_hub()
     # Ack Slack so stale unreads from while we were offline don't re-trigger
     try:
