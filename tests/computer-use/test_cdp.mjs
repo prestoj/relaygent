@@ -1,13 +1,10 @@
 /**
  * Integration tests for Chrome DevTools Protocol (cdp.mjs).
  *
- * Requires:
- *   - macOS (Chrome debug profile configured for this machine)
- *   - Chrome running with --remote-debugging-port=9223
- *
+ * Requires Chrome running with --remote-debugging-port=9223.
  * Auto-skips all tests when Chrome CDP is not available.
  *
- * Run: node --test computer-use/test_cdp.mjs
+ * Run: node --test tests/computer-use/test_cdp.mjs
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -16,7 +13,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 
 const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT ?? '9223', 10);
-const IS_MAC = process.platform === 'darwin';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,13 +40,13 @@ function serverAvailable() {
 }
 
 // Check once at module load (top-level await — requires "type": "module")
-const cdpReady = IS_MAC && await serverAvailable();
-const SKIP = cdpReady ? false : 'Requires macOS + Chrome on port 9223 (--remote-debugging-port)';
+const cdpReady = await serverAvailable();
+const SKIP = cdpReady ? false : `Chrome CDP not available on port ${CDP_PORT}`;
 
 // ── HTTP API ──────────────────────────────────────────────────────────────────
 
 describe('CDP HTTP API', () => {
-	it('cdpHttp returns null for unreachable port', { skip: cdpReady ? 'Chrome is up' : false }, async () => {
+	it('cdpHttp returns null for unreachable port', { skip: cdpReady ? 'Chrome is up — test needs no CDP' : false }, async () => {
 		// Runs when Chrome is NOT available — verifies the helper handles connection failure cleanly
 		const result = await cdpHttp('/json/list');
 		assert.equal(result, null);
