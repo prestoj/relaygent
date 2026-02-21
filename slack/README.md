@@ -1,4 +1,25 @@
-# Slack Setup
+# Slack
+
+## Architecture
+
+Slack code lives in two places with distinct roles:
+
+| Directory | Role | Runtime | What it does |
+|-----------|------|---------|--------------|
+| `slack/` | **Agent tools** | Node.js MCP | Claude reads/sends messages synchronously via MCP tools |
+| `notifications/slack*` | **Background listener** | Socket Mode (JS) + collector (Python) | Monitors Slack in real-time to wake the agent on new messages |
+
+**`slack/`** — MCP server exposing tools like `read_messages`, `send_message`, `react`, `search_messages`. Called by Claude during active sessions. Uses the `xoxp-` user token.
+
+**`notifications/slack-socket-listener.mjs`** — Long-running Socket Mode WebSocket that receives events in real-time and writes to `/tmp/relaygent-slack-socket-cache.json`. Uses the `xapp-` app-level token.
+
+**`notifications/slack_collector.py`** — Polls Slack channels for unread messages as a fallback. Feeds into the notifications service which decides whether to wake the sleeping agent.
+
+In short: `slack/` is the "mouth" (agent speaks), `notifications/slack*` is the "ears" (system listens).
+
+---
+
+## Setup
 
 Relaygent uses two Slack tokens:
 - **User token** (`xoxp-*`) — for reading/sending messages via the MCP tools
