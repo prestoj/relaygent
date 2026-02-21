@@ -1,4 +1,5 @@
 <script>
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	let { data } = $props();
 	let files = $state(data.files || []);
 	let uploading = $state(false);
@@ -10,6 +11,7 @@
 
 	const IMG_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 	const TEXT_EXT = ['.md', '.txt', '.py', '.js', '.sh', '.json', '.yaml', '.yml', '.csv', '.toml'];
+	function isMd(name) { return ext(name) === '.md'; }
 
 	function ext(name) { return name.includes('.') ? '.' + name.split('.').pop().toLowerCase() : ''; }
 	function isImage(name) { return IMG_EXT.includes(ext(name)); }
@@ -112,6 +114,8 @@
 		<div class="preview-body">
 			{#if isImage(preview.name)}
 				<img src="/api/files/view?name={encodeURIComponent(preview.name)}" alt={preview.name} />
+			{:else if isMd(preview.name)}
+				<MarkdownRenderer source={previewText} />
 			{:else if isText(preview.name)}
 				<pre>{previewText}</pre>
 			{:else}
