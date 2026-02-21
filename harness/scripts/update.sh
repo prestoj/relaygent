@@ -98,4 +98,16 @@ if [ "$(uname)" != "Darwin" ]; then
 fi
 echo -e "  Daemons: ${GREEN}restarted${NC}"
 
+# Check if MCP server source files changed (agents need to restart their session)
+MCP_CHANGED=false
+if [ "$BEFORE" != "$AFTER" ]; then
+    if git -C "$SCRIPT_DIR" diff --name-only "${BEFORE}..${AFTER}" | grep -qE '(mcp-server|browser-tools|browser-exprs|cdp|hammerspoon)\.mjs$'; then
+        MCP_CHANGED=true
+    fi
+fi
+if [ "$MCP_CHANGED" = true ]; then
+    echo -e "\n  ${YELLOW}NOTE: MCP server source files changed. MCP servers cache code at"
+    echo -e "  session start — restart your Claude Code session to pick up changes.${NC}"
+fi
+
 echo -e "\n  ${GREEN}Done.${NC}"
