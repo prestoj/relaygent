@@ -9,5 +9,6 @@ export function load({ params }) {
 	const result = loadSession(params.id);
 	if (!result) throw error(404, 'Session not found');
 	const displayTime = `${m[1]} ${m[2]}:${m[3]}`;
-	return { id: params.id, displayTime, activity: result.activity, summary: result.stats?.firstText || null };
+	const st = result.stats || {};
+	return { id: params.id, displayTime, activity: result.activity, summary: st.handoffGoal || st.firstText || null, stats: st };
 }
