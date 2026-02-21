@@ -161,7 +161,7 @@ server.tool("click_element", "Find UI element by title/role and click it. Auto-r
 
 registerBrowserTools(server, IS_LINUX);
 
-server.tool("dismiss_dialog", "Dismiss a native macOS dialog (TCC permission, alert, etc). Works on system dialogs that CDP/CGEvent clicks can't reach.",
+server.tool("dismiss_dialog", "Dismiss a macOS dialog or Chrome permission prompt (TCC, clipboard, notifications). Works on system dialogs and Chrome popups that CDP/CGEvent clicks can't reach.",
 	{ button: z.string().optional().describe("Button to click (default: 'Don\\'t Allow'). Options: 'Don\\'t Allow', 'OK', 'Cancel', 'Allow'") },
 	async ({ button }) => {
 		const r = await hsCall("POST", "/dismiss_dialog", { button: button || "Don't Allow" });
