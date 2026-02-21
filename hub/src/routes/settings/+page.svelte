@@ -89,8 +89,8 @@
 	.svc-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.svc-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-	.dot.up { background: #22c55e; }
-	.dot.down { background: #ef4444; }
+	.dot.up { background: var(--success); }
+	.dot.down { background: var(--error); }
 	.svc-name { font-weight: 600; }
 	.svc-detail { color: var(--text-muted); font-size: 0.88em; }
 	.mcp-list { display: flex; flex-direction: column; gap: 0.4em; }

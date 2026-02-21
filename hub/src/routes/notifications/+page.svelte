@@ -82,7 +82,7 @@
 	.header { display: flex; align-items: baseline; gap: 0.75em; margin-bottom: 1em; }
 	h1 { margin: 0; font-size: 1.4em; }
 	.sub { font-size: 0.8em; color: var(--text-muted); }
-	.error { color: #ef4444; font-size: 0.85em; }
+	.error { color: var(--error); font-size: 0.85em; }
 	.empty { color: var(--text-muted); font-size: 0.9em; }
 	.feed { display: flex; flex-direction: column; gap: 0.4em; }
 	.item { display: flex; gap: 0.6em; padding: 0.5em 0.7em; background: var(--bg-surface); border-radius: 6px; border-left: 3px solid var(--border); }

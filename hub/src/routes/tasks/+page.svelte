@@ -122,11 +122,11 @@
 	.section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1em 1.25em; margin-bottom: 1.25em; }
 	.task-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.task { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: 0.5em 0.75em; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
-	.task.due { border-color: #f97316; background: color-mix(in srgb, #f97316 8%, var(--bg)); }
+	.task.due { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, var(--bg)); }
 	.task-desc { flex: 1; font-size: 0.9em; }
 	.task-meta { display: flex; gap: 0.75em; align-items: center; white-space: nowrap; font-size: 0.8em; color: var(--text-muted); }
 	.freq { background: var(--code-bg); border-radius: 4px; padding: 0.1em 0.4em; font-family: monospace; }
-	.due-label { color: var(--text-muted); } .due-label.overdue { color: #f97316; font-weight: 600; }
+	.due-label { color: var(--text-muted); } .due-label.overdue { color: var(--warning); font-weight: 600; }
 	.add-row { display: flex; gap: 0.5em; margin-bottom: 0.75em; }
 	.add-row input { flex: 1; padding: 0.45em 0.75em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9em; }
 	.add-row input:focus { outline: none; border-color: var(--link); }
@@ -134,13 +134,13 @@
 	.add-row button { padding: 0.45em 1em; background: var(--link); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
 	.add-row button:disabled { opacity: 0.5; cursor: not-allowed; } .add-recurring { margin-top: 0.75em; }
 	.task-actions { display: flex; gap: 0.3em; align-items: center; }
-	.done-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; color: var(--text-muted); } .done-btn:hover { color: #16a34a; border-color: #16a34a; }
+	.done-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; color: var(--text-muted); } .done-btn:hover { color: var(--success); border-color: var(--success); }
 	.edit-btn, .del-btn, .save-btn, .cancel-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.5em; cursor: pointer; font-size: 0.85em; }
 	.edit-btn { color: var(--text-muted); } .edit-btn:hover { color: var(--link); border-color: var(--link); }
-	.del-btn { color: var(--text-muted); } .del-btn:hover { color: #ef4444; border-color: #ef4444; }
-	.save-btn { color: #16a34a; border-color: #16a34a; } .save-btn:hover { background: #dcfce7; }
+	.del-btn { color: var(--text-muted); } .del-btn:hover { color: var(--error); border-color: var(--error); }
+	.save-btn { color: var(--success); border-color: var(--success); } .save-btn:hover { background: var(--success-bg); }
 	.cancel-btn { color: var(--text-muted); } .cancel-btn:hover { color: var(--text); }
 	.edit-input { flex: 1; padding: 0.3em 0.5em; border: 1px solid var(--link); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.9em; outline: none; }
-	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; } .error { color: #ef4444; font-size: 0.85em; margin: 0.25em 0; }
+	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; } .error { color: var(--error); font-size: 0.85em; margin: 0.25em 0; }
 	.oneoff { background: var(--bg); }
 </style>

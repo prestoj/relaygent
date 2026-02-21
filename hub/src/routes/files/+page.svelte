@@ -134,7 +134,7 @@
 	.dz-text { font-weight: 600; color: var(--text-muted); margin-bottom: 0.3em; }
 	.dz-btn { display: inline-block; padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.85em; color: var(--text); }
 	.dz-btn:hover { border-color: var(--link); color: var(--link); }
-	.err { color: #dc2626; font-size: 0.85em; }
+	.err { color: var(--error); font-size: 0.85em; }
 	.empty { color: var(--text-muted); font-style: italic; }
 	.file-list { display: flex; flex-direction: column; gap: 2px; }
 	.file-row { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.75em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; }
@@ -144,7 +144,7 @@
 	.fmeta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
 	.fbtn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.95em; padding: 0.15em 0.35em; text-decoration: none; }
 	.fbtn:hover { color: var(--link); }
-	.fbtn.del:hover { color: #dc2626; }
+	.fbtn.del:hover { color: var(--error); }
 	.preview { margin-top: 1em; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 	.preview-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5em 0.75em; background: var(--bg-surface); border-bottom: 1px solid var(--border); }
 	.preview-body { padding: 1em; max-height: 70vh; overflow: auto; }

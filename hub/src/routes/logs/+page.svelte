@@ -111,13 +111,13 @@
 	.search-row { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.5em; }
 	.search { flex: 1; padding: 0.35em 0.6em; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; background: var(--bg-surface); color: var(--text); }
 	.match-count { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
-	.error { color: #ef4444; font-size: 0.85em; }
+	.error { color: var(--error); font-size: 0.85em; }
 	.log-wrap { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; max-height: 72vh; overflow-y: auto; font-family: monospace; font-size: 0.78em; line-height: 1.5; }
 	.empty { padding: 1em; color: var(--text-muted); }
 	.line { padding: 0.1em 0.75em; border-left: 3px solid transparent; white-space: pre-wrap; word-break: break-all; }
 	.line:hover { background: var(--code-bg); }
-	.line.err { border-left-color: #ef4444; color: #ef4444; background: color-mix(in srgb, #ef4444 5%, var(--bg-surface)); }
-	.line.warn { border-left-color: #f59e0b; background: color-mix(in srgb, #f59e0b 4%, var(--bg-surface)); }
+	.line.err { border-left-color: var(--error); color: var(--error); background: color-mix(in srgb, var(--error) 5%, var(--bg-surface)); }
+	.line.warn { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 4%, var(--bg-surface)); }
 	.line :global(.ts) { color: var(--text-muted); }
 	.line :global(mark) { background: color-mix(in srgb, var(--link) 25%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
 </style>

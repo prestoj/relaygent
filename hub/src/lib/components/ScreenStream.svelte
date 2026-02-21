@@ -179,8 +179,8 @@
 	.stream { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
 	.stream-header { display: flex; align-items: center; gap: 0.5em; padding: 0.35em 0.6em; border-bottom: 1px solid var(--border); }
 	.stream-label { font-weight: 600; font-size: 0.8em; }
-	.dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
-	.dot.ok { background: #22c55e; }
+	.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--error); flex-shrink: 0; }
+	.dot.ok { background: var(--success); }
 	.frame { position: relative; background: #111; overflow: hidden; outline: none; }
 	.frame.interactive { cursor: default; outline: 2px solid #3b82f6; outline-offset: -2px; }
 	.frame img { width: 100%; height: auto; display: block; user-select: none; -webkit-user-drag: none; }

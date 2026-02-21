@@ -22,7 +22,7 @@
 	}
 	h1 { margin: 0 0 0.2em; font-size: 1.5em; text-align: center; }
 	.sub { margin: 0 0 1.2em; color: var(--text-muted); font-size: 0.9em; text-align: center; }
-	.error { color: #ef4444; font-size: 0.85em; margin: 0 0 0.8em; text-align: center; }
+	.error { color: var(--error); font-size: 0.85em; margin: 0 0 0.8em; text-align: center; }
 	form { display: flex; flex-direction: column; gap: 0.75em; }
 	input {
 		padding: 0.6em 0.8em; border: 1px solid var(--border); border-radius: 6px;
