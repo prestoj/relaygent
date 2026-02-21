@@ -97,6 +97,13 @@ export async function listStates(teamId) {
 	return data.workflowStates.nodes.sort((a, b) => a.position - b.position);
 }
 
+export async function archiveIssue(id) {
+	const data = await gql(`mutation($id: String!) {
+		issueArchive(id: $id) { success }
+	}`, { id });
+	return data.issueArchive;
+}
+
 export async function listLabels(teamId) {
 	if (teamId) {
 		const data = await gql(`query($teamId: ID!) {
