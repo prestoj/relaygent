@@ -79,9 +79,11 @@ stop_process() {
 }
 
 check_process() {
-    local n=$1 p="$PID_DIR/$2.pid"
+    local n=$1 p="$PID_DIR/$2.pid" port=${3:-}
     if [[ -f "$p" ]] && kill -0 "$(cat "$p")" 2>/dev/null; then
         echo -e "  $n: ${GREEN}running${NC} (pid $(cat "$p"))"
+    elif [[ -n "$port" ]] && port_pids "$port" &>/dev/null; then
+        echo -e "  $n: ${GREEN}running${NC} (port $port)"
     else
         echo -e "  $n: ${RED}stopped${NC}"
     fi

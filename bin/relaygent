@@ -13,9 +13,11 @@ case "${1:-help}" in
         source "$SCRIPT_DIR/harness/scripts/lib.sh"
         load_config
         echo -e "${CYAN}Relaygent Status${NC}"
-        for svc in Relay:relay Hub:hub Notifications:notifications Slack-socket:slack-socket Email-poller:email-poller; do
-            check_process "${svc%%:*}" "${svc##*:}"
-        done
+        check_process "Relay" "relay"
+        check_process "Hub" "hub" "$HUB_PORT"
+        check_process "Notifications" "notifications" "$NOTIF_PORT"
+        check_process "Slack-socket" "slack-socket"
+        check_process "Email-poller" "email-poller"
         [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } \
             || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
         ;;
