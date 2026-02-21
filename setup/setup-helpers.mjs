@@ -122,20 +122,11 @@ export function setupHooks(config, REPO_DIR, HOME, C) {
 		args: [join(REPO_DIR, 'computer-use', 'mcp-server.mjs')],
 		env: { HAMMERSPOON_PORT: String(config.services?.hammerspoon?.port || 8097) },
 	};
-	claudeConfig.mcpServers['secrets'] = {
-		command: 'node',
-		args: [join(REPO_DIR, 'secrets', 'mcp-server.mjs')],
-	};
-	claudeConfig.mcpServers['email'] = {
-		command: 'node',
-		args: [join(REPO_DIR, 'email', 'mcp-server.mjs')],
-	};
-	claudeConfig.mcpServers['slack'] = {
-		command: 'node',
-		args: [join(REPO_DIR, 'slack', 'mcp-server.mjs')],
-	};
+	for (const name of ['secrets', 'email', 'slack', 'linear']) {
+		claudeConfig.mcpServers[name] = { command: 'node', args: [join(REPO_DIR, name, 'mcp-server.mjs')] };
+	}
 	writeFileSync(claudeJson, JSON.stringify(claudeConfig, null, 2));
-	console.log(`  MCP: hub-chat + notifications + computer-use + secrets + email + slack registered`);
+	console.log(`  MCP: hub-chat + notifications + computer-use + secrets + email + slack + linear registered`);
 }
 
 export async function setupSlackToken(REPO_DIR, HOME, C) {
