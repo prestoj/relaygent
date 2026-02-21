@@ -2,6 +2,9 @@
 	import { onMount, onDestroy } from 'svelte';
 	let { data } = $props();
 	let services = $state(data.services);
+	let showAllHealth = $state(false);
+	const chUrgent = (data.codeHealth?.files || []).filter(f => f.lines >= 170);
+	const chRest = (data.codeHealth?.files || []).filter(f => f.lines < 170);
 	let pollTimer;
 
 	onMount(() => {
@@ -83,17 +86,28 @@
 {#if data.codeHealth?.files.length > 0}
 <section class="card">
 	<h2>Code Health</h2>
-	<p class="ch-summary">{data.codeHealth.files.length} file{data.codeHealth.files.length !== 1 ? 's' : ''} near the {data.codeHealth.limit}-line limit</p>
+	<p class="ch-summary">{chUrgent.length} file{chUrgent.length !== 1 ? 's' : ''} need attention · {data.codeHealth.files.length} total over {data.codeHealth.threshold}</p>
 	<div class="ch-list">
-		{#each data.codeHealth.files as f}
+		{#each chUrgent as f}
 			<div class="ch-row">
-				<span class="ch-bar" style="width: {Math.min(f.pct, 100)}%; background: {f.lines >= 180 ? 'var(--error)' : f.lines >= 170 ? 'var(--warning)' : 'var(--success)'}"></span>
+				<span class="ch-bar" style="width: {Math.min(f.pct, 100)}%; background: {f.lines >= 180 ? 'var(--error)' : 'var(--warning)'}"></span>
 				<span class="ch-file">{f.path}</span>
 				<span class="ch-count" class:danger={f.lines >= 180} class:warn={f.lines >= 170 && f.lines < 180}>{f.lines}</span>
 			</div>
 		{/each}
+		{#if chRest.length > 0}
+			{#if showAllHealth}
+				{#each chRest as f}
+					<div class="ch-row">
+						<span class="ch-bar" style="width: {Math.min(f.pct, 100)}%; background: var(--success)"></span>
+						<span class="ch-file">{f.path}</span>
+						<span class="ch-count">{f.lines}</span>
+					</div>
+				{/each}
+			{/if}
+			<button class="ch-toggle" onclick={() => showAllHealth = !showAllHealth}>{showAllHealth ? 'Show less' : `Show ${chRest.length} more`}</button>
+		{/if}
 	</div>
-	<p class="hint">Files over {data.codeHealth.threshold} lines shown. Extract to stay under {data.codeHealth.limit}.</p>
 </section>
 {/if}
 
@@ -143,6 +157,8 @@
 	.ch-count { font-family: monospace; font-weight: 600; z-index: 1; flex-shrink: 0; margin-left: 0.5em; }
 	.ch-count.danger { color: var(--error); }
 	.ch-count.warn { color: var(--warning); }
+	.ch-toggle { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.3em 0.6em; font-size: 0.78em; color: var(--text-muted); cursor: pointer; margin-top: 0.3em; }
+	.ch-toggle:hover { color: var(--link); border-color: var(--link); }
 	@media (max-width: 600px) {
 		.grid { grid-template-columns: 7em 1fr; gap: 0.25em 0.5em; font-size: 0.85em; }
 	}
