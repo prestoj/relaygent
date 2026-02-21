@@ -165,7 +165,7 @@ export function listSessions() {
 			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
 			if (!m) continue;
 			const st = parseSessionStats(best) || {};
-			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
+			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, cost: st.cost, summary: st.handoffGoal || st.firstText || null });
 		}
 	} catch { /* ignore */ }
 	return sessions.sort((a, b) => b.id.localeCompare(a.id));

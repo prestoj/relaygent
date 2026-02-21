@@ -85,6 +85,7 @@ test('getRelayStats: returns a stats object with expected shape', () => {
 	assert.ok(typeof stats.totalTokens === 'number');
 	assert.ok(typeof stats.totalOutput === 'number');
 	assert.ok(typeof stats.totalToolCalls === 'number');
+	assert.ok(typeof stats.totalCost === 'number');
 	assert.ok(typeof stats.avgDuration === 'number');
 	assert.ok(typeof stats.avgContext === 'number');
 	assert.ok(typeof stats.medianDuration === 'number');
@@ -194,6 +195,7 @@ test('parseSessionStats: returns stats with correct shape and values', () => {
 	assert.ok(s !== null && typeof s === 'object', 'returns object');
 	assert.ok(typeof s.durationMin === 'number' && typeof s.totalTokens === 'number' && typeof s.toolCalls === 'number');
 	assert.ok(s.totalTokens >= 2000, `totalTokens >= 2000, got ${s.totalTokens}`);
+	assert.ok(s.cost > 0, `cost > 0, got ${s.cost}`);
 	assert.ok(s.toolCalls >= 3, `toolCalls >= 3, got ${s.toolCalls}`);
 	assert.equal(parseSessionStats('/nonexistent/file.jsonl'), null);
 });
