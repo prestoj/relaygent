@@ -15,8 +15,6 @@
 	let sessionStatus = $state(data.relayActivity?.length > 0 ? 'found' : 'waiting');
 	let ws = null, svcInterval;
 	let loading = $state(false), hasMore = $state(true);
-	let currentModel = $state(data.currentModel || '');
-	let modelSaving = $state(false);
 	let hookCtx = $state('');
 	let services = $state(data.services || []);
 	let relayRunning = $state(data.relayRunning ?? true);
@@ -29,17 +27,7 @@
 		relayActionPending = false;
 	}
 
-	const MODEL_OPTIONS = [
-		{ id: 'claude-opus-4-6', label: 'Opus 4.6' }, { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
-		{ id: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' }, { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
-	];
 	async function refreshServices() { try { const d = await (await fetch('/api/services')).json(); services = d.services || []; } catch { /* ignore */ } }
-
-	async function setModel(e) {
-		const model = e.target.value; modelSaving = true;
-		try { const r = await fetch('/api/model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) }); if (r.ok) currentModel = model; } catch { /* ignore */ }
-		modelSaving = false;
-	}
 
 	async function reloadPageData() {
 		try { const d = await (await fetch(`/api/relay?offset=0&limit=50`)).json(); if (d.activities?.length > 0) activities = d.activities; } catch { /* ignore */ }
@@ -95,14 +83,6 @@
 		<span class="badge" class:on={connected}>{connected ? 'Live' : 'Offline'}</span>
 	</div>
 	<button class="relay-toggle" class:stopping={relayRunning} class:starting={!relayRunning} onclick={toggleRelay} disabled={relayActionPending} title={relayRunning ? 'Stop relay' : 'Start relay'}>{relayActionPending ? '…' : relayRunning ? 'Stop' : 'Start'}</button>
-	<div class="model-picker">
-		<select value={currentModel} onchange={setModel} disabled={modelSaving}>
-			<option value="" disabled>Model...</option>
-			{#each MODEL_OPTIONS as opt}
-				<option value={opt.id}>{opt.label}</option>
-			{/each}
-		</select>
-	</div>
 	{#if services?.length}
 	<div class="svc-row">
 		{#each services as svc}
@@ -169,8 +149,6 @@
 	.relay-toggle:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }  .relay-toggle:disabled { opacity: 0.5; cursor: wait; }
 	.relay-toggle.stopping { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }  .relay-toggle.stopping:hover:not(:disabled) { background: #fee2e2; }
 	.relay-toggle.starting { border-color: #86efac; color: #16a34a; background: #f0fdf4; }  .relay-toggle.starting:hover:not(:disabled) { background: #dcfce7; }
-	.model-picker select { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 0.2em 0.4em; font-size: 0.78em; cursor: pointer; }
-	.model-picker select:hover { border-color: var(--text-muted); }  .model-picker select:disabled { opacity: 0.5; cursor: wait; }
 	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }  .svc { display: flex; align-items: center; gap: 0.3em; font-size: 0.78em; color: var(--text-muted); }  .svc .dot { width: 5px; height: 5px; border-radius: 50%; }
 	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; } .relay-detail { opacity: 0.7; font-size: 0.9em; margin-left: 0.1em; }
 	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
