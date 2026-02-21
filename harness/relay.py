@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
+from handoff import validate_and_log
 from jsonl_checks import should_sleep, last_output_is_idle
 from process import ClaudeProcess
 from relay_loop import Action, LoopState, handle_error
@@ -123,8 +124,9 @@ class RelayRunner:
                 continue
             break
 
+        goal = validate_and_log()
         commit_kb()
-        set_status("off")
+        set_status("off", goal=goal)
         cleanup_context_file()
         log("Relay run complete")
         return 0
