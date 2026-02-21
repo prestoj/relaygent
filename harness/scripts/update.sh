@@ -110,4 +110,7 @@ if [ "$MCP_CHANGED" = true ]; then
     echo -e "  session start — restart your Claude Code session to pick up changes.${NC}"
 fi
 
+# Clean up old logs
+bash "$SCRIPT_DIR/harness/scripts/clean-logs.sh" 2>/dev/null || true
+
 echo -e "\n  ${GREEN}Done.${NC}"
