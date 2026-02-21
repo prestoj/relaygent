@@ -20,6 +20,15 @@
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
 	];
 
+	let statusMsg = $state('');
+	const postJson = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const actions = [
+		{ name: 'Open Chat', keys: ['chat', 'message', 'talk'], type: 'action', hint: 'Send a message to the agent', action: () => window.dispatchEvent(new CustomEvent('open-chat')) },
+		{ name: 'Start Agent', keys: ['start', 'launch', 'run'], type: 'action', hint: 'Launch the relay agent', action: async () => { await postJson('/api/relay', { action: 'start' }); statusMsg = 'Agent starting...'; } },
+		{ name: 'Stop Agent', keys: ['stop', 'kill', 'halt'], type: 'action', hint: 'Stop the relay agent', action: async () => { await postJson('/api/relay', { action: 'stop' }); statusMsg = 'Agent stopping...'; } },
+		{ name: 'Health Check', keys: ['health', 'ping', 'check'], type: 'action', hint: 'Ping all services', action: async () => { const r = await postJson('/api/actions', { command: 'health' }); const d = await r.json(); statusMsg = d.output?.split('\n')[0] || 'Done'; } },
+	];
+
 	let kbResults = $state([]);
 	let debounceTimer;
 
@@ -35,11 +44,10 @@
 
 	let results = $derived.by(() => {
 		const q = query.toLowerCase().trim();
-		if (!q) return pages;
-		const matched = pages.filter(p =>
-			p.name.toLowerCase().includes(q) || p.keys.some(k => k.includes(q))
-		);
-		return [...matched, ...kbResults];
+		if (!q) return [...pages, ...actions];
+		const matchPages = pages.filter(p => p.name.toLowerCase().includes(q) || p.keys.some(k => k.includes(q)));
+		const matchActions = actions.filter(a => a.name.toLowerCase().includes(q) || a.keys.some(k => k.includes(q)));
+		return [...matchPages, ...matchActions, ...kbResults];
 	});
 
 	$effect(() => { selectedIdx = 0; });
@@ -47,7 +55,7 @@
 		if (open && inputEl) setTimeout(() => inputEl?.focus(), 10);
 	});
 
-	function show() { open = true; query = ''; kbResults = []; selectedIdx = 0; }
+	function show() { open = true; query = ''; kbResults = []; selectedIdx = 0; statusMsg = ''; }
 	function hide() { open = false; }
 
 	function handleKeydown(e) {
@@ -59,7 +67,11 @@
 		if (e.key === 'Enter' && results[selectedIdx]) { navigate(results[selectedIdx]); }
 	}
 
-	function navigate(item) { hide(); goto(item.path); }
+	function navigate(item) {
+		hide();
+		if (item.type === 'action') { item.action(); return; }
+		goto(item.path);
+	}
 
 	function onInput() {
 		clearTimeout(debounceTimer);
@@ -73,14 +85,14 @@
 <div class="backdrop" onclick={hide} role="presentation">
 	<div class="palette" onclick={(e) => e.stopPropagation()} role="dialog">
 		<input bind:this={inputEl} bind:value={query} oninput={onInput}
-			placeholder="Search pages, KB topics..." class="palette-input" />
+			placeholder="Search pages, actions, KB topics..." class="palette-input" />
 		<ul class="palette-list">
 			{#each results as item, i}
 				<li class:selected={i === selectedIdx}>
 					<button onclick={() => navigate(item)} onmouseenter={() => selectedIdx = i}>
-						<span class="item-type">{item.type === 'kb' ? 'KB' : 'Page'}</span>
+						<span class="item-type" class:action-type={item.type === 'action'}>{item.type === 'kb' ? 'KB' : item.type === 'action' ? 'Run' : 'Page'}</span>
 						<span class="item-name">{item.name}</span>
-						<span class="item-path">{item.path}</span>
+						<span class="item-path">{item.hint || item.path}</span>
 					</button>
 				</li>
 			{/each}
@@ -89,7 +101,7 @@
 			{/if}
 		</ul>
 		<div class="palette-footer">
-			<kbd>↑↓</kbd> navigate <kbd>↵</kbd> open <kbd>esc</kbd> close
+			{#if statusMsg}<span class="status-msg">{statusMsg}</span>{:else}<kbd>↑↓</kbd> navigate <kbd>↵</kbd> open <kbd>esc</kbd> close{/if}
 		</div>
 	</div>
 </div>
@@ -105,6 +117,8 @@
 	.palette-list li.selected button { background: var(--code-bg); }
 	.palette-list li button:hover { background: var(--code-bg); }
 	.item-type { font-size: 0.65em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.15em 0.4em; border-radius: 4px; background: var(--code-bg); color: var(--text-muted); min-width: 2.5em; text-align: center; }
+	.item-type.action-type { background: var(--success-bg); color: var(--success); }
+	.status-msg { color: var(--success); font-weight: 500; }
 	.item-name { font-weight: 500; flex: 1; }
 	.item-path { font-size: 0.78em; color: var(--text-muted); font-family: monospace; }
 	.empty { padding: 1em; text-align: center; color: var(--text-muted); font-size: 0.85em; }
