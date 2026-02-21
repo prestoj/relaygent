@@ -11,6 +11,8 @@ pcall(function() hs.console.hswindow():close() end)
 local json = hs.json
 local PORT = tonumber(os.getenv("HAMMERSPOON_PORT")) or 8097
 local input = dofile(hs.configdir .. "/input_handlers.lua")
+local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
+local ax_press = dofile(hs.configdir .. "/ax_press.lua")
 
 local function annotateWithIndicator(img, ix, iy)
     local sz = img:size()
@@ -50,6 +52,7 @@ local function handleRequest(method, path, headers, body)
                 local img = scr:snapshot(hs.geometry.rect(params.x, params.y, params.w, params.h))
                 if img and ix and iy then img = annotateWithIndicator(img, ix - params.x, iy - params.y) end
                 if img then img:saveToFile(p) end
+                img = nil; collectgarbage("collect")
                 return json.encode({path=p, width=params.w, height=params.h,
                     crop={x=params.x,y=params.y,w=params.w,h=params.h}}), 200
             end
@@ -57,6 +60,7 @@ local function handleRequest(method, path, headers, body)
             if img and ix and iy then img = annotateWithIndicator(img, ix, iy) end
             if img then img:saveToFile(p) end
             local sf = scr:fullFrame()
+            img = nil; collectgarbage("collect")
             return json.encode({path=p, width=sf.w, height=sf.h}), 200
         elseif key == "POST /click" then
             return input.click(params)
@@ -108,9 +112,9 @@ local function handleRequest(method, path, headers, body)
                 frame=fr and {x=math.floor(fr.x),y=math.floor(fr.y),
                     w=math.floor(fr.w),h=math.floor(fr.h)} or nil}), 200
         elseif key == "POST /accessibility" then
-            return dofile(hs.configdir .. "/ax_handler.lua")(params)
+            return ax_handler(params)
         elseif key == "POST /ax_press" then
-            return dofile(hs.configdir .. "/ax_press.lua")(params)
+            return ax_press(params)
         elseif key == "POST /dismiss_dialog" then
             local target = params.button or "Don't Allow"
             local dialogs = {"UserNotificationCenter","SecurityAgent","System Preferences","System Settings","Google Chrome"}
