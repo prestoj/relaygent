@@ -90,6 +90,7 @@ while [[ $# -gt 0 ]]; do
         -f|--follow) FOLLOW=true; shift ;;
         -n|--lines)
             if [[ -z "${2:-}" ]]; then echo -e "${RED}--lines requires a number${NC}"; exit 1; fi
+            if ! [[ "$2" =~ ^[0-9]+$ ]]; then echo -e "${RED}--lines value must be a number${NC}"; exit 1; fi
             LINES="$2"; shift 2 ;;
         --list) LIST=true; shift ;;
         --all) ALL=true; FOLLOW=true; shift ;;
