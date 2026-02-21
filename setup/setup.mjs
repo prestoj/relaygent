@@ -175,8 +175,12 @@ async function main() {
 				{ stdio: 'inherit', env: { ...process.env, ...envFromConfig(config) } });
 		}
 	}
+	// Post-setup verification
+	console.log(`\n${C.cyan}Verifying installation...${C.reset}\n`);
+	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'check.sh')], { stdio: 'inherit' });
+
 	const hubUrl = `http://localhost:${hubPort}/`;
-	console.log(`Opening hub: ${hubUrl}`); openBrowser(hubUrl);
+	console.log(`\nOpening hub: ${hubUrl}`); openBrowser(hubUrl);
 	rl.close();
 }
 
