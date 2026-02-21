@@ -51,6 +51,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
                 chat) compadd -- --read ;;
+                open) compadd -- intent kb tasks sessions logs files search notifications settings help ;;
             esac
         fi
     }
@@ -77,6 +78,8 @@ else
                 COMPREPLY=($(compgen -W "--remove" -- "$cur")) ;;
             chat)
                 COMPREPLY=($(compgen -W "--read" -- "$cur")) ;;
+            open)
+                COMPREPLY=($(compgen -W "intent kb tasks sessions logs files search notifications settings help" -- "$cur")) ;;
         esac
     }
     complete -F _relaygent relaygent
