@@ -130,7 +130,10 @@
 
 {#if sessionStatus === 'found'}
 <section class="summary-section">
-	<button class="summary-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : "What's happening?"}</button>
+	<div class="summary-hdr">
+		<button class="summary-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : "What's happening?"}</button>
+		{#if summaryText}<button class="summary-dismiss" onclick={() => summaryText = ''}>Dismiss</button>{/if}
+	</div>
 	{#if summaryText}<div class="summary-text">{summaryText}</div>{/if}
 </section>
 {/if}
@@ -181,8 +184,10 @@
 	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
 	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
 	.summary-section { margin-bottom: 1em; }
+	.summary-hdr { display: flex; align-items: center; gap: 0.5em; }
 	.summary-btn { padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.82em; font-weight: 600; color: var(--text-muted); }
 	.summary-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .summary-btn:disabled { opacity: 0.6; cursor: wait; }
+	.summary-dismiss { background: none; border: none; font-size: 0.78em; color: var(--text-muted); cursor: pointer; padding: 0.2em 0.4em; }  .summary-dismiss:hover { color: var(--text); }
 	.summary-text { margin-top: 0.5em; padding: 0.6em 0.8em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; line-height: 1.5; color: var(--text); }
 @media (max-width: 768px) {
 		.goal { flex-direction: column; gap: 0.25em; }
