@@ -14,7 +14,6 @@ def _run(args, timeout=5):
 
 
 def screen_size() -> tuple[int, int]:
-    """Get screen resolution via xdpyinfo or xrandr."""
     try:
         out = _run(["xdpyinfo"])
         for line in out.splitlines():
@@ -34,7 +33,6 @@ def screen_size() -> tuple[int, int]:
     except (subprocess.SubprocessError, FileNotFoundError, ValueError):
         pass
     return 1920, 1080
-
 
 def screenshot(params: dict) -> tuple[dict, int]:
     path = params.get("path", "/tmp/claude-screenshot.png")
@@ -62,17 +60,14 @@ def screenshot(params: dict) -> tuple[dict, int]:
     sw, sh = screen_size()
     return {"path": path, "width": sw, "height": sh}, 200
 
-
 def windows(_params: dict) -> tuple[dict, int]:
     wins = []
-    # Build WM_CLASS lookup from wmctrl -l -x (for app names)
     wm_classes: dict[str, str] = {}
     try:
         xout = _run(["wmctrl", "-l", "-x"])
         for line in xout.splitlines():
             parts = line.split(None, 3)
             if len(parts) >= 3:
-                # parts[2] is WM_CLASS, e.g. "xfce4-terminal.Xfce4-terminal"
                 wm_classes[parts[0]] = parts[2].split(".")[0]
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
@@ -127,13 +122,22 @@ def apps(_params: dict) -> tuple[dict, int]:
 def focus(params: dict) -> tuple[dict, int]:
     app = params.get("app")
     window_id = params.get("window_id")
+    pid = params.get("pid")
     if window_id:
         _run(["wmctrl", "-i", "-a", str(window_id)])
         return {"focused": window_id}, 200
+    if pid:
+        try:
+            for line in _run(["wmctrl", "-l", "-p"]).splitlines():
+                parts = line.split(None, 4)
+                if len(parts) >= 3 and parts[2] == str(pid):
+                    _run(["wmctrl", "-i", "-a", parts[0]])
+                    return {"focused": f"pid:{pid}"}, 200
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
     if not app:
-        return {"error": "app or window_id required"}, 400
+        return {"error": "app, window_id, or pid required"}, 400
     try:
-        # Search by title and WM_CLASS (-x includes class column)
         out = _run(["wmctrl", "-l", "-x"])
         app_lower = app.lower()
         for line in out.splitlines():
@@ -145,8 +149,6 @@ def focus(params: dict) -> tuple[dict, int]:
         pass
     return {"error": "not found"}, 404
 
-
-# Common Linux aliases for apps that have different binary names
 _ALIASES = {
     "google-chrome": ["google-chrome-stable", "chromium-browser", "chromium", "firefox"],
     "firefox": ["firefox-esr"],
@@ -165,7 +167,6 @@ _CHROME_ARGS = [
 ]
 
 def _patch_chrome_prefs() -> None:
-    """Set exit_type=Normal so Chrome doesn't show 'Restore pages?' bubble."""
     import json as _json
     pref = f"{_CHROME_DATA}/Default/Preferences"
     try:
@@ -177,7 +178,6 @@ def _patch_chrome_prefs() -> None:
             _json.dump(data, f)
     except (FileNotFoundError, ValueError, OSError):
         pass
-
 
 def launch(params: dict) -> tuple[dict, int]:
     app = params.get("app")

@@ -1,7 +1,7 @@
 // Chrome DevTools Protocol — connects to Chrome for browser automation with auto-reconnect
 import http from "node:http";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 
 const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT || "9223", 10);
 const CHROME_DATA = `${process.env.HOME}/data/chrome-debug-profile`;
@@ -13,7 +13,6 @@ let _events = [];
 let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
 function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
-// Background reconnect with exponential backoff (1s → 2s → 4s → 8s → 16s)
 function _scheduleReconnect(delay = 1000) {
 	if (_reconnectTimer || _connectPromise) return;
 	_reconnectTimer = setTimeout(async () => {
@@ -197,4 +196,5 @@ async function _denyPerms() {
 }
 export function cdpConnected() { return _ws && _ws.readyState === 1; }
 export const cdpAvailable = async () => { const t = await cdpHttp("/json/list"); return t !== null && Array.isArray(t); };
+export function cdpChromePid() { try { return parseInt(execSync(`lsof -ti :${CDP_PORT} -s TCP:LISTEN`, { timeout: 2000 }).toString().trim()); } catch { return null; } }
 export { cdpHttp };
