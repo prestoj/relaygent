@@ -33,10 +33,15 @@ export async function listTeams() {
 }
 
 export async function listIssues({ teamId, first = 50, after } = {}) {
-	const filter = teamId ? `filter: { team: { id: { eq: "${teamId}" } } }` : '';
-	const pagination = `first: ${first}${after ? `, after: "${after}"` : ''}`;
-	const data = await gql(`{
-		issues(${pagination}, orderBy: updatedAt, ${filter}) {
+	const vars = { first };
+	if (teamId) vars.teamId = teamId;
+	if (after) vars.after = after;
+	const teamDecl = teamId ? ', $teamId: String!' : '';
+	const teamFilter = teamId ? ', filter: { team: { id: { eq: $teamId } } }' : '';
+	const afterDecl = after ? ', $after: String' : '';
+	const afterArg = after ? ', after: $after' : '';
+	const data = await gql(`query($first: Int!${teamDecl}${afterDecl}) {
+		issues(first: $first${afterArg}, orderBy: updatedAt${teamFilter}) {
 			nodes {
 				id identifier title description priority priorityLabel
 				state { id name color type }
@@ -46,7 +51,7 @@ export async function listIssues({ teamId, first = 50, after } = {}) {
 			}
 			pageInfo { hasNextPage endCursor }
 		}
-	}`);
+	}`, vars);
 	return data.issues;
 }
 
@@ -93,7 +98,12 @@ export async function listStates(teamId) {
 }
 
 export async function listLabels(teamId) {
-	const filter = teamId ? `filter: { team: { id: { eq: "${teamId}" } } }` : '';
-	const data = await gql(`{ issueLabels(${filter}) { nodes { id name color } } }`);
+	if (teamId) {
+		const data = await gql(`query($teamId: String!) {
+			issueLabels(filter: { team: { id: { eq: $teamId } } }) { nodes { id name color } }
+		}`, { teamId });
+		return data.issueLabels.nodes;
+	}
+	const data = await gql(`{ issueLabels { nodes { id name color } } }`);
 	return data.issueLabels.nodes;
 }

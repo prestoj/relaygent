@@ -77,10 +77,11 @@ test('listIssues returns issues with metadata', async () => {
 	assert.equal(result.nodes[0].identifier, 'ENG-1');
 });
 
-test('listIssues with teamId includes filter', async () => {
+test('listIssues with teamId uses variables (not string interpolation)', async () => {
 	mockResponse = { data: { issues: { nodes: [], pageInfo: {} } } };
 	await listIssues({ teamId: 'team-abc' });
-	assert.ok(lastRequest.body.query.includes('team-abc'));
+	assert.equal(lastRequest.body.variables.teamId, 'team-abc');
+	assert.ok(lastRequest.body.query.includes('$teamId'));
 });
 
 test('createIssue sends mutation with input', async () => {
