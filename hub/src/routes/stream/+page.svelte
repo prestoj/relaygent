@@ -4,12 +4,10 @@
 
 <svelte:head><title>Screen | Relaygent</title></svelte:head>
 
-<h1>Screen</h1>
-<p class="subtitle">Live view of what the agent sees.</p>
-
-<ScreenStream fps={8} />
+<div class="screen-page">
+	<ScreenStream fps={6} />
+</div>
 
 <style>
-	h1 { margin-top: 0; }
-	.subtitle { color: var(--text-muted); margin-top: -0.5em; margin-bottom: 1em; font-size: 0.9em; }
+	.screen-page { max-width: 1400px; margin: 0 auto; }
 </style>
