@@ -9,6 +9,7 @@ os.environ.setdefault("RELAYGENT_DATA_DIR", "/tmp/relaygent-test-notiflog")
 import pytest
 import notif_config as config
 import db as notif_db
+import routes as routes_mod
 
 
 @pytest.fixture(autouse=True)
@@ -108,3 +109,49 @@ class TestPruneNotificationLog:
         notif_db.prune_notification_log(max_age_days=7)
         entries = notif_db.get_notification_history()
         assert len(entries) == 1
+
+
+class TestLogNotificationsTaskType:
+    """Test _log_notifications properly formats task-type notifications."""
+
+    def test_task_notification_logs_description(self, _isolated):
+        notifications = [{
+            "type": "task",
+            "description": "Commit KB changes",
+            "freq": "12h",
+            "overdue": "3h overdue",
+            "last": "2026-02-20",
+        }]
+        routes_mod._log_notifications(notifications)
+        entries = notif_db.get_notification_history()
+        assert len(entries) == 1
+        assert entries[0]["type"] == "task"
+        assert entries[0]["source"] == "task"
+        assert "Commit KB changes" in entries[0]["summary"]
+        assert "3h overdue" in entries[0]["summary"]
+
+    def test_task_notification_without_overdue(self, _isolated):
+        notifications = [{
+            "type": "task",
+            "description": "Run tests",
+            "freq": "daily",
+            "overdue": "",
+            "last": "never",
+        }]
+        routes_mod._log_notifications(notifications)
+        entries = notif_db.get_notification_history()
+        assert entries[0]["summary"] == "Run tests"
+
+    def test_task_notification_no_raw_dict(self, _isolated):
+        notifications = [{
+            "type": "task",
+            "description": "Deploy feature",
+            "freq": "weekly",
+            "overdue": "1d overdue",
+            "last": "2026-02-14",
+        }]
+        routes_mod._log_notifications(notifications)
+        entries = notif_db.get_notification_history()
+        # Must NOT contain raw dict markers
+        assert "{'type'" not in entries[0]["summary"]
+        assert "{\"type\"" not in entries[0]["summary"]

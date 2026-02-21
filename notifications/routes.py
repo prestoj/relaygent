@@ -78,6 +78,13 @@ def _log_notifications(notifications):
                 log_notification(
                     "slack", n.get("channel_name", "slack"),
                     m.get("text", "")[:200], json.dumps(m), f"slack-{ts}")
+        elif ntype == "task":
+            desc = n.get("description", "")[:200]
+            overdue = n.get("overdue", "")
+            summary = f"{desc} ({overdue})" if overdue else desc
+            log_notification(
+                "task", "task", summary,
+                json.dumps(n), f"task-{hash(desc)}")
         elif ntype in ("email", "github", "linear"):
             key = n.get("id", n.get("url", ""))
             log_notification(
