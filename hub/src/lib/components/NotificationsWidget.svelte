@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	let notifications = $state([]);
 	let loading = $state(true);
+	let error = $state('');
 	let collapsed = $state(false);
 	let interval;
 
@@ -9,7 +10,8 @@
 		try {
 			const d = await (await fetch('/api/notifications/pending?fast=1')).json();
 			notifications = d.notifications || [];
-		} catch { /* ignore */ }
+			error = d.error || '';
+		} catch { error = 'Notifications service unreachable'; }
 		loading = false;
 	}
 
@@ -33,15 +35,22 @@
 	function icon(src) { return sourceIcons[src] || '?'; }
 </script>
 
-{#if !loading && notifications.length > 0}
+{#if !loading && (notifications.length > 0 || error)}
 <section class="notif-widget">
 	<button class="notif-hdr" onclick={() => collapsed = !collapsed}>
 		<span class="notif-title">Notifications</span>
-		<span class="notif-count">{notifications.length}</span>
+		{#if notifications.length > 0}
+			<span class="notif-count">{notifications.length}</span>
+		{:else if error}
+			<span class="notif-count notif-err-badge">!</span>
+		{/if}
 		<span class="notif-chev">{collapsed ? '\u25B6' : '\u25BC'}</span>
 	</button>
 	{#if !collapsed}
 	<div class="notif-list">
+		{#if error && notifications.length === 0}
+			<div class="notif-err">{error}</div>
+		{/if}
 		{#each notifications as n}
 		<div class="notif-row">
 			<span class="notif-icon {n.source}">{icon(n.source)}</span>
@@ -74,4 +83,6 @@
 	.notif-time { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; }
 	.notif-history { font-size: 0.75em; color: var(--text-muted); text-align: right; display: block; margin-top: 0.2em; }
 	.notif-history:hover { color: var(--link); }
+	.notif-err-badge { background: #ef4444; }
+	.notif-err { font-size: 0.8em; color: #ef4444; padding: 0.2em 0; }
 </style>
