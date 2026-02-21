@@ -3,6 +3,12 @@ const _deep = `function _dqa(s,r){r=r||document;var o=Array.from(r.querySelector
   `r.querySelectorAll('*').forEach(function(e){if(e.shadowRoot)o=o.concat(_dqa(s,e.shadowRoot))});return o}` +
   `function _dq(s,r){r=r||document;var e=r.querySelector(s);if(e)return e;` +
   `var a=r.querySelectorAll('*');for(var i=0;i<a.length;i++){if(a[i].shadowRoot){e=_dq(s,a[i].shadowRoot);if(e)return e}}return null}`;
+// Full pointer+mouse event sequence — React/SPA frameworks often listen on pointerdown/mousedown, not click
+const _simClick = `var _clk=function(e){var r=e.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,` +
+  `o={bubbles:true,cancelable:true,view:window,button:0,clientX:cx,clientY:cy};` +
+  `e.dispatchEvent(new PointerEvent('pointerdown',o));e.dispatchEvent(new MouseEvent('mousedown',o));` +
+  `e.dispatchEvent(new PointerEvent('pointerup',o));e.dispatchEvent(new MouseEvent('mouseup',o));` +
+  `e.dispatchEvent(new MouseEvent('click',o))};`;
 const frameRoot = (frame) => frame != null ? `window.frames[${frame}].document` : `document`;
 const _vis = `var a=_dqa(S,ROOT);var el=a.find(function(e){return e.offsetParent!==null&&e.getBoundingClientRect().width>0});`;
 const _frOff = (frame) => frame != null
@@ -17,12 +23,13 @@ const retCoords = (frame, extra = ``) =>
 export const COORD_EXPR = (sel, frame) =>
   `(function(){${_deep}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;${retCoords(frame)}})()`;
 export const CLICK_EXPR = (sel, frame) =>
-  `(function(){${_deep}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});el.click();${retCoords(frame)}})()`;
+  `(function(){${_deep}${_simClick}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});_clk(el);${retCoords(frame)}})()`;
 
 const _norm = `var norm=s=>s.replace(/[\\u00a0]/g,' ').replace(/[\\u2018\\u2019]/g,"'").replace(/[\\u201c\\u201d]/g,'"').replace(/[\\u2013\\u2014]/g,'-').toLowerCase()`;
-const _textSel = `'a,button,input[type=submit],input[type=button],summary,span,[role=button],[role=tab],[role=menuitem],[role=option],[role=link],[aria-haspopup],[role=combobox]'`;
+const _textSel = `'a,button,input[type=submit],input[type=button],summary,span,[role=button],[role=tab],` +
+  `[role=menuitem],[role=option],[role=link],[role=switch],[role=checkbox],[aria-haspopup],[role=combobox],[tabindex="0"]'`;
 export const TEXT_CLICK_EXPR = (text, idx, frame) =>
-  `(function(){${_deep}${_norm};var ROOT=${frameRoot(frame)};var t=norm(${JSON.stringify(text)}),i=${idx};` +
+  `(function(){${_deep}${_simClick}${_norm};var ROOT=${frameRoot(frame)};var t=norm(${JSON.stringify(text)}),i=${idx};` +
   `var inVP=function(e){var r=e.getBoundingClientRect();return r.width>0&&r.bottom>0&&r.top<window.innerHeight&&r.right>0&&r.left<window.innerWidth};` +
   `var els=_dqa(${_textSel},ROOT).filter(function(e){return e.offsetParent!==null});` +
   `var _txt=function(e){return norm(e.innerText||e.value||e.getAttribute('aria-label')||'')};` +
@@ -37,7 +44,7 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
   `}` +
   `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
   `el.scrollIntoView({block:'nearest'});` +
-  `if(el.matches('[class*="-control"],[class*="__control"]')||el.closest('[class*="-control"],[class*="__control"]')){el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));}else{el.click();}` +
+  `_clk(el);` +
   `${retCoords(frame, `,text:(el.innerText||el.value||'').trim().substring(0,50),count:matches.length`)}})()`;
 
 const _setSV = `var _sv=function(e,v){var p=e.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;var d=Object.getOwnPropertyDescriptor(p,'value');if(d&&d.set)d.set.call(e,v);else e.value=v};`;
@@ -63,4 +70,4 @@ export const WAIT_EXPR = (sel, timeoutMs) =>
   `(function poll(){var el=_dq(${JSON.stringify(sel)});if(el&&el.offsetParent!==null)return res('found');` +
   `if(Date.now()-t>limit)return rej('timeout');setTimeout(poll,100)})()})})()`;
 
-export { _deep, frameRoot };
+export { _deep, _simClick, frameRoot };

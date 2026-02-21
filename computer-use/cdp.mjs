@@ -182,6 +182,8 @@ export function patchChromePrefs() {
   } catch (e) { log(`patchChromePrefs failed: ${e.message}`); }
 }
 
+export function cdpConnected() { return _ws && _ws.readyState === 1; }
+
 export async function cdpAvailable() {
   const tabs = await cdpHttp("/json/list");
   return tabs !== null && Array.isArray(tabs);

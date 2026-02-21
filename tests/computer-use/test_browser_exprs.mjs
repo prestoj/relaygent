@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import {
 	COORD_EXPR, CLICK_EXPR, TEXT_CLICK_EXPR,
 	TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR,
-	_deep, frameRoot,
+	_deep, _simClick, frameRoot,
 } from '../../computer-use/browser-exprs.mjs';
 
 describe('frameRoot', () => {
@@ -29,6 +29,32 @@ describe('_deep', () => {
 	it('is a non-empty string defining _dq and _dqa helpers', () => {
 		assert.ok(typeof _deep === 'string' && _deep.length > 0);
 		assert.ok(_deep.includes('function _dq(') && _deep.includes('function _dqa('));
+	});
+});
+
+describe('_simClick', () => {
+	it('defines _clk helper function', () => {
+		assert.ok(_simClick.includes('var _clk=function(e)'));
+	});
+
+	it('dispatches PointerEvent pointerdown and pointerup', () => {
+		assert.ok(_simClick.includes("PointerEvent('pointerdown'"));
+		assert.ok(_simClick.includes("PointerEvent('pointerup'"));
+	});
+
+	it('dispatches MouseEvent mousedown, mouseup, and click', () => {
+		assert.ok(_simClick.includes("MouseEvent('mousedown'"));
+		assert.ok(_simClick.includes("MouseEvent('mouseup'"));
+		assert.ok(_simClick.includes("MouseEvent('click'"));
+	});
+
+	it('calculates center coordinates from getBoundingClientRect', () => {
+		assert.ok(_simClick.includes('getBoundingClientRect'));
+		assert.ok(_simClick.includes('r.width/2') && _simClick.includes('r.height/2'));
+	});
+
+	it('sets bubbles and cancelable on dispatched events', () => {
+		assert.ok(_simClick.includes('bubbles:true') && _simClick.includes('cancelable:true'));
 	});
 });
 
@@ -64,9 +90,10 @@ describe('CLICK_EXPR', () => {
 		assert.ok(expr.includes(JSON.stringify('#submit')));
 	});
 
-	it('calls .click() and scrollIntoView on the element', () => {
+	it('dispatches full pointer+mouse event sequence via _clk', () => {
 		const expr = CLICK_EXPR('a', undefined);
-		assert.ok(expr.includes('.click()') && expr.includes('scrollIntoView'));
+		assert.ok(expr.includes('_clk(el)') && expr.includes('scrollIntoView'));
+		assert.ok(expr.includes('PointerEvent') && expr.includes('MouseEvent'));
 	});
 
 	it('returns null when element not found', () => {
@@ -92,6 +119,19 @@ describe('TEXT_CLICK_EXPR', () => {
 	it('includes unicode normalization and error path', () => {
 		const expr = TEXT_CLICK_EXPR('test', 0, undefined);
 		assert.ok(expr.includes('norm=') && expr.includes("'No match'"));
+	});
+
+	it('dispatches full pointer+mouse event sequence via _clk', () => {
+		const expr = TEXT_CLICK_EXPR('Submit', 0, undefined);
+		assert.ok(expr.includes('_clk(el)'));
+		assert.ok(expr.includes('PointerEvent') && expr.includes('MouseEvent'));
+	});
+
+	it('includes expanded role selectors for modern SPAs', () => {
+		const expr = TEXT_CLICK_EXPR('btn', 0, undefined);
+		assert.ok(expr.includes('[role=switch]'), 'missing [role=switch]');
+		assert.ok(expr.includes('[role=checkbox]'), 'missing [role=checkbox]');
+		assert.ok(expr.includes('[tabindex="0"]'), 'missing [tabindex="0"]');
 	});
 });
 
