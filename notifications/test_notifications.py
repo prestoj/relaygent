@@ -54,7 +54,7 @@ class TestDatabase:
 
 
 class TestReminderCreate:
-    """POST /reminder is used internally by the sleep tool (max_minutes wake timeout)."""
+    """POST /reminder creates a one-off reminder."""
 
     def test_create(self, client):
         resp = client.post("/reminder", json={

@@ -44,25 +44,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "sleep": {
-        let timeMsg = "indefinitely (until a notification arrives)";
-        if (args.max_minutes) {
-          const wakeTime = new Date(Date.now() + args.max_minutes * 60000);
-          const pad = (n) => String(n).padStart(2, "0");
-          const isoTime = `${wakeTime.getFullYear()}-${pad(wakeTime.getMonth() + 1)}-${pad(wakeTime.getDate())}T${pad(wakeTime.getHours())}:${pad(wakeTime.getMinutes())}:${pad(wakeTime.getSeconds())}`;
-          try {
-            await apiCall("/reminder", "POST", {
-              trigger_time: isoTime,
-              message: `Sleep timeout (${args.max_minutes} min)`,
-            });
-            timeMsg = `for up to ${args.max_minutes} minutes (wake reminder set for ${isoTime})`;
-          } catch (e) {
-            timeMsg = `for up to ${args.max_minutes} minutes (warning: failed to set wake reminder)`;
-          }
-        }
         return text(
-          `Sleep activated ${timeMsg}. The relay harness handles the wait ` +
-          "with zero token cost. You'll be woken via resume when a notification " +
-          "arrives (chat message, reminder, etc). Finish your turn now to enter sleep."
+          "Sleep activated. The relay harness handles the wait with zero token cost. " +
+          "You'll be woken via resume when a notification arrives " +
+          "(chat message, reminder, Slack, etc). Finish your turn now to enter sleep."
         );
       }
       default:
