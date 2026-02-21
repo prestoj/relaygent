@@ -1,6 +1,7 @@
 <script>
 	let { connected = false, relayRunning = true, services = [], onToggleRelay } = $props();
 	let actionPending = $state(false);
+	let goal = $derived(services?.find(s => s.name === 'Relay')?.goal || '');
 	async function toggle() {
 		if (actionPending) return;
 		actionPending = true;
@@ -26,6 +27,9 @@
 	</div>
 	{/if}
 </section>
+{#if goal}
+<div class="goal-line">{goal}</div>
+{/if}
 
 <style>
 	.status-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75em; padding: 0.6em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }
@@ -40,4 +44,5 @@
 	.relay-toggle.starting { border-color: #86efac; color: #16a34a; background: #f0fdf4; }  .relay-toggle.starting:hover:not(:disabled) { background: #dcfce7; }
 	.svc-row { display: flex; flex-wrap: wrap; gap: 0.4em 0.8em; margin-left: auto; }  .svc { display: flex; align-items: center; gap: 0.3em; font-size: 0.78em; color: var(--text-muted); }  .svc .dot { width: 5px; height: 5px; border-radius: 50%; }
 	.svc.up .dot { background: #22c55e; } .svc.down .dot { background: #ef4444; } .svc.down { color: #ef4444; } .relay-detail { opacity: 0.7; font-size: 0.9em; margin-left: 0.1em; }
+	.goal-line { font-size: 0.8em; color: var(--text-muted); padding: 0.3em 1em; margin-top: -0.5em; margin-bottom: 0.75em; }
 </style>
