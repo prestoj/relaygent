@@ -51,9 +51,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Install secrets dependencies
-        run: npm install --prefix secrets
+          node-version: "22"
       - name: Run vault tests
         run: node --test tests/secrets/test_vault.mjs
 
@@ -64,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install email dependencies
         run: npm install --prefix email
       - name: Run email tests
@@ -77,11 +75,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install slack dependencies
         run: npm install --prefix slack
       - name: Run slack tests
         run: node --test tests/slack/test_slack_helpers.mjs tests/slack/test_slack_client.mjs
+
+  test-setup:
+    name: Setup tests (JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run setup tests
+        run: node --test tests/setup/test_setup_helpers.mjs tests/setup/test_setup_utils.mjs
 
   lint-js:
     name: JS syntax check
@@ -90,9 +99,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Check syntax (all .mjs files)
-        run: find secrets slack notifications -name "*.mjs" -not -path "*/node_modules/*" | xargs -I{} node --check {}
+        run: find secrets slack notifications email -name "*.mjs" -not -path "*/node_modules/*" | xargs -I{} node --check {}
 
   build-hub:
     name: Hub build (Svelte)
@@ -130,7 +139,7 @@ jobs:
       - name: Check files under 200 lines
         run: |
           status=0
-          for f in harness/*.py computer-use/*.py slack/*.mjs secrets/*.mjs notifications/*.py hub/src/routes/**/*.svelte; do
+          for f in harness/*.py computer-use/*.py slack/*.mjs secrets/*.mjs notifications/*.py email/*.mjs hub/src/routes/**/*.svelte; do
             [ -f "$f" ] || continue
             lines=$(wc -l < "$f")
             if [ "$lines" -gt 200 ]; then
