@@ -118,7 +118,7 @@
 
 
 <ContextBar pct={contextPct} />
-<SessionTimer />
+<SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>

@@ -45,7 +45,8 @@ async function checkService(svc) {
 
 function checkRelayStatus() {
 	try {
-		const { status, updated } = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
+		const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
+		const { status, updated, session_id } = data;
 		const ok = status === 'working' || status === 'sleeping';
 		const labels = { rate_limited: 'rate limited', crashed: 'crashed' };
 		let detail = labels[status] || status;
@@ -53,9 +54,9 @@ function checkRelayStatus() {
 			const ageMin = Math.round((Date.now() - new Date(updated).getTime()) / 60000);
 			if (ageMin >= 1) detail = `${status} (${ageMin}m)`;
 		}
-		return { name: 'Relay', ok, detail };
+		return { name: 'Relay', ok, detail, sessionId: session_id || null };
 	} catch {
-		return { name: 'Relay', ok: false, detail: 'off' };
+		return { name: 'Relay', ok: false, detail: 'off', sessionId: null };
 	}
 }
 
