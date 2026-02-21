@@ -57,7 +57,7 @@ def collect(notifications: list) -> None:
     _advance_ack(max_ts)
 
     notifications.append({
-        "type": "message",
+        "type": "email",
         "source": "email",
         "count": len(emails),
         "previews": [
