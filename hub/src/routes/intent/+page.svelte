@@ -59,5 +59,5 @@
 	}
 	.actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
 	.save-btn { background: var(--link); color: #fff; border: none; padding: 0.5em 1em; border-radius: 6px; cursor: pointer; }
-	.saved { color: #22c55e; }
+	.saved { color: var(--success); }
 </style>

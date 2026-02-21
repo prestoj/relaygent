@@ -109,9 +109,9 @@
 	.ai.expanded { background: var(--code-bg); }
 	.ai.new { animation: fadeIn 0.3s ease-out; background: var(--code-bg); }
 	@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; } }
-	.ai.text { border-left-color: #22c55e; }
+	.ai.text { border-left-color: var(--success); }
 	.ai.file { border-left-color: #3b82f6; }
-	.ai.bash { border-left-color: #f59e0b; }
+	.ai.bash { border-left-color: var(--warning); }
 	.ai.mcp { border-left-color: #8b5cf6; }
 	.ai.other { border-left-color: #6b7280; }
 	.time { color: var(--text-muted); font-size: 0.78em; font-family: monospace; white-space: nowrap; }

@@ -35,5 +35,5 @@
 	.tw-item.done { text-decoration: line-through; opacity: 0.5; }
 	.tw-icon { font-size: 0.9em; min-width: 1em; text-align: center; flex-shrink: 0; }
 	.tw-item.active .tw-icon { color: var(--link); }
-	.tw-item.done .tw-icon { color: #22c55e; }
+	.tw-item.done .tw-icon { color: var(--success); }
 </style>

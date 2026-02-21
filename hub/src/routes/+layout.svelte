@@ -79,11 +79,15 @@
 	.app-wrapper {
 		--bg: #fafafa; --bg-surface: #fff; --text: #1a1a1a; --text-muted: #555;
 		--link: #2563eb; --border: #e5e5e5; --code-bg: #f0f0f0; --th-bg: #f5f5f5;
+		--error: #ef4444; --success: #22c55e; --warning: #f59e0b;
+		--error-bg: #fef2f2; --success-bg: #f0fdf4; --warning-bg: #fffbeb;
 		background: var(--bg); color: var(--text); min-height: 100vh;
 	}
 	.app-wrapper.dark {
 		--bg: #0d1117; --bg-surface: #161b22; --text: #e6edf3; --text-muted: #8b949e;
 		--link: #58a6ff; --border: #30363d; --code-bg: #21262d; --th-bg: #21262d;
+		--error: #f87171; --success: #4ade80; --warning: #fbbf24;
+		--error-bg: #451a1a; --success-bg: #14291a; --warning-bg: #422006;
 	}
 
 	:global(a) { color: var(--link); text-decoration: none; }
@@ -106,7 +110,7 @@
 	.links { display: flex; gap: 1.25em; align-items: center; }
 	.links a.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link); padding-bottom: 0.1em; text-decoration: none; }
 	.hamburger { display: none; }
-	.unread-badge { display: inline-block; background: #ef4444; color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
+	.unread-badge { display: inline-block; background: var(--error); color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
 
 	.theme-toggle {
 		background: none; border: none; cursor: pointer;

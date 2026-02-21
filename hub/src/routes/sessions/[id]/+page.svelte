@@ -161,9 +161,9 @@
 	.ai { display: grid; grid-template-columns: 3.5em 1fr; gap: 0.4em; font-size: 0.85em; padding: 0.35em 0.5em; background: var(--bg-surface); border-radius: 4px; border-left: 3px solid var(--border); cursor: pointer; transition: background 0.15s; }
 	.ai:hover { background: var(--code-bg); }
 	.ai.expanded { background: var(--code-bg); }
-	.ai.text { border-left-color: #22c55e; }
+	.ai.text { border-left-color: var(--success); }
 	.ai.file { border-left-color: #3b82f6; }
-	.ai.bash { border-left-color: #f59e0b; }
+	.ai.bash { border-left-color: var(--warning); }
 	.ai.mcp { border-left-color: #8b5cf6; }
 	.ai.other { border-left-color: #6b7280; }
 	.time { color: var(--text-muted); font-size: 0.78em; font-family: monospace; white-space: nowrap; }

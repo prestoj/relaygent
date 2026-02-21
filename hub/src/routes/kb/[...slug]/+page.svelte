@@ -118,16 +118,16 @@
 	}
 	.del-btn {
 		padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px;
-		background: var(--bg-surface); cursor: pointer; color: var(--danger, #dc2626); font-size: 0.9em;
+		background: var(--bg-surface); cursor: pointer; color: var(--error); font-size: 0.9em;
 	}
 	.del-confirm-btn {
-		background: #dc2626; color: #fff; border: none; border-radius: 6px;
+		background: var(--error); color: #fff; border: none; border-radius: 6px;
 		padding: 0.35em 0.7em; cursor: pointer; font-size: 0.85em;
 	}
 	.cancel-del-btn {
 		background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85em; padding: 0.35em 0;
 	}
-	.confirm-text { font-size: 0.85em; color: var(--danger, #dc2626); }
+	.confirm-text { font-size: 0.85em; color: var(--error); }
 	.tags { display: flex; gap: 0.4em; margin-bottom: 0.5em; }
 	.tag {
 		font-size: 0.8em; padding: 0.2em 0.6em;
@@ -146,7 +146,7 @@
 	.preview-box { min-height: 10em; padding: 0.75em; border: 1px solid var(--border); border-radius: 0 6px 6px 6px; background: var(--bg-surface); }
 	.actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
 	.save-btn { background: var(--link); color: #fff; border: none; padding: 0.5em 1em; border-radius: 6px; cursor: pointer; }
-	.saved { color: #22c55e; }
+	.saved { color: var(--success); }
 	.backlinks { margin-top: 2em; padding-top: 1em; border-top: 1px solid var(--border); }
 	.backlinks ul { padding-left: 1.2em; }
 </style>
