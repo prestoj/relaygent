@@ -1,8 +1,6 @@
 // HTTP client for computer-use backend (Hammerspoon on macOS, linux-server.py on Linux)
-// All requests serialized through single TCP connection
-
 import { execFile, execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { openSync, readSync, closeSync, readFileSync } from "node:fs";
 import { platform } from "node:os";
 import http from "node:http";
 
@@ -10,20 +8,24 @@ const IS_LINUX = platform() === "linux";
 const PORT = parseInt(process.env.HAMMERSPOON_PORT || "8097", 10);
 const agent = new http.Agent({ keepAlive: false, maxSockets: 1 });
 let tail = Promise.resolve();
-
 const SCREENSHOT_PATH = "/tmp/claude-screenshot.png";
 const SCALED_PATH = "/tmp/claude-screenshot-scaled.png";
-const MAX_BYTES = 5 * 1024 * 1024; // 5MB — well under Claude's 20MB base64 limit
-const SCALED_WIDTH = 1280; // Always downscale to this width for consistent vision coords
+const SCALED_WIDTH = 1280;
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
 // Scale factor: native screen pixels / scaled image pixels.
-// Set after first screenshot — click coords are multiplied by this before execution.
 let _scaleFactor = 1;
 export function scaleFactor() { return _scaleFactor; }
+
+function isValidPng(p) {
+	try { const b = Buffer.alloc(8), fd = openSync(p, "r"); readSync(fd, b, 0, 8, 0); closeSync(fd); return b.compare(PNG_SIG) === 0; }
+	catch { return false; }
+}
 
 /** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64. */
 export function readScreenshot(nativeWidth) {
 	try {
+		if (!isValidPng(SCREENSHOT_PATH)) return null;
 		if (nativeWidth && nativeWidth > SCALED_WIDTH) {
 			_scaleFactor = nativeWidth / SCALED_WIDTH;
 			if (IS_LINUX) {
