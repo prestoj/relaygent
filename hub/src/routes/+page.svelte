@@ -26,6 +26,7 @@
 	let relayRunning = $state(data.relayRunning ?? true);
 	let summaryText = $state('');
 	let summaryLoading = $state(false);
+	let handoffGoal = $derived(services?.find(s => s.name === 'Relay')?.goal || '');
 	async function fetchSummary() {
 		if (summaryLoading) return;
 		summaryLoading = true; summaryText = '';
@@ -88,6 +89,13 @@
 <svelte:head><title>Relaygent</title></svelte:head>
 
 <StatusBar {connected} {relayRunning} {services} onToggleRelay={toggleRelay} />
+
+{#if handoffGoal && !connected}
+<section class="handoff-goal">
+	<div class="hg-label">Next goal</div>
+	<div class="hg-text">{handoffGoal}</div>
+</section>
+{/if}
 
 {#if hookCtx}
 <div class="hook-ctx"><span class="hook-label">Agent context</span>{hookCtx}</div>
@@ -152,6 +160,8 @@
 <style>
 	.hook-ctx { font-size: 0.72em; color: var(--text-muted); padding: 0.3em 1em; background: var(--code-bg); border-radius: 6px; margin-bottom: 0.75em; font-family: monospace; white-space: pre-wrap; word-break: break-word; }
 	.hook-label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.6em; font-size: 0.9em; }
+	.handoff-goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }
+	.hg-label { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap; }  .hg-text { color: var(--text); font-size: 0.88em; line-height: 1.4; }
 	.goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--link) 25%, var(--border)); border-radius: 8px; margin-bottom: 1em; }
 	.gl { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--link); white-space: nowrap; }  .gt { color: var(--text); font-size: 0.88em; line-height: 1.4; }
 	.task-id { font-family: monospace; font-size: 0.9em; font-weight: 600; color: var(--link); }  .task-assignee { color: var(--text-muted); font-size: 0.9em; }
@@ -168,6 +178,6 @@
 	.summary-dismiss { background: none; border: none; font-size: 0.78em; color: var(--text-muted); cursor: pointer; padding: 0.2em 0.4em; }  .summary-dismiss:hover { color: var(--text); }
 	.summary-text { margin-top: 0.5em; padding: 0.6em 0.8em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; line-height: 1.5; color: var(--text); }
 @media (max-width: 768px) {
-		.goal { flex-direction: column; gap: 0.25em; }
+		.handoff-goal, .goal { flex-direction: column; gap: 0.25em; }
 	}
 </style>
