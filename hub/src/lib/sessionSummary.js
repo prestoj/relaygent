@@ -22,9 +22,12 @@ export function compactActivity(activity, maxItems = 40) {
 	return lines.join('\n').slice(0, 6000);
 }
 
-/** Build a clean env for subprocess — strips CLAUDECODE to avoid nested-session error. */
+/** Build a clean env for subprocess — strips CLAUDECODE and ensures claude is in PATH. */
 function cleanEnv() {
-	const env = { ...process.env, DISABLE_INTERACTIVITY: '1' };
+	const home = process.env.HOME || '';
+	const extraPaths = [`${home}/.local/bin`, '/usr/local/bin', `${home}/bin`];
+	const currentPath = process.env.PATH || '/usr/bin:/bin';
+	const env = { ...process.env, DISABLE_INTERACTIVITY: '1', PATH: [...extraPaths, currentPath].join(':') };
 	delete env.CLAUDECODE;
 	return env;
 }
