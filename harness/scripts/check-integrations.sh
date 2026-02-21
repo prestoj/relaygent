@@ -39,8 +39,27 @@ else ck_warn "CLAUDE.md" "missing — run: ./setup.sh to generate"; fi
 
 # --- MCP servers ---
 if [ -f "$HOME/.claude.json" ]; then
-    MCP_COUNT=$(python3 -c "import json; print(len(json.load(open('$HOME/.claude.json')).get('mcpServers',{})))" 2>/dev/null || echo 0)
-    if [ "${MCP_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-        ck_ok "MCP servers" "$MCP_COUNT configured (verify: relaygent mcp test)"
-    else ck_warn "MCP servers" "none configured — run: relaygent mcp add"; fi
+    MCP_DATA=$(python3 -c "
+import json,os
+cfg = json.load(open(os.path.expanduser('~/.claude.json')))
+for name, srv in cfg.get('mcpServers', {}).items():
+    args = srv.get('args', [])
+    entry = args[0] if args else ''
+    ok = '1' if entry and os.path.isfile(entry) else '0'
+    print(f'{ok} {name} {entry}')
+" 2>/dev/null)
+    MCP_OK=0; MCP_TOTAL=0; MCP_BAD=""
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        MCP_TOTAL=$((MCP_TOTAL + 1))
+        if [ "${line:0:1}" = "1" ]; then MCP_OK=$((MCP_OK + 1))
+        else MCP_BAD="${MCP_BAD} $(echo "$line" | awk '{print $2}')"; fi
+    done <<< "$MCP_DATA"
+    if [ "$MCP_TOTAL" -eq 0 ] 2>/dev/null; then
+        ck_warn "MCP servers" "none configured — run: relaygent mcp add"
+    elif [ "$MCP_OK" -eq "$MCP_TOTAL" ]; then
+        ck_ok "MCP servers" "$MCP_OK/$MCP_TOTAL entry points valid"
+    else
+        ck_fail "MCP servers" "$MCP_OK/$MCP_TOTAL valid — broken:${MCP_BAD}"
+    fi
 else ck_warn "MCP config" "~/.claude.json not found — run: relaygent setup"; fi
