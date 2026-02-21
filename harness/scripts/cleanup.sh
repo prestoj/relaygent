@@ -132,6 +132,24 @@ DRY_FLAG=""
 [ "$DRY_RUN" = true ] && DRY_FLAG="--dry-run"
 bash "$SCRIPT_DIR/harness/scripts/clean-logs.sh" --days "$DAYS" $DRY_FLAG 2>&1 | grep -E '(would |removed|truncated|freed|clean)' || echo -e "  ${DIM}No old logs${NC}"
 
+# --- 4. Prune stale git branches ---
+if [ -d "$REPO_DIR/.git" ]; then
+    echo -e "\n${CYAN}Git branches:${NC}"
+    git -C "$REPO_DIR" fetch --prune origin 2>/dev/null || true
+    STALE=$(git -C "$REPO_DIR" branch --merged main 2>/dev/null | grep -v '^\*\|main' || true)
+    STALE_COUNT=$(echo "$STALE" | grep -c '\S' || true)
+    if [ "${STALE_COUNT:-0}" -gt 0 ]; then
+        if [ "$DRY_RUN" = true ]; then
+            echo -e "  ${YELLOW}Would delete $STALE_COUNT merged branch(es)${NC}"
+        else
+            echo "$STALE" | xargs git -C "$REPO_DIR" branch -d 2>/dev/null || true
+            echo -e "  ${GREEN}Deleted $STALE_COUNT merged branch(es)${NC}"
+        fi
+    else
+        echo -e "  ${DIM}No stale branches${NC}"
+    fi
+fi
+
 # --- Summary ---
 echo ""
 TOTAL_MB=$((TOTAL_FREED / 1024))
