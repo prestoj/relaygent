@@ -44,7 +44,9 @@ function getAttentionItems() {
 function hasIntentContent() {
 	try {
 		const intentPath = path.join(getKbDir(), 'INTENT.md');
-		const lines = fs.readFileSync(intentPath, 'utf-8').split('\n')
+		const raw = fs.readFileSync(intentPath, 'utf-8');
+		if (raw.includes('Delete everything above')) return false;
+		const lines = raw.split('\n')
 			.filter(l => l.trim() && !l.startsWith('---') && !l.startsWith('tags') && !l.startsWith('title') && !l.startsWith('created') && !l.startsWith('updated') && !l.startsWith('<!--'));
 		return lines.length >= 3;
 	} catch { return false; }
