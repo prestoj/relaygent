@@ -2,16 +2,10 @@
 # Relaygent orientation — quick system status snapshot
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CONFIG_FILE="$HOME/.relaygent/config.json"
-KB_DIR="${RELAYGENT_KB_DIR:-$REPO_DIR/knowledge/topics}"
+source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+load_config
 INTENT_FILE="$KB_DIR/INTENT.md"
 HANDOFF_FILE="$KB_DIR/HANDOFF.md"
-
-# Read ports from config
-HUB_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['hub']['port'])" 2>/dev/null || echo 8080)
-NOTIF_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Relaygent Orientation"
@@ -42,7 +36,6 @@ check_service() {
 }
 check_service "Notifications" "http://127.0.0.1:${NOTIF_PORT}/health"
 check_service "Hub" "http://127.0.0.1:${HUB_PORT}/api/health"
-HS_PORT=$(python3 -c "import json; c=json.load(open('$CONFIG_FILE')); print(c.get('services',{}).get('hammerspoon',{}).get('port',8097))" 2>/dev/null || echo 8097)
 CU_NAME="Hammerspoon"
 [ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
 check_service "$CU_NAME" "http://127.0.0.1:${HS_PORT}/health"

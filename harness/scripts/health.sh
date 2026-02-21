@@ -2,18 +2,9 @@
 # Relaygent health check — verify all services are responding
 set -euo pipefail
 
-CONFIG_FILE="$HOME/.relaygent/config.json"
-GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+load_config
 ALL_OK=true
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo -e "${RED}Not set up yet. Run: relaygent start${NC}"; exit 1
-fi
-
-HUB_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['hub']['port'])" 2>/dev/null || echo 8080)
-NOTIF_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
-HS_PORT=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['services'].get('hammerspoon',{}).get('port',8097))" 2>/dev/null || echo 8097)
 
 echo -e "${CYAN}Relaygent Health Check${NC}"
 
@@ -27,7 +18,7 @@ check_http() {
     fi
 }
 
-check_process() {
+check_daemon() {
     local name=$1 pattern=$2
     if pgrep -f "$pattern" >/dev/null 2>&1; then
         echo -e "  $name: ${GREEN}running${NC}"
@@ -44,11 +35,11 @@ if [ "$(uname)" = "Darwin" ]; then
 fi
 
 # Background daemons
-check_process "Notification poller" "notification-poller"
-[ -f "$HOME/.relaygent/gmail/credentials.json" ] && check_process "Email poller" "email-poller"
+check_daemon "Notification poller" "notification-poller"
+[ -f "$HOME/.relaygent/gmail/credentials.json" ] && check_daemon "Email poller" "email-poller"
 
 # Relay harness
-check_process "Relay harness" "relay.py"
+check_daemon "Relay harness" "relay.py"
 
 # Computer-use (platform-specific)
 if [ "$(uname)" = "Linux" ]; then
@@ -123,12 +114,12 @@ else
 fi
 
 # Git repo state
-if [ -d "$SCRIPT_DIR/.git" ]; then
-    BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null)
+if [ -d "$REPO_DIR/.git" ]; then
+    BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null)
     if [ "$BRANCH" != "main" ]; then
         echo -e "  ${YELLOW}Git: on branch '$BRANCH' (not main)${NC}"
     fi
-    MOD=$(git -C "$SCRIPT_DIR" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    MOD=$(git -C "$REPO_DIR" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
     [ "${MOD:-0}" -gt 0 ] && echo -e "  ${YELLOW}Git: $MOD uncommitted change(s)${NC}"
 fi
 

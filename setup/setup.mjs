@@ -155,15 +155,26 @@ async function main() {
 	setupHooks(config, REPO_DIR, HOME, C);
 
 	setupCliSymlink(REPO_DIR, HOME, C);
-	printSetupComplete(hubPort, C);
-	const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
-	if (launch !== 'n') {
-		console.log(`\nStarting Relaygent...\n`);
-		spawnSync(join(REPO_DIR, 'bin', 'relaygent'), ['start'],
-			{ stdio: 'inherit', env: { ...process.env, ...envFromConfig(config) } });
-		const hubUrl = `http://localhost:${hubPort}/`;
-		console.log(`Opening hub: ${hubUrl}`); openBrowser(hubUrl);
+	// On macOS, offer LaunchAgent installation for auto-restart on crash
+	let launchAgentsInstalled = false;
+	if (process.platform === 'darwin') {
+		const la = (await ask(`\n${C.cyan}Install auto-restart services (LaunchAgents)? [Y/n]:${C.reset} `)).trim().toLowerCase();
+		if (la !== 'n') {
+			spawnSync('bash', [join(REPO_DIR, 'scripts', 'install-launchagents.sh')], { stdio: 'inherit' });
+			launchAgentsInstalled = true;
+		}
 	}
+	printSetupComplete(hubPort, C);
+	if (!launchAgentsInstalled) {
+		const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
+		if (launch !== 'n') {
+			console.log(`\nStarting Relaygent...\n`);
+			spawnSync(join(REPO_DIR, 'bin', 'relaygent'), ['start'],
+				{ stdio: 'inherit', env: { ...process.env, ...envFromConfig(config) } });
+		}
+	}
+	const hubUrl = `http://localhost:${hubPort}/`;
+	console.log(`Opening hub: ${hubUrl}`); openBrowser(hubUrl);
 	rl.close();
 }
 

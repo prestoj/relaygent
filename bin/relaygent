@@ -28,9 +28,15 @@ case "${1:-help}" in
     orient|check|update|health|clean-logs) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
+    install-services) bash "$SCRIPT_DIR/scripts/install-launchagents.sh" "${@:2}" ;;
+    version)
+        COMMIT=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        DATE=$(git -C "$SCRIPT_DIR" log -1 --format=%cs 2>/dev/null || echo "unknown")
+        echo "relaygent ($COMMIT, $DATE)"
+        ;;
     help|--help|-h|*)
         echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
-        printf "  %-17s %s\n" \
+        printf "  %-19s %s\n" \
             "start" "Launch agent, dashboard, and all services" \
             "stop" "Stop everything" \
             "restart" "Restart all services" \
@@ -41,7 +47,9 @@ case "${1:-help}" in
             "health" "Ping all services and report status" \
             "update" "Pull latest, rebuild, restart" \
             "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
+            "install-services" "Set up auto-restart LaunchAgents (macOS)" \
             "set-password" "Set/remove hub dashboard auth (--remove)" \
-            "archive-linear" "Archive old Linear issues (--dry-run, --days N)"
+            "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
+            "version" "Show version info"
         ;;
 esac
