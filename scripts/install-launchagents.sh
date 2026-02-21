@@ -20,8 +20,7 @@ GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC
 
 if [ "$(uname)" != "Darwin" ]; then
     echo -e "${YELLOW}LaunchAgents are macOS-only.${NC}"
-    echo "On Linux, use the systemd relay service (scripts/install-relay-service.sh)"
-    echo "or add cron entries for other services."
+    echo "On Linux, use: scripts/install-systemd-services.sh (or: relaygent install-services)"
     exit 1
 fi
 

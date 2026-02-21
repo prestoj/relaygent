@@ -155,17 +155,19 @@ async function main() {
 	setupHooks(config, REPO_DIR, HOME, C);
 
 	setupCliSymlink(REPO_DIR, HOME, C);
-	// On macOS, offer LaunchAgent installation for auto-restart on crash
-	let launchAgentsInstalled = false;
-	if (process.platform === 'darwin') {
-		const la = (await ask(`\n${C.cyan}Install auto-restart services (LaunchAgents)? [Y/n]:${C.reset} `)).trim().toLowerCase();
-		if (la !== 'n') {
-			spawnSync('bash', [join(REPO_DIR, 'scripts', 'install-launchagents.sh')], { stdio: 'inherit' });
-			launchAgentsInstalled = true;
-		}
+	// Offer auto-restart service installation (LaunchAgents on macOS, systemd on Linux)
+	let servicesInstalled = false;
+	const serviceScript = process.platform === 'darwin'
+		? join(REPO_DIR, 'scripts', 'install-launchagents.sh')
+		: join(REPO_DIR, 'scripts', 'install-systemd-services.sh');
+	const serviceLabel = process.platform === 'darwin' ? 'LaunchAgents' : 'systemd services';
+	const svc = (await ask(`\n${C.cyan}Install auto-restart services (${serviceLabel})? [Y/n]:${C.reset} `)).trim().toLowerCase();
+	if (svc !== 'n') {
+		spawnSync('bash', [serviceScript], { stdio: 'inherit' });
+		servicesInstalled = true;
 	}
 	printSetupComplete(hubPort, C);
-	if (!launchAgentsInstalled) {
+	if (!servicesInstalled) {
 		const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
 		if (launch !== 'n') {
 			console.log(`\nStarting Relaygent...\n`);
