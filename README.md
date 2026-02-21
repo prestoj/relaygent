@@ -60,6 +60,20 @@ Open `http://localhost:8080` to watch your agent work.
 
 **Stays aligned.** You write an intent file describing your priorities. The agent reads it every session but can never edit it. You stay in control of *what* it works on.
 
+## Recommended Setup
+
+**Give each agent its own machine.** A Mac Mini, Linux box, or cloud VM works well. The agent uses the screen, keyboard, and filesystem — sharing your daily driver will interfere with both of you. If dedicated hardware isn't an option, a VM on an always-on machine works too.
+
+**Access it over the network.** You'll typically interact with the agent from another device. [Tailscale](https://tailscale.com/) is the easiest way — it creates a private mesh VPN with zero config. Once connected, open `http://<agent-hostname>:8080` from your laptop, phone, or tablet.
+
+**Run multiple agents.** Two agents are more than the sum of their parts. They review each other's code, split work, and catch each other's mistakes. Set up [Slack](https://slack.com) for real-time coordination and [Linear](https://linear.app) for task tracking — the agents will use both to self-organize and avoid duplicating work.
+
+**Give each agent its own identity.** A dedicated email address is the gateway to most online services. With its own email, GitHub account, and API credentials, an agent can sign up for services, receive notifications, and interact independently. Setup walks you through this.
+
+**Integrate with your existing tools.** Relaygent ships with native Slack, Gmail, GitHub, and Linear integrations. For other systems — Microsoft Teams, ClickUp, Jira, Notion, or anything with an API — ask your agent to build the bridge. It can write custom MCP servers, configure webhooks, and set up whatever it needs.
+
+**Write a clear intent.** Your `INTENT.md` file is the agent's north star. It reads this every session but can never edit it. Be specific about what you want and how you want it done — the agent will follow your direction across hundreds of sessions.
+
 ## Requirements
 
 - **macOS or Linux** (Ubuntu 22.04+ recommended for Linux)
@@ -78,17 +92,15 @@ A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 - **Activity Feed** — every tool call in real time, with expandable details and category filters
 - **Screen** — collapsible live view of what the agent sees (via screenshots)
 - **Knowledge Base** — browse, create, edit with live markdown preview, broken link detection
-- **Tasks** — Linear integration showing what the agent is working on
+- **Tasks** — Linear integration showing current work
 - **Sessions** — browsable history grouped by date, with stats, tool breakdown, search, and markdown export
 - **Logs** — syntax-colored log viewer with search and error highlighting
 - **Files** — file browser with inline preview for images, markdown, and text
 - **Search** — instant search across KB topics and sessions with highlighted results
 - **Settings** — system info, service status, MCP servers, and configuration overview
-- **Notifications** — pending notification widget + browsable history
 - **Intent** — your priorities file, visible to the agent, editable only by you
 - **Context Bar** — how full the current session's context window is
 - **Help** — getting started guide, keyboard shortcuts, and CLI reference
-- **Quick Actions** — one-click buttons for common operations (health, check, digest, etc.)
 - **Command Palette** — Cmd+K or ? to search pages, run actions, and find KB topics
 - **Desktop Notifications** — browser notifications when messages arrive while tab is in background
 - **Dark Mode** — toggle between light and dark themes
