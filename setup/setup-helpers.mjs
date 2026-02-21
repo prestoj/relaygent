@@ -180,8 +180,9 @@ export function setupClaudeMd(HOME, config, REPO_DIR, C) {
 	const user = HOME.split('/').pop();
 	const [kb, data, repo] = [config.paths.kb, config.paths.data, REPO_DIR].map(p => p.replace(HOME, '~'));
 	const host = hostname();
+	const hsPort = config.services?.hammerspoon?.port || 8097;
 	const vars = { HOST: host, PLATFORM: process.platform, USER: user, HOME, REPO: repo, KB: kb, DATA: data,
-		HUB_PORT: config.hub.port, NOTIF_PORT: config.services.notifications.port };
+		HUB_PORT: config.hub.port, NOTIF_PORT: config.services.notifications.port, HS_PORT: hsPort };
 	let content = readFileSync(join(REPO_DIR, 'templates', 'CLAUDE.md'), 'utf-8');
 	for (const [k, v] of Object.entries(vars)) content = content.replaceAll(`{{${k}}}`, v);
 	writeFileSync(claudeMdPath, content);

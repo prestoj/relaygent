@@ -22,8 +22,15 @@ export function printSetupComplete(hubPort, C) {
 	console.log(`\n${C.green}┌─ Setup complete! ──────────────────────────────────────────┐${C.reset}`);
 	console.log(`${C.green}│${C.reset}  Dashboard:  ${C.bold}${url}${C.reset}`);
 	console.log(`${C.green}│${C.reset}  Commands:   ${C.bold}relaygent start / stop / status / restart${C.reset}`);
-	console.log(`${C.green}│${C.reset}  Orient:     ${C.bold}relaygent orient${C.reset}  (health check + status)`);
-	console.log(`${C.green}│${C.reset}  Your agent will greet you in hub chat after launching.`);
+	console.log(`${C.green}│${C.reset}  Health:     ${C.bold}relaygent health${C.reset}  (verify everything works)`);
+	console.log(`${C.green}│${C.reset}  Orient:     ${C.bold}relaygent orient${C.reset}  (quick status snapshot)`);
+	console.log(`${C.green}│${C.reset}`);
+	console.log(`${C.green}│${C.reset}  ${C.yellow}Next steps:${C.reset}`);
+	console.log(`${C.green}│${C.reset}  1. Edit ${C.bold}knowledge/topics/INTENT.md${C.reset} with your priorities`);
+	console.log(`${C.green}│${C.reset}  2. Run ${C.bold}relaygent health${C.reset} to verify services are running`);
+	console.log(`${C.green}│${C.reset}  3. Your agent will greet you in hub chat after launching`);
+	console.log(`${C.green}│${C.reset}`);
+	console.log(`${C.green}│${C.reset}  ${C.dim}Docs: https://relaygent.ai/docs.html${C.reset}`);
 	console.log(`${C.green}└────────────────────────────────────────────────────────────┘${C.reset}\n`);
 }
 
