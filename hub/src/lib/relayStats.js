@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { parseSessionStats } from './sessionStats.js';
+import { parseSessionStats, flushStatsCache } from './sessionStats.js';
 
-export { parseSessionStats };
+export { parseSessionStats, flushStatsCache };
 
 const CLAUDE_PROJECTS = path.join(process.env.HOME, '.claude', 'projects');
 const CACHE_TTL = 5 * 60 * 1000;
@@ -41,6 +41,7 @@ export function getRelayStats() {
 			}
 		} catch { /* skip */ }
 	}
+	flushStatsCache();
 
 	sessions.sort((a, b) => a.start.localeCompare(b.start));
 

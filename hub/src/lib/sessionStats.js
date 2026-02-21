@@ -1,8 +1,41 @@
 import fs from 'fs';
+import path from 'path';
 
 // Per-file stats cache: avoids re-parsing unchanged JSONL files
 const _statsCache = new Map(); // path → { mtimeMs, size, stats }
-const MAX_STATS_CACHE = 200;
+const MAX_STATS_CACHE = 500;
+let _diskCacheLoaded = false;
+
+function getDiskCachePath() {
+	const dataDir = process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'projects', 'relaygent', 'data');
+	return path.join(dataDir, 'session-stats-cache.json');
+}
+
+function loadDiskCache() {
+	if (_diskCacheLoaded) return;
+	_diskCacheLoaded = true;
+	try {
+		const raw = fs.readFileSync(getDiskCachePath(), 'utf-8');
+		const entries = JSON.parse(raw);
+		for (const [k, v] of Object.entries(entries)) {
+			if (!_statsCache.has(k)) _statsCache.set(k, v);
+		}
+	} catch { /* no cache file yet */ }
+}
+
+let _dirty = false;
+function markDirty() { _dirty = true; }
+
+export function flushStatsCache() {
+	if (!_dirty) return;
+	_dirty = false;
+	try {
+		const obj = Object.fromEntries(_statsCache);
+		const cachePath = getDiskCachePath();
+		fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+		fs.writeFileSync(cachePath, JSON.stringify(obj));
+	} catch { /* ignore write errors */ }
+}
 
 function extractMainGoal(content) {
 	const lines = content.split('\n');
@@ -19,6 +52,7 @@ function extractMainGoal(content) {
 
 export function parseSessionStats(jsonlPath) {
 	try {
+		loadDiskCache();
 		const stat = fs.statSync(jsonlPath);
 		if (stat.size < 500) return null;
 
@@ -87,6 +121,7 @@ export function parseSessionStats(jsonlPath) {
 			_statsCache.delete(first);
 		}
 		_statsCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, size: stat.size, stats: result });
+		markDirty();
 
 		return result;
 	} catch { return null; }
