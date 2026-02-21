@@ -9,7 +9,7 @@ import { homedir } from "os";
 
 const SLACK_DIR = join(homedir(), ".relaygent", "slack");
 const TOKEN_PATH = join(SLACK_DIR, "token.json");
-const BASE_URL = "https://slack.com/api";
+const BASE_URL = process.env.SLACK_API_URL || "https://slack.com/api";
 
 let token = null;
 

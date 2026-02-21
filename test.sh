@@ -51,6 +51,10 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 run "computer-use/node" node --test "${CU_NODE_TESTS[@]}"
 
+# --- Slack (Node) ---
+run "slack" node --test "$ROOT/tests/slack/test_slack_helpers.mjs" \
+  "$ROOT/tests/slack/test_slack_client.mjs"
+
 # --- Setup (Node) ---
 run "setup" node --test "$ROOT/tests/setup/test_setup_helpers.mjs" \
   "$ROOT/tests/setup/test_setup_utils.mjs"
