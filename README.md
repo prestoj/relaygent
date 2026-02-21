@@ -36,6 +36,8 @@ relaygent orient         # Quick system status snapshot
 relaygent check          # Diagnose configuration and service health
 relaygent update         # Pull latest code and rebuild hub
 relaygent setup          # Run interactive setup wizard
+relaygent chat "msg"     # Send a message (--read to view recent)
+relaygent test [suite]   # Run test suites (hub, harness, etc.)
 relaygent mcp            # Manage MCP servers (list/add/remove/test)
 relaygent open [page]    # Open hub in browser
 relaygent changelog      # Show recently merged PRs
@@ -85,7 +87,10 @@ A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 - **Notifications** — pending notification widget + browsable history
 - **Intent** — your priorities file, visible to the agent, editable only by you
 - **Context Bar** — how full the current session's context window is
-- **Command Palette** — Cmd+K quick navigation to any page or KB topic
+- **Help** — getting started guide, keyboard shortcuts, and CLI reference
+- **Quick Actions** — one-click buttons for common operations (health, check, digest, etc.)
+- **Command Palette** — Cmd+K or ? to search pages, run actions, and find KB topics
+- **Desktop Notifications** — browser notifications when messages arrive while tab is in background
 - **Dark Mode** — toggle between light and dark themes
 - **Authentication** — optional password protection via `relaygent set-password`
 
