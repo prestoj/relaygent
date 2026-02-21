@@ -1,5 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
+	import { KEY_MAP } from '$lib/screenKeys.js';
 
 	let { fps = 10 } = $props();
 	let imgEl = $state(null);
@@ -141,14 +142,12 @@
 		lastAction = `scroll ${direction} at ${x},${y}`;
 	}
 
-	const KEY_MAP = {
-		Enter: 'return', Backspace: 'delete', Delete: 'forwarddelete', Tab: 'tab',
-		Escape: 'escape', ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left',
-		ArrowRight: 'right', ' ': 'space', Home: 'home', End: 'end',
-		PageUp: 'pageup', PageDown: 'pagedown',
-		F1: 'f1', F2: 'f2', F3: 'f3', F4: 'f4', F5: 'f5', F6: 'f6',
-		F7: 'f7', F8: 'f8', F9: 'f9', F10: 'f10', F11: 'f11', F12: 'f12',
-	};
+	function handlePaste(e) {
+		if (!interactive) return;
+		e.preventDefault();
+		const text = e.clipboardData?.getData('text');
+		if (text) { sendAction({ action: 'type', text }); lastAction = `paste (${text.length} chars)`; }
+	}
 
 	onMount(() => { refresh(); interval = setInterval(refresh, 1000 / fps); });
 	onDestroy(() => { if (interval) clearInterval(interval); });
@@ -166,7 +165,7 @@
 	</div>
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="frame" class:interactive bind:this={frameEl} tabindex={interactive ? 0 : -1}
-		onkeydown={handleKeyDown} onwheel={handleScroll}
+		onkeydown={handleKeyDown} onwheel={handleScroll} onpaste={handlePaste}
 		onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}>
 		{#if !everLoaded}<div class="placeholder">Connecting...</div>{/if}
 		<img bind:this={imgEl} alt="Screen" style="display:{everLoaded ? 'block' : 'none'}"
