@@ -19,7 +19,27 @@
 			return `${Math.round(diffH / 24)}d ago`;
 		} catch { return ''; }
 	}
+	function dateFromId(id) {
+		const m = id.match(/^(\d{4})-(\d{2})-(\d{2})/);
+		return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+	}
+	function groupSessions(sessions) {
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+		const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+		const groups = [];
+		let cur = null;
+		for (const s of sessions) {
+			const d = dateFromId(s.id);
+			const label = !d ? 'Older' : d >= today ? 'Today' : d >= yesterday ? 'Yesterday' : d >= weekAgo ? 'This Week' : 'Older';
+			if (!cur || cur.label !== label) { cur = { label, items: [] }; groups.push(cur); }
+			cur.items.push(s);
+		}
+		return groups;
+	}
 	const st = data.stats;
+	const groups = groupSessions(data.sessions);
 </script>
 
 <svelte:head><title>Sessions — Relaygent</title></svelte:head>
@@ -41,20 +61,24 @@
 {#if data.sessions.length === 0}
 	<p style="color: var(--text-muted)">No sessions found.</p>
 {:else}
-	<ul class="session-list">
-		{#each data.sessions as s, i}
-			<li class:current={i === 0}>
-				<div class="row">
-					<a href="/sessions/{s.id}">{s.displayTime}</a>
-					{#if fmtRelative(s.id)}<span class="rel">{fmtRelative(s.id)}</span>{/if}
-					<span class="meta">
-						{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
-					</span>
-				</div>
-				{#if s.summary}<p class="sum">{s.summary}</p>{/if}
-			</li>
-		{/each}
-	</ul>
+	{#each groups as group}
+		<h2 class="group-label">{group.label}</h2>
+		<ul class="session-list">
+			{#each group.items as s, i}
+				{@const isFirst = group === groups[0] && i === 0}
+				<li class:current={isFirst}>
+					<div class="row">
+						<a href="/sessions/{s.id}">{s.displayTime}</a>
+						{#if fmtRelative(s.id)}<span class="rel">{fmtRelative(s.id)}</span>{/if}
+						<span class="meta">
+							{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{isFirst ? ' · current' : ''}
+						</span>
+					</div>
+					{#if s.summary}<p class="sum">{s.summary}</p>{/if}
+				</li>
+			{/each}
+		</ul>
+	{/each}
 {/if}
 
 <style>
@@ -63,7 +87,9 @@
 		font-size: 0.85em; color: var(--text-muted); }
 	.stats-row strong { color: var(--text); }
 	.sep { color: var(--border); }
-	.session-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5em; }
+	.group-label { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 1.2em 0 0.4em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+	.group-label:first-of-type { margin-top: 0; }
+	.session-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5em; margin: 0; }
 	.session-list li { display: flex; flex-direction: column; gap: 0.1em; }
 	.row { display: flex; align-items: baseline; gap: 0.75em; }
 	.session-list a { font-family: monospace; font-size: 1.05em; }
