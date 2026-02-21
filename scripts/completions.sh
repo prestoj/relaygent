@@ -6,6 +6,7 @@
 
 _relaygent_commands="setup start stop restart status stats test logs orient check health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open version help"
 _relaygent_mcp_commands="list add remove test"
+_relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
 
 if [ -n "$ZSH_VERSION" ]; then
@@ -44,6 +45,7 @@ if [ -n "$ZSH_VERSION" ]; then
         elif (( CURRENT == 3 )); then
             case "${words[2]}" in
                 mcp) _describe 'mcp command' mcp_cmds ;;
+                test) compadd -- harness hub notifications email slack setup secrets computer-use ;;
                 logs) compadd -- --list -f -n ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
@@ -63,6 +65,8 @@ else
                 COMPREPLY=($(compgen -W "$_relaygent_commands completions" -- "$cur")) ;;
             mcp)
                 COMPREPLY=($(compgen -W "$_relaygent_mcp_commands" -- "$cur")) ;;
+            test)
+                COMPREPLY=($(compgen -W "$_relaygent_test_suites" -- "$cur")) ;;
             logs)
                 COMPREPLY=($(compgen -W "$_relaygent_logs_flags" -- "$cur")) ;;
             cleanup|clean-logs)
