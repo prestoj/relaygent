@@ -10,9 +10,6 @@ export function initAudio() {
 	} catch {}
 	document.removeEventListener('click', initAudio);
 	document.removeEventListener('keydown', initAudio);
-	if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-		Notification.requestPermission();
-	}
 }
 
 export function playChime() {
@@ -36,7 +33,12 @@ export function playChime() {
 }
 
 export function notifyDesktop(text) {
-	if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+	if (typeof Notification === 'undefined') return;
+	if (Notification.permission === 'default') {
+		Notification.requestPermission();
+		return;
+	}
+	if (Notification.permission !== 'granted') return;
 	try {
 		new Notification('Relaygent', { body: (text || '').substring(0, 120), icon: '/favicon.svg' });
 	} catch {}
