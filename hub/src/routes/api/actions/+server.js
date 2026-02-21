@@ -14,6 +14,7 @@ const ACTIONS = {
 	digest: ['digest'],
 	changelog: ['changelog'],
 	'clean-logs': ['clean-logs', '--dry-run'],
+	restart: ['restart'],
 };
 
 function stripAnsi(s) { return s.replace(/\x1b\[[0-9;]*m/g, ''); }

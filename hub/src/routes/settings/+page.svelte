@@ -3,9 +3,23 @@
 	let { data } = $props();
 	let services = $state(data.services);
 	let showAllHealth = $state(false);
+	let restarting = $state(false);
+	let restartMsg = $state('');
 	const chUrgent = (data.codeHealth?.files || []).filter(f => f.lines >= 170);
 	const chRest = (data.codeHealth?.files || []).filter(f => f.lines < 170);
+	let anyDown = $derived(services.some(s => !s.ok));
 	let pollTimer;
+
+	async function restartAll() {
+		restarting = true; restartMsg = '';
+		try {
+			const r = await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restart' }) });
+			const d = await r.json();
+			restartMsg = r.ok ? 'Restart complete' : (d.output || 'Restart failed');
+			setTimeout(async () => { try { services = (await (await fetch('/api/services')).json()).services; } catch { /* wait for recovery */ } }, 3000);
+		} catch { restartMsg = 'Network error — hub may be restarting'; }
+		restarting = false;
+	}
 
 	onMount(() => {
 		pollTimer = setInterval(async () => {
@@ -63,7 +77,13 @@
 			</div>
 		{/each}
 	</div>
-	<p class="hint">Auto-refreshes every 15 seconds</p>
+	<div class="svc-footer">
+		<p class="hint">Auto-refreshes every 15 seconds</p>
+		{#if anyDown}
+			<button class="restart-btn" onclick={restartAll} disabled={restarting}>{restarting ? 'Restarting...' : 'Restart All Services'}</button>
+		{/if}
+		{#if restartMsg}<span class="restart-msg">{restartMsg}</span>{/if}
+	</div>
 </section>
 
 <section class="card">
@@ -129,17 +149,17 @@
 	h2 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.75em; }
 	.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1em 1.25em; margin-bottom: 1em; }
 	.grid { display: grid; grid-template-columns: 10em 1fr; gap: 0.35em 1em; font-size: 0.9em; }
-	.label { color: var(--text-muted); }
-	.value { color: var(--text); }
-	.mono { font-family: monospace; font-size: 0.9em; }
+	.label { color: var(--text-muted); }  .value { color: var(--text); }  .mono { font-family: monospace; font-size: 0.9em; }
 	.hint { font-size: 0.78em; color: var(--text-muted); margin: 0.75em 0 0; }
 	.svc-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.svc-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-	.dot.up { background: var(--success); }
-	.dot.down { background: var(--error); }
-	.svc-name { font-weight: 600; }
-	.svc-detail { color: var(--text-muted); font-size: 0.88em; }
+	.dot.up { background: var(--success); }  .dot.down { background: var(--error); }
+	.svc-name { font-weight: 600; }  .svc-detail { color: var(--text-muted); font-size: 0.88em; }
+	.svc-footer { display: flex; align-items: center; gap: 0.75em; margin-top: 0.75em; flex-wrap: wrap; }
+	.restart-btn { padding: 0.3em 0.7em; border: 1px solid var(--error); border-radius: 6px; background: var(--bg); color: var(--error); font-size: 0.78em; cursor: pointer; font-weight: 600; }
+	.restart-btn:hover:not(:disabled) { background: var(--error); color: #fff; }  .restart-btn:disabled { opacity: 0.5; cursor: default; }
+	.restart-msg { font-size: 0.78em; color: var(--text-muted); }
 	.mcp-list { display: flex; flex-direction: column; gap: 0.4em; }
 	.mcp-row { display: flex; align-items: baseline; gap: 0.75em; font-size: 0.9em; padding: 0.3em 0.5em; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); }
 	.mcp-name { font-weight: 600; font-family: monospace; white-space: nowrap; }
@@ -155,8 +175,7 @@
 	.ch-bar { position: absolute; left: 0; top: 0; bottom: 0; opacity: 0.12; border-radius: 4px; }
 	.ch-file { font-family: monospace; z-index: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.ch-count { font-family: monospace; font-weight: 600; z-index: 1; flex-shrink: 0; margin-left: 0.5em; }
-	.ch-count.danger { color: var(--error); }
-	.ch-count.warn { color: var(--warning); }
+	.ch-count.danger { color: var(--error); }  .ch-count.warn { color: var(--warning); }
 	.ch-toggle { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.3em 0.6em; font-size: 0.78em; color: var(--text-muted); cursor: pointer; margin-top: 0.3em; }
 	.ch-toggle:hover { color: var(--link); border-color: var(--link); }
 	@media (max-width: 600px) {
