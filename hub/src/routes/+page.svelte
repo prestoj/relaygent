@@ -6,7 +6,6 @@
 	import ScreenStream from '$lib/components/ScreenStream.svelte';
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
-	import PRStatus from '$lib/components/PRStatus.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -109,7 +108,6 @@
 
 <ContextBar pct={contextPct} />
 <SessionTimer />
-<PRStatus />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
