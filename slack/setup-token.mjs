@@ -24,65 +24,17 @@
 
 import { createServer as createHttpServer } from "http";
 import { createServer as createHttpsServer } from "https";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
-import { homedir, tmpdir } from "os";
-import { execSync } from "child_process";
 import { createInterface } from "readline";
-
-const CALLBACK_PORT = 3333;
-const TOKEN_PATH = join(homedir(), ".relaygent", "slack", "token.json");
-
-/** Generate a self-signed cert for localhost. Returns {key, cert} or null. */
-function makeSelfSignedCert() {
-	const [k, c] = [join(tmpdir(), "rl-slack-key.pem"), join(tmpdir(), "rl-slack-cert.pem")];
-	try {
-		execSync(`openssl req -x509 -newkey rsa:2048 -keyout "${k}" -out "${c}" -days 1 -nodes -subj "/CN=localhost"`, { stdio: "ignore" });
-		return { key: readFileSync(k), cert: readFileSync(c) };
-	} catch { return null; }
-}
+import {
+	CALLBACK_PORT, SCOPES, makeSelfSignedCert, openBrowser,
+	saveToken, exchangeCode, verifyToken,
+} from "./oauth-helpers.mjs";
 
 const tlsCreds = makeSelfSignedCert();
 const REDIRECT_URI = `${tlsCreds ? "https" : "http"}://localhost:${CALLBACK_PORT}/callback`;
 
-const SCOPES = [
-	"channels:history", "channels:read", "channels:write",
-	"chat:write",
-	"groups:history", "groups:read", "groups:write",
-	"im:history", "im:read", "im:write",
-	"mpim:history", "mpim:read", "mpim:write",
-	"reactions:write", "search:read", "users:read",
-].join(",");
-
 function ask(rl, prompt) {
 	return new Promise(resolve => rl.question(prompt, resolve));
-}
-
-function openBrowser(url) {
-	try {
-		const cmd = process.platform === "darwin" ? "open" : "xdg-open";
-		execSync(`${cmd} "${url}"`, { stdio: "ignore" });
-		return true;
-	} catch { return false; }
-}
-
-function saveToken(token) {
-	mkdirSync(join(homedir(), ".relaygent", "slack"), { recursive: true });
-	writeFileSync(TOKEN_PATH, JSON.stringify({ access_token: token }, null, 2));
-	console.log(`\n✓ Token saved to ${TOKEN_PATH}`);
-}
-
-async function exchangeCode(clientId, clientSecret, code) {
-	const body = new URLSearchParams({
-		client_id: clientId, client_secret: clientSecret,
-		code, redirect_uri: REDIRECT_URI,
-	});
-	const res = await fetch("https://slack.com/api/oauth.v2.access", {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: body.toString(),
-	});
-	return res.json();
 }
 
 async function runOAuthFlow(clientId, clientSecret) {
@@ -109,7 +61,7 @@ async function runOAuthFlow(clientId, clientSecret) {
 			server.close();
 
 			console.log("\nExchanging code for token...");
-			const data = await exchangeCode(clientId, clientSecret, code);
+			const data = await exchangeCode(clientId, clientSecret, code, REDIRECT_URI);
 			if (!data.ok) { reject(new Error(`Token exchange failed: ${data.error}`)); return; }
 
 			const token = data.authed_user?.access_token;
@@ -131,15 +83,6 @@ async function runOAuthFlow(clientId, clientSecret) {
 		server.on("error", reject);
 		setTimeout(() => { server.close(); reject(new Error("Timeout after 5 minutes")); }, 5 * 60 * 1000);
 	});
-}
-
-async function verifyToken(token) {
-	const res = await fetch("https://slack.com/api/auth.test", {
-		method: "POST",
-		headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams(),
-	});
-	return res.json();
 }
 
 async function main() {
