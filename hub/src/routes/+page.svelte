@@ -5,6 +5,7 @@
 	import ActivityFeed from '$lib/components/ActivityFeed.svelte';
 	import ScreenStream from '$lib/components/ScreenStream.svelte';
 	import { sanitizeHtml } from '$lib/sanitize.js';
+	import { marked } from 'marked';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 	let { data } = $props();
@@ -134,7 +135,7 @@
 		<button class="summary-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : "What's happening?"}</button>
 		{#if summaryText}<button class="summary-dismiss" onclick={() => summaryText = ''}>Dismiss</button>{/if}
 	</div>
-	{#if summaryText}<div class="summary-text">{summaryText}</div>{/if}
+	{#if summaryText}<div class="summary-text">{@html sanitizeHtml(marked.parse(summaryText))}</div>{/if}
 </section>
 {/if}
 
