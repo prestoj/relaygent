@@ -13,11 +13,13 @@ export function load() {
 	const raw = fs.readFileSync(INTENT_PATH, 'utf-8');
 	const { data: frontmatter, content } = matter(raw);
 	const html = sanitizeHtml(marked(content));
+	const isTemplate = raw.includes('Delete everything above');
 	return {
 		title: frontmatter.title || 'Intent',
 		updated: frontmatter.updated || null,
 		html,
-		rawContent: content
+		rawContent: content,
+		isTemplate,
 	};
 }
 
