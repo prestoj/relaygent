@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
 import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp } from "./cdp.mjs";
-import { COORD_EXPR, CLICK_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
+import { COORD_EXPR, CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const actionRes = async (text, delay) => ({ content: [{ type: "text", text }, ...await takeScreenshot(delay ?? 1500)] });
@@ -99,6 +99,19 @@ export function registerBrowserTools(server, IS_LINUX) {
       try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
       if (coords.error) return jsonRes(coords);
       return actionRes(`Clicked "${coords.text}" at (${coords.sx},${coords.sy}) [${coords.count} matches]`, 1000);
+    }
+  );
+
+  server.tool("browser_hover",
+    "Hover over a web element by CSS selector — triggers mouseover/mouseenter for dropdowns, tooltips, menus. Auto-returns screenshot.",
+    { selector: z.string().describe("CSS selector (e.g. 'nav > li', '.dropdown-trigger', '#menu-item')"),
+      frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
+    async ({ selector, frame }) => {
+      const raw = await cdpEval(HOVER_EXPR(selector, frame));
+      if (!raw) return jsonRes({ error: cdpErr(selector) });
+      let coords;
+      try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
+      return actionRes(`Hovered ${selector} at (${coords.sx},${coords.sy})`, 800);
     }
   );
 

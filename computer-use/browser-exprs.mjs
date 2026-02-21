@@ -24,6 +24,12 @@ export const COORD_EXPR = (sel, frame) =>
   `(function(){${_deep}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;${retCoords(frame)}})()`;
 export const CLICK_EXPR = (sel, frame) =>
   `(function(){${_deep}${_simClick}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});_clk(el);${retCoords(frame)}})()`;
+const _simHover = `var _hov=function(e){var r=e.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,` +
+  `o={bubbles:true,cancelable:true,view:window,clientX:cx,clientY:cy};` +
+  `e.dispatchEvent(new PointerEvent('pointerover',o));e.dispatchEvent(new PointerEvent('pointerenter',Object.assign({},o,{bubbles:false})));` +
+  `e.dispatchEvent(new MouseEvent('mouseover',o));e.dispatchEvent(new MouseEvent('mouseenter',Object.assign({},o,{bubbles:false})))};`;
+export const HOVER_EXPR = (sel, frame) =>
+  `(function(){${_deep}${_simHover}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});_hov(el);${retCoords(frame)}})()`;
 
 const _norm = `var norm=s=>s.replace(/[\\u00a0]/g,' ').replace(/[\\u2018\\u2019]/g,"'").replace(/[\\u201c\\u201d]/g,'"').replace(/[\\u2013\\u2014]/g,'-').toLowerCase()`;
 const _textSel = `'a,button,input[type=submit],input[type=button],summary,span,[role=button],[role=tab],` +
@@ -70,4 +76,4 @@ export const WAIT_EXPR = (sel, timeoutMs) =>
   `(function poll(){var el=_dq(${JSON.stringify(sel)});if(el&&el.offsetParent!==null)return res('found');` +
   `if(Date.now()-t>limit)return rej('timeout');setTimeout(poll,100)})()})})()`;
 
-export { _deep, _simClick, frameRoot };
+export { _deep, _simClick, _simHover, frameRoot };
