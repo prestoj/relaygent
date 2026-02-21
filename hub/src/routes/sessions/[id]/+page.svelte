@@ -89,6 +89,7 @@
 {#if data.summary}<p class="sum">{data.summary}</p>{/if}
 <div class="sum-row">
 	<button class="sum-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : 'AI Summary'}</button>
+	<a href="/api/sessions/export?id={data.id}" class="sum-btn export-btn" download>Export</a>
 	{#if aiSummary}<p class="ai-sum">{aiSummary}</p>{/if}
 </div>
 
@@ -150,6 +151,7 @@
 	.sum-row { margin-bottom: 0.75em; }
 	.sum-btn { padding: 0.35em 0.7em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--text-muted); }
 	.sum-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .sum-btn:disabled { opacity: 0.6; cursor: wait; }
+	.export-btn { text-decoration: none; display: inline-block; }
 	.ai-sum { margin: 0.4em 0 0; padding: 0.5em 0.7em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.82em; line-height: 1.5; }
 	.fbar { display: flex; gap: 0.3em; align-items: center; margin-bottom: 0.5em; }
 	.fb { padding: 0.2em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.78em; }
