@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
+	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
@@ -63,6 +64,7 @@
 	{@render children()}
 </main>
 <ChatBubble />
+<CommandPalette />
 </div>
 
 <style>
