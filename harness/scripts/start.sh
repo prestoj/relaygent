@@ -97,6 +97,8 @@ if ! claude -p 'hi' >/dev/null 2>&1; then
 elif [ "$(uname)" = "Linux" ] && systemctl --user is-enabled relaygent-relay &>/dev/null; then
     systemctl --user start relaygent-relay 2>/dev/null
     echo -e "  Relay: ${GREEN}managed by systemd${NC}"
+elif [ "$(uname)" = "Darwin" ] && launchctl list 2>/dev/null | grep -q com.relaygent.relay; then
+    echo -e "  Relay: ${GREEN}managed by LaunchAgent${NC}"
 else
     start_service "Relay" "relay" python3 "$REPO_DIR/harness/relay.py"
 fi
