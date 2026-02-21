@@ -53,8 +53,8 @@
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
-		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode">
-			{darkMode ? 'Light' : 'Dark'}
+		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
 		</button>
 		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="theme-toggle" type="submit">Logout</button></form>{/if}
 	</div>
@@ -108,10 +108,11 @@
 	.unread-badge { display: inline-block; background: #ef4444; color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
 
 	.theme-toggle {
-		background: none; border: 1px solid var(--border); cursor: pointer;
-		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
+		background: none; border: none; cursor: pointer;
+		font-size: 1.15em; padding: 0.15em 0.3em; border-radius: 4px; line-height: 1;
+		transition: transform 0.2s;
 	}
-	.theme-toggle:hover { color: var(--text); }
+	.theme-toggle:hover { transform: scale(1.2); }
 
 	main { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
