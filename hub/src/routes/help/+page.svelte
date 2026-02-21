@@ -87,6 +87,26 @@
 	<p class="hint">Configure integrations in <a href="/settings">Settings</a> or via <code>relaygent mcp add</code></p>
 </section>
 
+<section class="card">
+	<h2>Troubleshooting</h2>
+	<dl class="concepts">
+		<dt>Agent won't start</dt>
+		<dd>Run <code>relaygent check</code> to diagnose. Common causes: Claude Code not authenticated (<code>claude /login</code>), missing config (<code>relaygent setup</code>), or no Intent set.</dd>
+		<dt>Services are down</dt>
+		<dd>Check <a href="/settings">Settings</a> for red dots. Use <code>relaygent restart</code> or the Restart button on the Settings page. Run <code>relaygent install-services</code> if auto-restart isn't set up.</dd>
+		<dt>Agent seems stuck or confused</dt>
+		<dd>Rewrite your <a href="/intent">Intent</a> with clearer instructions. The agent reads it fresh every session. You can also send a chat message with specific direction.</dd>
+		<dt>Context fills too quickly</dt>
+		<dd>This is normal — sessions automatically hand off to successors. The agent writes a briefing so work continues seamlessly. Check <a href="/sessions">Sessions</a> to see handoff history.</dd>
+		<dt>Agent didn't do what I asked</dt>
+		<dd>Send a chat message — the agent checks messages at session start. For persistent priorities, update your <a href="/intent">Intent</a>. For one-off requests, chat is best.</dd>
+		<dt>Disk space is low</dt>
+		<dd>Run <code>relaygent cleanup</code> to remove old sessions, caches, and logs. Use <code>--dry-run</code> first to see what would be removed.</dd>
+		<dt>Hub shows a blank page or errors</dt>
+		<dd>Run <code>relaygent update</code> to rebuild. If that fails, check <code>relaygent logs hub</code> for errors. The hub auto-rebuilds every 5 minutes if stale.</dd>
+	</dl>
+</section>
+
 <style>
 	h1 { margin-top: 0; }
 	h2 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.75em; }
