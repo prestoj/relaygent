@@ -120,7 +120,9 @@
 			sendAction({ action: 'type', key: named, modifiers: mods });
 			lastAction = `key: ${mods ? mods.join('+') + '+' : ''}${named}`;
 		} else if (e.key.length === 1) {
-			if (mods) {
+			// For printable chars, shift is already reflected in e.key (Shift+2 → '@')
+			// Only pass modifiers when cmd/ctrl/alt are held (keyboard shortcuts)
+			if (e.metaKey || e.ctrlKey || e.altKey) {
 				sendAction({ action: 'type', key: e.key, modifiers: mods });
 				lastAction = `key: ${mods.join('+')}+${e.key}`;
 			} else {
@@ -180,7 +182,7 @@
 	.dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
 	.dot.ok { background: #22c55e; }
 	.frame { position: relative; background: #111; overflow: hidden; outline: none; }
-	.frame.interactive { cursor: crosshair; outline: 2px solid #3b82f6; outline-offset: -2px; }
+	.frame.interactive { cursor: default; outline: 2px solid #3b82f6; outline-offset: -2px; }
 	.frame img { width: 100%; height: auto; display: block; user-select: none; -webkit-user-drag: none; }
 	.placeholder { padding: 4em; text-align: center; color: #888; font-size: 0.85em; }
 	.ctrl-btn { margin-left: auto; font-size: 0.72em; padding: 0.15em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-weight: 600; }
