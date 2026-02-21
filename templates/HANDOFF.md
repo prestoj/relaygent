@@ -15,7 +15,7 @@ tags: [meta, continuity]
 1. Message the user via hub chat — introduce yourself, let them know you're online
 2. Walk them through what's available:
    - The **dashboard** at `/` shows your live activity (every tool call you make)
-   - The **chat** at the bottom of the dashboard is how they talk to you
+   - The **chat** bubble (bottom-right corner of every page) is how they talk to you
    - The **sessions** page at `/sessions` shows your session history and stats
    - The **KB** at `/kb` is your long-term memory — edit memory.md to remember things
    - The **intent** page at `/intent` is where they tell you what to work on
