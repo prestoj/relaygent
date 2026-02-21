@@ -32,12 +32,11 @@ function fakePngHeader(width, totalSize) {
 	return buf;
 }
 
-// --- Fake sips CLI (prepend to PATH before module import) ---
+// --- Fake sips + convert CLIs (prepend to PATH before module import) ---
 const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-sips-'));
 const sipsBin = path.join(binDir, 'sips');
 fs.writeFileSync(sipsBin, [
 	'#!/bin/bash',
-	'# Parse --out <dest> from args and write a tiny file there',
 	'prev=""; out=""',
 	'for arg in "$@"; do',
 	'  if [ "$prev" = "--out" ]; then out="$arg"; fi',
@@ -45,6 +44,9 @@ fs.writeFileSync(sipsBin, [
 	'done',
 	'if [ -n "$out" ]; then printf "SCALED" > "$out"; fi',
 ].join('\n'), { mode: 0o755 });
+// Fake convert (ImageMagick) — output file is last arg
+const convertBin = path.join(binDir, 'convert');
+fs.writeFileSync(convertBin, '#!/bin/bash\nprintf "SCALED" > "${@: -1}"', { mode: 0o755 });
 process.env.PATH = binDir + path.delimiter + process.env.PATH;
 
 // --- Fake Hammerspoon server ---
@@ -86,7 +88,7 @@ test('GET /api/screen: returns PNG bytes and correct headers on success', async 
 	assert.ok(body.equals(FAKE_PNG), 'response body should match screenshot file');
 });
 
-test('GET /api/screen: wide image (Retina) triggers sips scaling', async () => {
+test('GET /api/screen: wide image triggers scaling (sips on mac, convert on linux)', async () => {
 	clearScreenshots();
 	fileToWrite = fakePngHeader(2560, 1024); // 2560px wide — exceeds MAX_WIDTH
 	const res = await GET();

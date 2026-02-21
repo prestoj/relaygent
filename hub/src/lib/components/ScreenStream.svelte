@@ -10,22 +10,17 @@
 	let lastAction = $state('');
 	let interval = null;
 	let pending = false;
+	let dragState = null; // { startX, startY } when dragging
 
 	function refresh() {
 		if (!imgEl || pending) return;
 		pending = true;
 		const img = new Image();
-		img.onload = () => {
-			imgEl.src = img.src;
-			online = true;
-			everLoaded = true;
-			pending = false;
-		};
+		img.onload = () => { imgEl.src = img.src; online = true; everLoaded = true; pending = false; };
 		img.onerror = () => { online = false; pending = false; };
 		img.src = `/api/screen?t=${Date.now()}`;
 	}
 
-	/** Convert CSS click position to native screen coordinates. */
 	function toNative(e) {
 		const rect = imgEl.getBoundingClientRect();
 		const scaleX = imgEl.naturalWidth / rect.width;
@@ -36,8 +31,7 @@
 	async function sendAction(body) {
 		try {
 			const res = await fetch('/api/screen/action', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body),
 			});
 			if (!res.ok) lastAction = `Error: ${(await res.json()).error}`;
@@ -46,12 +40,36 @@
 		setTimeout(refresh, 150);
 	}
 
+	function handleMouseDown(e) {
+		if (!interactive || !imgEl || e.button !== 0) return;
+		const { x, y } = toNative(e);
+		dragState = { startX: x, startY: y, moved: false };
+	}
+
+	function handleMouseMove(e) {
+		if (!dragState) return;
+		const { x, y } = toNative(e);
+		const dx = Math.abs(x - dragState.startX), dy = Math.abs(y - dragState.startY);
+		if (dx > 5 || dy > 5) dragState.moved = true;
+	}
+
+	function handleMouseUp(e) {
+		if (!dragState) return;
+		if (dragState.moved) {
+			const { x, y } = toNative(e);
+			sendAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y });
+			lastAction = `drag ${dragState.startX},${dragState.startY} → ${x},${y}`;
+		}
+		dragState = null;
+	}
+
 	function handleClick(e) {
 		if (!interactive || !imgEl) return;
 		e.preventDefault();
+		if (dragState?.moved) return; // drag handled in mouseup
 		const { x, y } = toNative(e);
 		const right = e.button === 2;
-		sendAction({ action: 'click', x, y, right });
+		sendAction({ action: 'click', x, y, right: right || undefined });
 		lastAction = `click ${x},${y}${right ? ' (right)' : ''}`;
 	}
 
@@ -73,14 +91,19 @@
 		if (e.ctrlKey) modifiers.push('ctrl');
 		if (e.altKey) modifiers.push('alt');
 		if (e.shiftKey) modifiers.push('shift');
-		// Named keys → key action; printable chars → type text
+		const mods = modifiers.length ? modifiers : undefined;
 		const named = KEY_MAP[e.key];
 		if (named) {
-			sendAction({ action: 'type', key: named, modifiers: modifiers.length ? modifiers : undefined });
-			lastAction = `key: ${modifiers.length ? modifiers.join('+') + '+' : ''}${named}`;
+			sendAction({ action: 'type', key: named, modifiers: mods });
+			lastAction = `key: ${mods ? mods.join('+') + '+' : ''}${named}`;
 		} else if (e.key.length === 1) {
-			sendAction({ action: 'type', text: e.key });
-			lastAction = `type: "${e.key}"`;
+			if (mods) {
+				sendAction({ action: 'type', key: e.key, modifiers: mods });
+				lastAction = `key: ${mods.join('+')}+${e.key}`;
+			} else {
+				sendAction({ action: 'type', text: e.key });
+				lastAction = `type: "${e.key}"`;
+			}
 		}
 	}
 
@@ -116,7 +139,8 @@
 	</div>
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="frame" class:interactive bind:this={frameEl} tabindex={interactive ? 0 : -1}
-		onkeydown={handleKeyDown} onwheel={handleScroll}>
+		onkeydown={handleKeyDown} onwheel={handleScroll}
+		onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}>
 		{#if !everLoaded}<div class="placeholder">Connecting...</div>{/if}
 		<img bind:this={imgEl} alt="Screen" style="display:{everLoaded ? 'block' : 'none'}"
 			onclick={handleClick} ondblclick={handleDblClick} oncontextmenu={handleContextMenu}
