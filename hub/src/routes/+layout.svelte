@@ -56,7 +56,7 @@
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
 		</button>
-		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="theme-toggle" type="submit">Logout</button></form>{/if}
+		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="logout-btn" type="submit">Logout</button></form>{/if}
 	</div>
 </nav>
 
@@ -113,6 +113,11 @@
 		transition: transform 0.2s;
 	}
 	.theme-toggle:hover { transform: scale(1.2); }
+	.logout-btn {
+		background: none; border: 1px solid var(--border); cursor: pointer;
+		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
+	}
+	.logout-btn:hover { color: var(--text); }
 
 	main { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
@@ -142,7 +147,8 @@
 		}
 		.links a:hover { background: var(--code-bg); text-decoration: none; }
 		.links a.active { background: var(--code-bg); border-bottom: none; border-left: 3px solid var(--link); font-weight: 600; }
-		.theme-toggle { padding: 0.6em 1.5em; text-align: left; border: none; }
+		.theme-toggle { padding: 0.6em 1.5em; text-align: center; border: none; }
+		.logout-btn { padding: 0.6em 1.5em; text-align: left; border: none; }
 		main { margin: 1em auto; padding: 0 1em; }
 	}
 </style>
