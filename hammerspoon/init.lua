@@ -113,7 +113,7 @@ local function handleRequest(method, path, headers, body)
             return dofile(hs.configdir .. "/ax_press.lua")(params)
         elseif key == "POST /dismiss_dialog" then
             local target = params.button or "Don't Allow"
-            local dialogs = {"UserNotificationCenter","SecurityAgent","System Preferences","System Settings"}
+            local dialogs = {"UserNotificationCenter","SecurityAgent","System Preferences","System Settings","Google Chrome"}
             for _, appName in ipairs(dialogs) do
                 local app = hs.application.find(appName)
                 if app then

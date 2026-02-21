@@ -111,6 +111,7 @@ export async function getConnection() {
     _ws = await connectTab(page.webSocketDebuggerUrl);
     _saveTabId(page.id);
     log(`connected to ${page.url.substring(0, 60)}`);
+    await _denyPerms().catch(() => {});
     return { ws: _ws };
   } catch (e) { log(`connect failed: ${e.message}`); return null; }
 }
@@ -147,31 +148,21 @@ export async function cdpNavigate(url) {
   const conn = await getConnection();
   if (!conn) return false;
   try {
-    // Silently deny browser permission prompts (notifications, camera, etc.)
-    // so native Chrome dialogs never appear and block automation
-    try {
-      const origin = new URL(url).origin;
-      await send("Browser.grantPermissions", { permissions: [], origin });
-    } catch {}
+    try { await send("Browser.grantPermissions", { permissions: [], origin: new URL(url).origin }); } catch {}
     await send("Page.enable");
     const loaded = waitForEvent("Page.loadEventFired", 15000);
     await send("Page.navigate", { url });
     await loaded;
-    if (_currentTabId) await cdpActivate(_currentTabId);  // ensure Chrome visually switches to this tab
+    if (_currentTabId) await cdpActivate(_currentTabId);
     return true;
-  } catch (e) {
-    log(`navigate error: ${e.message}`);
-    return false;
-  }
+  } catch (e) { log(`navigate error: ${e.message}`); return false; }
 }
 
-/** Disconnect cached CDP WebSocket so next getConnection() re-queries /json/list */
 export function cdpDisconnect() {
   if (_ws) { try { _ws.close(); } catch {} _ws = null; }
   _saveTabId(null);
 }
 
-/** After keyboard navigation, find and activate the tab Chrome just loaded. */
 export async function cdpSyncToVisibleTab(url) {
   cdpDisconnect();
   await new Promise(r => setTimeout(r, 800));
@@ -186,15 +177,22 @@ export async function cdpSyncToVisibleTab(url) {
   log(`synced to tab: ${target.url.substring(0, 60)}`);
 }
 
-/** Reset Chrome profile exit_type to Normal so next launch skips "Restore pages?" bubble */
 export function patchChromePrefs() {
   try {
     const prefs = JSON.parse(readFileSync(CHROME_PREFS, "utf8"));
-    prefs.profile = { ...prefs.profile, exit_type: "Normal", exited_cleanly: true };
-    writeFileSync(CHROME_PREFS, JSON.stringify(prefs)); log("patched Chrome prefs");
+    prefs.profile = { ...prefs.profile, exit_type: "Normal", exited_cleanly: true,
+      default_content_setting_values: { ...(prefs.profile.default_content_setting_values || {}),
+        clipboard: 2, notifications: 2, geolocation: 2, media_stream_camera: 2, media_stream_mic: 2 } };
+    writeFileSync(CHROME_PREFS, JSON.stringify(prefs));
+    log("patched Chrome prefs: exit_type=Normal, permissions=blocked");
   } catch (e) { log(`patchChromePrefs failed: ${e.message}`); }
 }
 
+let _permsDenied = false;
+async function _denyPerms() {
+  if (_permsDenied) return; _permsDenied = true;
+  const perms = ['clipboardReadWrite', 'notifications', 'geolocation', 'camera', 'microphone'];
+  await Promise.all(perms.map(n => send("Browser.setPermission", { permission: { name: n }, setting: "denied" }).catch(() => {})));
+}
 export function cdpConnected() { return _ws && _ws.readyState === 1; }
-
 export const cdpAvailable = async () => { const t = await cdpHttp("/json/list"); return t !== null && Array.isArray(t); };
