@@ -83,6 +83,6 @@
 	.notif-time { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; }
 	.notif-history { font-size: 0.75em; color: var(--text-muted); text-align: right; display: block; margin-top: 0.2em; }
 	.notif-history:hover { color: var(--link); }
-	.notif-err-badge { background: #ef4444; }
-	.notif-err { font-size: 0.8em; color: #ef4444; padding: 0.2em 0; }
+	.notif-err-badge { background: var(--error); }
+	.notif-err { font-size: 0.8em; color: var(--error); padding: 0.2em 0; }
 </style>
