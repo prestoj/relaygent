@@ -56,8 +56,8 @@ const fakeHs = http.createServer((_req, res) => {
 	if (fileToWrite !== null) {
 		fs.writeFileSync(SCREENSHOT_PATH, fileToWrite);
 	}
-	res.writeHead(200);
-	res.end();
+	res.writeHead(200, { 'Content-Type': 'application/json' });
+	res.end(JSON.stringify({ width: 1280, height: 800 }));
 });
 await new Promise(r => fakeHs.listen(0, '127.0.0.1', r));
 const hsPort = fakeHs.address().port;
@@ -84,6 +84,7 @@ test('GET /api/screen: returns PNG bytes and correct headers on success', async 
 	assert.equal(res.status, 200);
 	assert.equal(res.headers.get('Content-Type'), 'image/png');
 	assert.equal(res.headers.get('Cache-Control'), 'no-cache, no-store');
+	assert.equal(res.headers.get('X-Native-Width'), '1280', 'should use Hammerspoon point coords');
 	const body = Buffer.from(await res.arrayBuffer());
 	assert.ok(body.equals(FAKE_PNG), 'response body should match screenshot file');
 });
@@ -96,6 +97,7 @@ test('GET /api/screen: wide image triggers scaling (sips on mac, convert on linu
 
 	assert.equal(res.status, 200);
 	assert.equal(res.headers.get('Content-Type'), 'image/png');
+	assert.equal(res.headers.get('X-Native-Width'), '1280', 'should use Hammerspoon point coords, not PNG pixel width');
 	assert.ok(fs.existsSync(SCALED_PATH), 'sips should have created scaled file');
 	const body = Buffer.from(await res.arrayBuffer());
 	assert.ok(body.toString().includes('SCALED'), 'body should be sips output');
