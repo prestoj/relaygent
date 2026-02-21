@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 let tmpDir, projectsDir;
-let findLatestSession, listSessions, loadSession, getRelayActivity;
+let findLatestSession, listSessions, loadSession, getRelayActivity, clearSessionsCache;
 
 // A minimal assistant entry (~300 bytes when serialised) — keeps files above the 200-byte threshold
 const ENTRY = JSON.stringify({
@@ -46,7 +46,7 @@ before(async () => {
 	process.env.HOME = tmpDir;
 
 	// Import after setting HOME — these functions read HOME at call time anyway
-	({ findLatestSession, listSessions, loadSession, getRelayActivity } =
+	({ findLatestSession, listSessions, loadSession, getRelayActivity, clearSessionsCache } =
 		await import('../../hub/src/lib/relayActivity.js'));
 
 	// Restore HOME — tests set it per-case as needed
@@ -64,11 +64,13 @@ after(() => {
 function withHome(fn) {
 	const saved = process.env.HOME;
 	process.env.HOME = tmpDir;
+	clearSessionsCache();
 	try { return fn(); } finally { process.env.HOME = saved; }
 }
 async function withHomeAsync(fn) {
 	const saved = process.env.HOME;
 	process.env.HOME = tmpDir;
+	clearSessionsCache();
 	try { return await fn(); } finally { process.env.HOME = saved; }
 }
 
