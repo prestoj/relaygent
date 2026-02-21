@@ -31,13 +31,17 @@ relaygent start          # Launch the agent + dashboard + services
 relaygent stop           # Stop everything
 relaygent status         # Check what's running
 relaygent restart        # Restart all services
-relaygent logs           # Tail service logs
+relaygent logs [service] # Tail service logs (fuzzy matching)
 relaygent orient         # Quick system status snapshot
 relaygent check          # Diagnose configuration and service health
 relaygent update         # Pull latest code and rebuild hub
-relaygent health         # Check all services in one shot
+relaygent setup          # Run interactive setup wizard
+relaygent mcp            # Manage MCP servers (list/add/remove/test)
+relaygent open [page]    # Open hub in browser
+relaygent changelog      # Show recently merged PRs
+relaygent digest         # Daily summary (PRs, commits, disk)
 relaygent set-password   # Set/remove dashboard authentication
-relaygent archive-linear # Archive old completed Linear issues
+relaygent completions    # Shell tab-completion for bash/zsh
 ```
 
 Open `http://localhost:8080` to watch your agent work.
@@ -69,14 +73,20 @@ Open `http://localhost:8080` to watch your agent work.
 
 A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 
-- **Activity Feed** — every tool call the agent makes, in real time, with expandable details
-- **Screen** — collapsible live view of what the agent sees (via Hammerspoon screenshots)
-- **Knowledge Base** — browse, create, edit, and delete the agent's long-term memory (Markdown + wiki-links)
-- **Tasks** — manage recurring and one-off tasks; add tasks directly from the dashboard
-- **Sessions** — browsable history grouped by date, with stats, tool breakdown, and search
-- **Current Tasks** — live Linear integration showing what the agent is working on
+- **Activity Feed** — every tool call in real time, with expandable details and category filters
+- **Screen** — collapsible live view of what the agent sees (via screenshots)
+- **Knowledge Base** — browse, create, edit with live markdown preview, broken link detection
+- **Tasks** — Linear integration showing what the agent is working on
+- **Sessions** — browsable history grouped by date, with stats, tool breakdown, search, and markdown export
+- **Logs** — syntax-colored log viewer with search and error highlighting
+- **Files** — file browser with inline preview for images, markdown, and text
+- **Search** — instant search across KB topics and sessions with highlighted results
+- **Settings** — system info, service status, MCP servers, and configuration overview
+- **Notifications** — pending notification widget + browsable history
 - **Intent** — your priorities file, visible to the agent, editable only by you
 - **Context Bar** — how full the current session's context window is
+- **Command Palette** — Cmd+K quick navigation to any page or KB topic
+- **Dark Mode** — toggle between light and dark themes
 - **Authentication** — optional password protection via `relaygent set-password`
 
 ## How the Relay Works
@@ -149,7 +159,7 @@ Create additional topic files as needed. The agent links them together with `[[w
 relaygent/
 ├── harness/          # Relay runner — session lifecycle, sleep/wake, handoff
 ├── hub/              # SvelteKit dashboard + chat + KB (Node.js)
-├── computer-use/     # MCP server wrapping Hammerspoon (19 tools)
+├── computer-use/     # MCP server for screen control (33 tools)
 ├── hammerspoon/      # Lua scripts for screen control (copied to ~/.hammerspoon)
 ├── notifications/    # Reminder + wake trigger service (Python/Flask + MCP)
 ├── linear/           # Linear MCP server + auto-archive script
@@ -159,7 +169,7 @@ relaygent/
 ├── hooks/            # PostToolUse hook (time, notifications, context tracking)
 ├── templates/        # Starter KB files for new installations
 ├── setup/            # Interactive onboarding (setup.mjs + helpers)
-├── scripts/          # Pre-commit hook (200-line file limit enforcement)
+├── scripts/          # Hub rebuild, service install, pre-commit hooks
 └── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check/health)
 ```
 
