@@ -60,6 +60,25 @@ function checkRelayStatus() {
 	}
 }
 
+function checkMcpServers() {
+	try {
+		const raw = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude.json'), 'utf-8'));
+		if (!raw.mcpServers) return null;
+		const entries = Object.entries(raw.mcpServers);
+		if (entries.length === 0) return null;
+		const servers = entries.map(([name, cfg]) => {
+			const args = cfg.args || [];
+			const mainFile = args[0] || '';
+			const exists = mainFile ? fs.existsSync(mainFile) : false;
+			return { name, ok: exists };
+		});
+		const okCount = servers.filter(s => s.ok).length;
+		const allOk = okCount === servers.length;
+		const detail = servers.map(s => `${s.ok ? '+' : '-'} ${s.name}`).join('\n');
+		return { name: `MCP ${okCount}/${servers.length}`, ok: allOk, detail, type: 'mcp', servers };
+	} catch { return null; }
+}
+
 function checkDisk() {
 	try {
 		const out = execFileSync('df', ['-h', os.homedir()], { timeout: 2000 }).toString();
@@ -76,5 +95,7 @@ export async function getServiceHealth() {
 	const disk = checkDisk();
 	const all = [checkRelayStatus(), ...results];
 	if (disk) all.push(disk);
+	const mcp = checkMcpServers();
+	if (mcp) all.push(mcp);
 	return all;
 }

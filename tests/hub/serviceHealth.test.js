@@ -131,3 +131,71 @@ test('Disk entry present with valid shape', async () => {
 	assert.equal(typeof disk.ok, 'boolean');
 	assert.equal(disk.detail, '');
 });
+
+// --- MCP server discovery tests ---
+
+async function withHome(dir, fn) {
+	const orig = process.env.HOME;
+	process.env.HOME = dir;
+	try { return await fn(); } finally { process.env.HOME = orig; }
+}
+
+function writeClaudeJson(dir, mcpServers) {
+	fs.writeFileSync(path.join(dir, '.claude.json'), JSON.stringify({ mcpServers }));
+}
+
+test('MCP: shows configured servers with valid entry points', async () => {
+	const fakeScript = path.join(tmpDir, 'server.mjs');
+	fs.writeFileSync(fakeScript, '// fake');
+	writeClaudeJson(tmpDir, { 'test-mcp': { command: 'node', args: [fakeScript] } });
+	writeStatus('working');
+	const results = await withHome(tmpDir, () => getServiceHealth());
+	const mcp = results.find(s => s.name.startsWith('MCP'));
+	assert.ok(mcp, 'MCP entry present');
+	assert.equal(mcp.name, 'MCP 1/1');
+	assert.equal(mcp.ok, true);
+	assert.ok(mcp.detail.includes('test-mcp'));
+});
+
+test('MCP: missing entry point shows not ok', async () => {
+	writeClaudeJson(tmpDir, { 'broken-mcp': { command: 'node', args: ['/nonexistent/file.mjs'] } });
+	writeStatus('working');
+	const results = await withHome(tmpDir, () => getServiceHealth());
+	const mcp = results.find(s => s.name.startsWith('MCP'));
+	assert.ok(mcp);
+	assert.equal(mcp.name, 'MCP 0/1');
+	assert.equal(mcp.ok, false);
+});
+
+test('MCP: mixed healthy and broken servers', async () => {
+	const fakeScript = path.join(tmpDir, 'server.mjs');
+	fs.writeFileSync(fakeScript, '// fake');
+	writeClaudeJson(tmpDir, {
+		'good-mcp': { command: 'node', args: [fakeScript] },
+		'bad-mcp': { command: 'node', args: ['/nonexistent.mjs'] },
+	});
+	writeStatus('working');
+	const results = await withHome(tmpDir, () => getServiceHealth());
+	const mcp = results.find(s => s.name.startsWith('MCP'));
+	assert.equal(mcp.name, 'MCP 1/2');
+	assert.equal(mcp.ok, false);
+	assert.ok(mcp.detail.includes('+ good-mcp'));
+	assert.ok(mcp.detail.includes('- bad-mcp'));
+});
+
+test('MCP: no entry when .claude.json missing', async () => {
+	const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'svc-nomcp-'));
+	writeStatus('working');
+	const results = await withHome(emptyDir, () => getServiceHealth());
+	const mcp = results.find(s => s.name.startsWith('MCP'));
+	assert.equal(mcp, undefined, 'no MCP entry when config missing');
+	fs.rmSync(emptyDir, { recursive: true, force: true });
+});
+
+test('MCP: no entry when mcpServers is empty', async () => {
+	writeClaudeJson(tmpDir, {});
+	writeStatus('working');
+	const results = await withHome(tmpDir, () => getServiceHealth());
+	const mcp = results.find(s => s.name.startsWith('MCP'));
+	assert.equal(mcp, undefined, 'no MCP entry for empty config');
+});
