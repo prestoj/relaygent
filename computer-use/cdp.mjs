@@ -5,7 +5,7 @@ import http from "node:http";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 
-const CDP_PORT = 9223;
+const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT || "9223", 10);
 const CHROME_DATA = `${process.env.HOME}/data/chrome-debug-profile`;
 const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
