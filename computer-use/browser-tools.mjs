@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp } from "./cdp.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp, cdpChromePid } from "./cdp.mjs";
 import { COORD_EXPR, CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
@@ -16,8 +16,10 @@ export function registerBrowserTools(server, IS_LINUX) {
       new_tab: bool.describe("Open in new tab") },
     async ({ url, new_tab }) => {
       if (!new_tab && await cdpNavigate(url)) {
-        // Focus existing Chrome window — launch would open a new tab on Linux
-        await hsCall("POST", IS_LINUX ? "/focus" : "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
+        // Focus the CDP Chrome's window by PID to avoid targeting stale Chrome instances
+        const pid = IS_LINUX ? cdpChromePid() : null;
+        if (pid) await hsCall("POST", "/focus", { pid });
+        else await hsCall("POST", IS_LINUX ? "/focus" : "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
         return actionRes(`Navigated to ${url}`, 800);
       }
       const mod = IS_LINUX ? "ctrl" : "cmd";
@@ -187,14 +189,10 @@ export function registerBrowserTools(server, IS_LINUX) {
       return actionRes(`Filled ${fields.length} fields${submit ? ' and submitted' : ''}`, submit ? 1500 : 400);
     });
 
-  server.tool("browser_tabs",
-    "List all open Chrome tabs with URLs and titles.",
-    {},
-    async () => {
-      const tabs = await cdpHttp("/json/list");
-      if (!tabs) return jsonRes({ error: "CDP not available — Chrome may not be running" });
-      const pages = tabs.filter(t => t.type === "page").map(t => ({ id: t.id, title: t.title, url: t.url }));
-      return jsonRes({ tabs: pages, count: pages.length });
-    }
-  );
+  server.tool("browser_tabs", "List all open Chrome tabs with URLs and titles.", {}, async () => {
+    const tabs = await cdpHttp("/json/list");
+    if (!tabs) return jsonRes({ error: "CDP not available — Chrome may not be running" });
+    const pages = tabs.filter(t => t.type === "page").map(t => ({ id: t.id, title: t.title, url: t.url }));
+    return jsonRes({ tabs: pages, count: pages.length });
+  });
 }
