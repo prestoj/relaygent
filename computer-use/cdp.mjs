@@ -76,6 +76,7 @@ function waitForEvent(method, timeoutMs = 10000) {
 let _chromeStarting = false;
 async function ensureChrome() {
   if (_chromeStarting) return; _chromeStarting = true;
+  try { execSync("pkill -f google-chrome", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
   const bin = existsSync("/Applications/Google Chrome.app")
     ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
   try { spawn(bin, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"],
@@ -83,8 +84,6 @@ async function ensureChrome() {
     log("auto-launched Chrome with CDP"); await new Promise(r => setTimeout(r, 4000));
   } catch (e) { log(`Chrome launch failed: ${e.message}`); } finally { _chromeStarting = false; }
 }
-
-// Serialized — prevents races when multiple tools call getConnection() simultaneously
 export async function getConnection() {
   if (_connectPromise) return _connectPromise;
   _connectPromise = _getConnectionImpl();
