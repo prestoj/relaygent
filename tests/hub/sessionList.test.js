@@ -83,9 +83,9 @@ test('findLatestSession: returns null when no sessions exist', () => {
 	});
 });
 
-test('findLatestSession: returns the most recently modified .jsonl file > 200 bytes', () => {
+test('findLatestSession: returns the session with the latest directory timestamp', () => {
 	withHome(() => {
-		const d = makeDir('ws-a');
+		const d = makeDir('ws-2026-01-01-10-00-00');
 		const p = writeSession(d);
 		const result = findLatestSession();
 		assert.equal(result, p);
@@ -94,14 +94,28 @@ test('findLatestSession: returns the most recently modified .jsonl file > 200 by
 
 test('findLatestSession: skips files smaller than 200 bytes', () => {
 	withHome(() => {
-		const d = makeDir('ws-tiny');
+		const d = makeDir('ws-2026-01-01-09-00-00');
 		fs.writeFileSync(path.join(d, 'small.jsonl'), 'x');
 		// Only a tiny file — should not return it
 		const result = findLatestSession();
-		// The previous test's file may still be found, but not this tiny one
 		if (result !== null) {
 			assert.ok(fs.statSync(result).size > 200);
 		}
+	});
+});
+
+test('findLatestSession: picks newest by directory name, not file mtime', () => {
+	withHome(() => {
+		const older = makeDir('ws-2026-02-01-10-00-00');
+		const newer = makeDir('ws-2026-02-02-10-00-00');
+		writeSession(older);
+		writeSession(newer);
+		// Touch older file to give it a newer mtime
+		const olderFile = path.join(older, 'session.jsonl');
+		const future = new Date(Date.now() + 60000);
+		fs.utimesSync(olderFile, future, future);
+		const result = findLatestSession();
+		assert.ok(result.includes('2026-02-02'), 'should pick newer dir, not newer mtime');
 	});
 });
 
