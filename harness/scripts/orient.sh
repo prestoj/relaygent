@@ -2,7 +2,8 @@
 # Relaygent orientation — quick system status snapshot
 set -euo pipefail
 
-source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 load_config
 INTENT_FILE="$KB_DIR/INTENT.md"
 HANDOFF_FILE="$KB_DIR/HANDOFF.md"
@@ -117,7 +118,7 @@ fi
 
 # Open PRs
 if command -v gh &>/dev/null; then
-    PR_LIST=$(gh pr list --state open --json number,title --jq '.[] | "  #\(.number): \(.title)"' 2>/dev/null)
+    PR_LIST=$(gh pr list --state open --json number,title,reviewDecision --jq '.[] | "  #\(.number): \(.title)\(if .reviewDecision == "APPROVED" then " ✓" elif .reviewDecision == "CHANGES_REQUESTED" then " ✗" else "" end)"' 2>/dev/null)
     if [ -n "$PR_LIST" ]; then
         echo -e "\033[0;34mOpen PRs:\033[0m"; echo "$PR_LIST"
     fi
@@ -141,40 +142,7 @@ fi
 # Due tasks
 TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
-    DUE_TASKS=$(python3 -c "
-import re
-from datetime import datetime, timedelta
-now = datetime.now()
-freqs = {'6h': 0.25, '12h': 0.5, 'daily': 1, '2d': 2, '3d': 3, 'weekly': 7, 'monthly': 30}
-due = []
-for line in open('$TASKS_FILE'):
-    m = re.match(r'- \[ \] (.+?)(?:\s*\|(.*))?$', line.strip())
-    if not m: continue
-    desc = m.group(1).strip()
-    meta = {}
-    for p in (m.group(2) or '').split('|'):
-        kv = re.match(r'\s*(\w+):\s*(.+)', p.strip())
-        if kv: meta[kv.group(1)] = kv.group(2).strip()
-    ttype = meta.get('type', 'one-off')
-    freq = meta.get('freq', '')
-    last = meta.get('last', '')
-    if ttype == 'one-off':
-        due.append(desc)
-    elif ttype == 'recurring' and freq:
-        if not last or last == 'never':
-            due.append(desc)
-        else:
-            try:
-                last_dt = datetime.strptime(last, '%Y-%m-%d %H:%M')
-                if now - last_dt >= timedelta(days=freqs.get(freq, 1)):
-                    due.append(desc)
-            except: pass
-if due:
-    print('\n\033[1;33mTasks due:\033[0m')
-    for d in due[:5]: print(f'  • {d}')
-else:
-    print('\n\033[0;34mTasks:\033[0m nothing due')
-" 2>/dev/null)
+    DUE_TASKS=$(python3 "$SCRIPT_DIR/due-tasks.py" "$TASKS_FILE" 2>/dev/null)
     [ -n "$DUE_TASKS" ] && echo "$DUE_TASKS"
 fi
 
