@@ -149,10 +149,13 @@
 		if (open) { clearUnread(); tick().then(scrollBottom); }
 	}
 
+	function openChat() { if (!open) { open = true; clearUnread(); tick().then(scrollBottom); } }
+
 	onMount(() => {
 		defaultTitle = document.title || 'Relaygent Hub';
 		document.addEventListener('click', initAudio);
 		document.addEventListener('keydown', initAudio);
+		window.addEventListener('open-chat', openChat);
 		loadHistory();
 		connect();
 	});
@@ -161,6 +164,7 @@
 		if (browser) {
 			document.removeEventListener('click', initAudio);
 			document.removeEventListener('keydown', initAudio);
+			window.removeEventListener('open-chat', openChat);
 			document.title = defaultTitle;
 		}
 	});
