@@ -28,7 +28,7 @@ function callHaiku(prompt) {
 		const child = execFile('claude', ['-p', prompt, '--model', 'claude-haiku-4-5-20251001'], {
 			timeout: 30000,
 			maxBuffer: 1024 * 64,
-			env: { ...process.env, DISABLE_INTERACTIVITY: '1' },
+			env: (({ CLAUDECODE, ...e }) => ({ ...e, DISABLE_INTERACTIVITY: '1' }))(process.env),
 		}, (err, stdout) => {
 			if (err) return reject(err);
 			resolve(stdout.trim());
