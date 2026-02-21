@@ -14,8 +14,8 @@ from relay import RelayRunner
 
 def _result(**kwargs) -> ClaudeResult:
     """Build a ClaudeResult with defaults (clean exit)."""
-    defaults = dict(exit_code=0, hung=False, timed_out=False,
-                    no_output=False, incomplete=False, context_pct=0.0)
+    defaults = dict(exit_code=0, hung=False, timed_out=False, no_output=False,
+                    incomplete=False, rate_limited=False, context_pct=0.0)
     return ClaudeResult(**{**defaults, **kwargs})
 
 
@@ -143,6 +143,52 @@ class TestNoOutput:
             _result(exit_code=0),     # clean exit → session_established=True
             _result(no_output=True),  # no output on resume → reset to fresh
             _result(exit_code=0),     # clean on fresh
+        ]
+        exit_code = _run_with_results(runner, results)
+        assert exit_code == 0
+
+
+class TestRateLimited:
+    def test_rate_limited_retries_after_delay(self, runner):
+        """Rate limited result should retry without incrementing counters."""
+        results = [
+            _result(rate_limited=True),  # rate limited → wait 60s
+            _result(exit_code=0),        # clean exit
+        ]
+        exit_code = _run_with_results(runner, results)
+        assert exit_code == 0
+
+    def test_rate_limited_does_not_count_as_crash(self, runner):
+        """Rate limited should not increment crash_count."""
+        results = [
+            _result(rate_limited=True),
+            _result(rate_limited=True),
+            _result(rate_limited=True),
+            _result(rate_limited=True),  # More than MAX_RETRIES — should NOT give up
+            _result(exit_code=0),
+        ]
+        with patch("relay.notify_crash") as mock_notify:
+            exit_code = _run_with_results(runner, results)
+            mock_notify.assert_not_called()
+        assert exit_code == 0
+
+
+class TestNoOutputRetryLimit:
+    def test_gives_up_after_max_no_output(self, runner):
+        """Too many consecutive no-output exits should give up."""
+        results = [_result(no_output=True) for _ in range(7)]  # > MAX_INCOMPLETE_RETRIES (5)
+        with patch("relay.notify_crash") as mock_notify:
+            _run_with_results(runner, results)
+            mock_notify.assert_called_once()
+
+    def test_no_output_count_resets_after_clean(self, runner):
+        """no_output_count resets after a clean exit."""
+        results = [
+            _result(no_output=True),
+            _result(no_output=True),
+            _result(exit_code=0),         # clean → resets
+            _result(no_output=True),      # fresh count
+            _result(exit_code=0),
         ]
         exit_code = _run_with_results(runner, results)
         assert exit_code == 0
