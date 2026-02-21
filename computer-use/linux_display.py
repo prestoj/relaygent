@@ -153,6 +153,7 @@ _ALIASES = {
 }
 
 _CHROME_NAMES = {"google-chrome", "google-chrome-stable", "chromium-browser", "chromium"}
+_CHROME_DATA = os.path.expanduser("~/data/chrome-debug-profile")
 _CHROME_ARGS = [
     "--no-sandbox", "--no-first-run", "--start-maximized",
     "--disable-default-apps", "--disable-sync",
@@ -160,14 +161,13 @@ _CHROME_ARGS = [
     "--disable-session-crashed-bubble", "--disable-infobars",
     "--test-type",  # suppresses --no-sandbox warning bar
     "--remote-debugging-port=9223", "--remote-allow-origins=*",
-    "--user-data-dir=/tmp/chrome-debug-profile",
+    f"--user-data-dir={_CHROME_DATA}",
 ]
-
 
 def _patch_chrome_prefs() -> None:
     """Set exit_type=Normal so Chrome doesn't show 'Restore pages?' bubble."""
     import json as _json
-    pref = "/tmp/chrome-debug-profile/Default/Preferences"
+    pref = f"{_CHROME_DATA}/Default/Preferences"
     try:
         with open(pref) as f:
             data = _json.load(f)
