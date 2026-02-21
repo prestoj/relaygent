@@ -45,10 +45,7 @@ Computer-use (screenshot, click, type) via Hammerspoon MCP (Mac) or linux-server
 ## Hub Restart
 
 ```bash
-pkill -f ws-server.mjs
-npm run build --prefix {{REPO}}/hub
-PORT={{HUB_PORT}} RELAY_STATUS_FILE={{REPO}}/data/relay-status.json \
-  RELAYGENT_KB_DIR={{KB}} RELAYGENT_DATA_DIR={{DATA}} \
-  RELAYGENT_NOTIFICATIONS_PORT={{NOTIF_PORT}} \
-  nohup node {{REPO}}/hub/ws-server.mjs >> {{REPO}}/logs/relaygent-hub.log 2>&1 &
+relaygent update
 ```
+
+This rebuilds the hub and restarts all services safely. Never restart manually.
