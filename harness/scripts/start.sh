@@ -94,8 +94,9 @@ verify_service "Notifications" "http://localhost:$NOTIF_PORT/health" 3 || true
 # Relay — verify Claude auth before starting
 if ! claude -p 'hi' >/dev/null 2>&1; then
     echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
-elif [ "$(uname)" = "Linux" ] && command -v systemctl &>/dev/null && systemctl --user is-system-running &>/dev/null; then
-    bash "$REPO_DIR/scripts/install-relay-service.sh" && echo -e "  Relay: ${GREEN}managed by systemd (auto-restarts on crash)${NC}"
+elif [ "$(uname)" = "Linux" ] && systemctl --user is-enabled relaygent-relay &>/dev/null; then
+    systemctl --user start relaygent-relay 2>/dev/null
+    echo -e "  Relay: ${GREEN}managed by systemd${NC}"
 else
     start_service "Relay" "relay" python3 "$REPO_DIR/harness/relay.py"
 fi
