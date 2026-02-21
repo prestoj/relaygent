@@ -41,9 +41,7 @@ run "email" node --test "$ROOT/tests/email/test_email_poller.mjs" \
   "$ROOT/tests/email/test_gmail_client.mjs"
 
 # --- Computer-use Python ---
-run "computer-use/python" python3 -m pytest \
-  "$ROOT/tests/computer-use/test_linux_input.py" \
-  "$ROOT/tests/computer-use/test_linux_display.py" -q
+run "computer-use/python" python3 -m pytest "$ROOT/tests/computer-use/" -q
 
 # --- Computer-use Node ---
 # test_cdp.mjs is mac-only (requires Chrome on port 9223 with mac CDP profile)
@@ -52,6 +50,10 @@ if [[ "$(uname)" == "Darwin" ]]; then
   CU_NODE_TESTS+=("$ROOT/tests/computer-use/test_cdp.mjs")
 fi
 run "computer-use/node" node --test "${CU_NODE_TESTS[@]}"
+
+# --- Setup (Node) ---
+run "setup" node --test "$ROOT/tests/setup/test_setup_helpers.mjs" \
+  "$ROOT/tests/setup/test_setup_utils.mjs"
 
 # --- Summary ---
 printf '\n================================\n'
