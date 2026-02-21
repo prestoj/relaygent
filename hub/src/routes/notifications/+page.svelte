@@ -1,8 +1,8 @@
 <script>
 	let { data } = $props();
 
-	const typeIcons = { reminder: '\u23F0', message: '\uD83D\uDCAC', slack: '\uD83D\uDCE8', email: '\u2709\uFE0F', github: '\uD83D\uDC19', linear: '\uD83D\uDCCB' };
-	const typeColors = { reminder: '#f59e0b', message: '#22c55e', slack: '#e01e5a', email: '#3b82f6', github: '#8b5cf6', linear: '#5e6ad2' };
+	const typeIcons = { reminder: '\u23F0', message: '\uD83D\uDCAC', slack: '\uD83D\uDCE8', email: '\u2709\uFE0F', github: '\uD83D\uDC19', linear: '\uD83D\uDCCB', task: '\u2705' };
+	const typeColors = { reminder: '#f59e0b', message: '#22c55e', slack: '#e01e5a', email: '#3b82f6', github: '#8b5cf6', linear: '#5e6ad2', task: '#10b981' };
 
 	function fmtTime(iso) {
 		if (!iso) return '';
