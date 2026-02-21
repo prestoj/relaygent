@@ -5,10 +5,11 @@
  */
 import { createInterface } from 'readline';
 import { execSync, spawnSync } from 'child_process';
-import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, chmodSync, appendFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, chmodSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, setupClaudeMd, envFromConfig } from './setup-helpers.mjs';
+import { checkPortConflict, printSetupComplete, setupCliSymlink } from './setup-utils.mjs';
 
 const REPO_DIR = process.argv[2] || resolve('.');
 const HOME = homedir();
@@ -38,6 +39,7 @@ async function main() {
 	}
 	const claudeVer = spawnSync('claude', ['--version'], { stdio: 'pipe' });
 	console.log(`${C.green}Claude Code found: ${claudeVer.stdout.toString().trim()}${C.reset}`);
+	console.log(`  ${C.dim}Checking Claude auth (may take a few seconds)...${C.reset}`);
 	if (spawnSync('claude', ['-p', 'hi'], { stdio: 'pipe', timeout: 15000 }).status !== 0) {
 		console.log(`${C.red}Claude Code not logged in. Run ${C.bold}claude${C.reset}${C.red} first.${C.reset}`);
 		process.exit(1);
@@ -46,6 +48,7 @@ async function main() {
 	console.log(`Sets up a persistent AI agent with a web dashboard.\n`);
 
 	const agentName = 'relaygent'; const hubPort = 8080;
+	await checkPortConflict(hubPort, C);
 	// Write config
 	console.log(`${C.yellow}Setting up directories...${C.reset}`);
 	mkdirSync(CONFIG_DIR, { recursive: true });
@@ -151,41 +154,8 @@ async function main() {
 	// Set up Claude CLI hooks + MCP servers
 	setupHooks(config, REPO_DIR, HOME, C);
 
-	// Symlink CLI into PATH — try ~/bin, then /usr/local/bin, else modify shell rc.
-	const cliSrc = join(REPO_DIR, 'bin', 'relaygent');
-	const userBin = join(HOME, 'bin');
-	let cliOk = false;
-	try {
-		mkdirSync(userBin, { recursive: true });
-		execSync(`ln -sf "${cliSrc}" "${join(userBin, 'relaygent')}"`, { stdio: 'pipe' });
-		console.log(`  CLI: ${C.green}relaygent${C.reset} command available (~/bin)`);
-		cliOk = true;
-	} catch { /* ~/bin not writable */ }
-	if (!cliOk) {
-		try {
-			execSync(`ln -sf "${cliSrc}" "/usr/local/bin/relaygent"`, { stdio: 'pipe' });
-			console.log(`  CLI: ${C.green}relaygent${C.reset} command available (/usr/local/bin)`);
-			cliOk = true;
-		} catch { /* no write access to /usr/local/bin */ }
-	}
-	if (!cliOk) {
-		const binDir = join(REPO_DIR, 'bin');
-		const rcFile = join(HOME, process.env.SHELL?.includes('zsh') ? '.zshrc' : '.bashrc');
-		const pathLine = `export PATH="${binDir}:$PATH"  # relaygent`;
-		try {
-			const rc = existsSync(rcFile) ? readFileSync(rcFile, 'utf-8') : '';
-			if (!rc.includes(binDir)) {
-				appendFileSync(rcFile, `\n${pathLine}\n`);
-				console.log(`  CLI: added ${binDir} to PATH in ${rcFile}`);
-				console.log(`  ${C.yellow}Restart your shell or run: source ${rcFile}${C.reset}`);
-			}
-		} catch {
-			console.log(`  CLI: add ${binDir} to your PATH manually`);
-		}
-	}
-
-	console.log(`\n${C.green}Setup complete!${C.reset} Dashboard: http://localhost:${hubPort}/`);
-	console.log(`  ${C.bold}relaygent start${C.reset} / ${C.bold}stop${C.reset} / ${C.bold}status${C.reset} / ${C.bold}restart${C.reset}\n`);
+	setupCliSymlink(REPO_DIR, HOME, C);
+	printSetupComplete(hubPort, C);
 	const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
 	if (launch !== 'n') {
 		console.log(`\nStarting Relaygent...\n`);
