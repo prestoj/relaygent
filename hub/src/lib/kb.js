@@ -152,27 +152,5 @@ export function saveTopic(slug, frontmatter, content) {
 	fs.renameSync(tmp, filepath);
 }
 
-/** Search KB topics */
-export function searchTopics(query) {
-	if (!query) return [];
-	const q = query.toLowerCase();
-	return listTopics().map(t => {
-		let raw;
-		try { raw = fs.readFileSync(safeSlugPath(t.slug), 'utf-8'); } catch { return null; }
-		const lower = raw.toLowerCase();
-		const idx = lower.indexOf(q);
-		if (idx === -1) return null;
-		const contentStart = raw.indexOf('---', 3);
-		const content = contentStart > -1 ? raw.slice(contentStart + 3) : raw;
-		const cLower = content.toLowerCase();
-		const cIdx = cLower.indexOf(q);
-		let snippet = '';
-		if (cIdx > -1) {
-			const start = Math.max(0, cIdx - 60);
-			const end = Math.min(content.length, cIdx + q.length + 60);
-			snippet = (start > 0 ? '...' : '') + content.slice(start, end).replace(/\n/g, ' ').trim() + (end < content.length ? '...' : '');
-		}
-		return { ...t, type: 'topic', snippet };
-	}).filter(Boolean);
-}
+export { searchTopics } from './kbSearch.js';
 
