@@ -37,6 +37,7 @@
 	</form>
 {:else}
 	<div class="header">
+		<div class="breadcrumb"><a href="/kb">KB</a> <span class="sep">/</span> <span>{data.topic.title || data.topic.slug}</span></div>
 		<h1>{data.topic.title || data.topic.slug}</h1>
 		<div class="header-actions">
 			{#if confirmDelete}
@@ -149,4 +150,8 @@
 	.saved { color: var(--success); }
 	.backlinks { margin-top: 2em; padding-top: 1em; border-top: 1px solid var(--border); }
 	.backlinks ul { padding-left: 1.2em; }
+	.breadcrumb { font-size: 0.82em; color: var(--text-muted); margin-bottom: 0.2em; }
+	.breadcrumb a { color: var(--link); text-decoration: none; }
+	.breadcrumb a:hover { text-decoration: underline; }
+	.breadcrumb .sep { margin: 0 0.3em; }
 </style>
