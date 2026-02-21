@@ -87,6 +87,17 @@ async function main() {
 	}
 	console.log(`  KB templates: ${KB_DIR}`);
 
+	// Prompt for initial intent so the agent knows what to work on
+	const intentFile = join(KB_DIR, 'INTENT.md');
+	if (readFileSync(intentFile, 'utf-8').includes('Delete everything above')) {
+		console.log(`\n${C.cyan}What should your agent focus on?${C.reset}\n${C.dim}Examples: "Build a blog", "Maintain my server", "Help with code reviews"${C.reset}`);
+		const intent = (await ask(`${C.cyan}Intent (Enter to skip): ${C.reset}`)).trim();
+		if (intent) {
+			writeFileSync(intentFile, `---\ntitle: Intent\ncreated: ${today}\nupdated: ${today}\ntags: [meta, intent]\n---\n\n${intent}\n`);
+			console.log(`  ${C.green}Intent saved${C.reset}`);
+		} else console.log(`  ${C.dim}Skipped — edit INTENT.md later${C.reset}`);
+	}
+
 	// Init git for KB (use spawnSync to avoid shell injection from user input)
 	if (!existsSync(join(kbRoot, '.git'))) {
 		const gitOpts = { cwd: kbRoot, stdio: 'pipe' };
