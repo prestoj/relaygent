@@ -8,13 +8,14 @@ usage() {
     echo "Usage: relaygent mcp [list|add|remove]"
     echo ""
     echo "Commands:"
-    echo "  list                          Show registered MCP servers"
-    echo "  add <name> <command> [args]   Register a new MCP server"
-    echo "  remove <name>                 Unregister an MCP server"
+    echo "  list                                    Show registered MCP servers"
+    echo "  add <name> <command> [args] [--env K=V]  Register a new MCP server"
+    echo "  remove <name>                            Unregister an MCP server"
     echo ""
     echo "Examples:"
     echo "  relaygent mcp list"
     echo "  relaygent mcp add jira node /path/to/jira-mcp.mjs"
+    echo "  relaygent mcp add notion npx @notionhq/mcp --env NOTION_TOKEN=secret_xyz"
     echo "  relaygent mcp remove jira"
 }
 
@@ -57,21 +58,42 @@ cmd_add() {
     local name="${1:-}"
     local command="${2:-}"
     shift 2 2>/dev/null || true
-    local args=("$@")
+    # Separate --env KEY=VALUE from regular args
+    local args=() envs=()
+    while [ $# -gt 0 ]; do
+        if [ "$1" = "--env" ] && [ $# -ge 2 ]; then
+            envs+=("$2"); shift 2
+        else
+            args+=("$1"); shift
+        fi
+    done
 
     if [ -z "$name" ] || [ -z "$command" ]; then
         echo "Error: name and command are required"
-        echo "Usage: relaygent mcp add <name> <command> [args...]"
+        echo "Usage: relaygent mcp add <name> <command> [args...] [--env KEY=VALUE]"
         exit 1
     fi
 
     ensure_claude_json
-    python3 - "$CLAUDE_JSON" "$name" "$command" "${args[@]}" <<'PYEOF'
+    # Pass args first, then a separator, then env pairs
+    python3 - "$CLAUDE_JSON" "$name" "$command" "--" "${args[@]}" "---" "${envs[@]}" <<'PYEOF'
 import json, sys
-config_path = sys.argv[1]
-name = sys.argv[2]
-command = sys.argv[3]
-args = sys.argv[4:]
+all_args = sys.argv[1:]
+config_path, name, command = all_args[0], all_args[1], all_args[2]
+rest = all_args[3:]  # starts with "--"
+# Split on separator markers
+args, env_pairs = [], {}
+section = "args"
+for item in rest:
+    if item == "--":
+        section = "args"
+    elif item == "---":
+        section = "env"
+    elif section == "args":
+        args.append(item)
+    elif section == "env" and "=" in item:
+        k, v = item.split("=", 1)
+        env_pairs[k] = v
 try:
     config = json.load(open(config_path))
 except (json.JSONDecodeError, FileNotFoundError):
@@ -82,12 +104,17 @@ existing = name in config["mcpServers"]
 entry = {"command": command}
 if args:
     entry["args"] = args
+if env_pairs:
+    entry["env"] = env_pairs
 config["mcpServers"][name] = entry
 with open(config_path, "w") as f:
     json.dump(config, f, indent=2)
     f.write("\n")
 action = "Updated" if existing else "Added"
-print(f"{action} MCP server '\033[1m{name}\033[0m': {command} {' '.join(args)}")
+detail = f"{command} {' '.join(args)}".strip()
+if env_pairs:
+    detail += f" (env: {', '.join(env_pairs.keys())})"
+print(f"{action} MCP server '\033[1m{name}\033[0m': {detail}")
 print(f"\nRestart your Claude Code session to pick up the change.")
 PYEOF
 }
