@@ -1,11 +1,11 @@
 <script>
 	let { data, form } = $props();
-	let editing = $state(false);
+	let editing = $state(data.isTemplate);
 	let editContent = $state('');
 
 	function toggleEdit() {
 		editing = !editing;
-		if (editing) editContent = data.rawContent;
+		if (editing) editContent = data.isTemplate ? '' : data.rawContent;
 	}
 
 	$effect(() => {
@@ -28,9 +28,16 @@
 
 <p class="note">This file is only modified by the human operator.</p>
 
+{#if data.isTemplate && editing}
+	<div class="template-banner">
+		<strong>Write your Intent below.</strong> Tell the agent what to focus on — your priorities, goals, and constraints.
+		<span class="template-examples">Examples: "Build a blog with Next.js", "Monitor my servers and alert me", "Help review PRs in my repo"</span>
+	</div>
+{/if}
+
 {#if editing}
 	<form method="POST" action="?/save">
-		<textarea name="content" bind:value={editContent} rows="20" class="editor"></textarea>
+		<textarea name="content" bind:value={editContent} rows="20" class="editor" placeholder="What should your agent work on?"></textarea>
 		<div class="actions">
 			<button type="submit" class="save-btn">Save</button>
 			<button type="button" onclick={() => editing = false}>Cancel</button>
@@ -60,4 +67,6 @@
 	.actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
 	.save-btn { background: var(--link); color: #fff; border: none; padding: 0.5em 1em; border-radius: 6px; cursor: pointer; }
 	.saved { color: var(--success); }
+	.template-banner { background: color-mix(in srgb, var(--link) 10%, var(--bg-surface)); border: 1px solid var(--link); border-radius: 8px; padding: 0.75em 1em; margin-bottom: 0.75em; font-size: 0.88em; line-height: 1.5; }
+	.template-examples { display: block; color: var(--text-muted); font-size: 0.88em; margin-top: 0.3em; }
 </style>
