@@ -41,6 +41,15 @@ function getAttentionItems() {
 	return [];
 }
 
+function hasIntentContent() {
+	try {
+		const intentPath = path.join(getKbDir(), 'INTENT.md');
+		const lines = fs.readFileSync(intentPath, 'utf-8').split('\n')
+			.filter(l => l.trim() && !l.startsWith('---') && !l.startsWith('tags') && !l.startsWith('title') && !l.startsWith('created') && !l.startsWith('updated') && !l.startsWith('<!--'));
+		return lines.length >= 3;
+	} catch { return false; }
+}
+
 function getContextPct() {
 	try {
 		const raw = fs.readFileSync('/tmp/relaygent-context-pct', 'utf-8').trim();
@@ -64,5 +73,6 @@ export async function load() {
 		contextPct: getContextPct(),
 		services,
 		relayRunning: isRelayRunning(),
+		hasIntent: hasIntentContent(),
 	};
 }
