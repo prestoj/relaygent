@@ -32,6 +32,13 @@ export async function formatText(text, resolveUser = userName) {
 	return out;
 }
 
+// Format Slack timestamp to Pacific time string
+export function formatTs(ts) {
+	if (!ts) return "";
+	return new Date(parseFloat(ts) * 1000)
+		.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+}
+
 // Resolve DM channel to partner's display name
 export async function dmName(ch, resolveUser = userName) {
 	if (ch.is_im && ch.user) return `DM: ${await resolveUser(ch.user)}`;

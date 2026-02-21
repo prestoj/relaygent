@@ -3,13 +3,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { slackApi } from "./slack-client.mjs";
-import { userName, dmName, formatText } from "./slack-helpers.mjs";
+import { userName, dmName, formatText, formatTs } from "./slack-helpers.mjs";
+import { checkUnread } from "./unread-check.mjs";
 
-const SOCKET_CACHE = "/tmp/relaygent-slack-socket-cache.json";
 const LAST_ACK = join(homedir(), ".relaygent", "slack", ".last_check_ts");
 
 const server = new McpServer({ name: "slack", version: "1.0.0" });
@@ -46,11 +46,9 @@ server.tool("read_messages",
 			if (!msgs.length) return txt("No messages.");
 			if (!thread_ts) msgs.reverse();
 			const lines = await Promise.all(msgs.map(async m => {
-				const ts = new Date(parseFloat(m.ts) * 1000)
-					.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
 				const user = await userName(m.user || m.bot_id);
 				const replies = m.reply_count ? ` [${m.reply_count} replies, thread_ts: ${m.ts}]` : "";
-				return `[${ts}] (ts:${m.ts}) <${user}> ${await formatText(m.text)}${replies}`;
+				return `[${formatTs(m.ts)}] (ts:${m.ts}) <${user}> ${await formatText(m.text)}${replies}`;
 			}));
 			return txt(lines.join("\n"));
 		} catch (e) { return txt(`Slack read error: ${e.message}`); }
@@ -129,9 +127,7 @@ server.tool("search_messages",
 			const lines = await Promise.all(matches.map(async m => {
 				const chName = m.channel?.name || "?";
 				const chId = m.channel?.id ? ` (${m.channel.id})` : "";
-				const ts = m.ts ? new Date(parseFloat(m.ts) * 1000)
-					.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) : "";
-				return `[${ts}] (ts:${m.ts}) [#${chName}${chId}] <${m.username || m.user}> ${await formatText(m.text)}`;
+				return `[${formatTs(m.ts)}] (ts:${m.ts}) [#${chName}${chId}] <${m.username || m.user}> ${await formatText(m.text)}`;
 			}));
 			return txt(lines.join("\n\n"));
 		} catch (e) { return txt(`Slack search error: ${e.message}`); }
@@ -141,38 +137,8 @@ server.tool("search_messages",
 server.tool("unread", "Check channels with unread messages.", {},
 	async () => {
 		try {
-			if (existsSync(SOCKET_CACHE)) {
-				let ackTs = 0;
-				try { ackTs = parseFloat(readFileSync(LAST_ACK, "utf-8").trim()) || 0; } catch {}
-				const sock = JSON.parse(readFileSync(SOCKET_CACHE, "utf-8"));
-				const msgs = (sock.messages || []).filter(m => parseFloat(m.ts || "0") > ackTs);
-				if (msgs.length > 0) {
-					const lines = await Promise.all(msgs.map(async m => {
-						const ts = new Date(parseFloat(m.ts) * 1000)
-							.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
-						const user = await userName(m.user);
-						const ch = m.channel_name || m.channel || "?";
-						const cid = m.channel ? ` (${m.channel})` : "";
-						return `[${ts}] [#${ch}${cid}] <${user}> ${await formatText(m.text)}`;
-					}));
-					return txt(lines.join("\n"));
-				}
-				return txt("No unread messages.");
-			}
-			const data = await slackApi("conversations.list", {
-				limit: 100, types: "public_channel,private_channel,mpim,im", exclude_archived: true,
-			});
-			const chs = (data.channels || []).slice(0, 15);
-			if (!chs.length) return txt("No channels found.");
-			const unread = (await Promise.all(chs.map(async c => {
-				try {
-					const info = await slackApi("conversations.info", { channel: c.id });
-					if (info.channel.unread_count_display > 0)
-						return `${await dmName(info.channel)}: ${info.channel.unread_count_display} unread`;
-				} catch {}
-				return null;
-			}))).filter(Boolean);
-			return txt(unread.length ? unread.join("\n") : "No unread messages.");
+			const result = await checkUnread(LAST_ACK);
+			return txt(result || "No unread messages.");
 		} catch (e) { return txt(`Slack unread error: ${e.message}`); }
 	}
 );
