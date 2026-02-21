@@ -101,10 +101,12 @@ else
     warn "$CU_NAME" "not responding on :$HS_PORT (optional — needed for computer-use)"
 fi
 
-# Relay process
+# Relay process (PID file, then pgrep fallback for LaunchAgent-managed relay)
 RELAY_PID="$HOME/.relaygent/relay.pid"
 if [ -f "$RELAY_PID" ] && kill -0 "$(cat "$RELAY_PID")" 2>/dev/null; then
     ok "Relay" "running (pid $(cat "$RELAY_PID"))"
+elif pgrep -f "relay\.py" >/dev/null 2>&1; then
+    ok "Relay" "running (managed)"
 else
     warn "Relay" "not running — start with: relaygent start"
 fi
@@ -131,11 +133,9 @@ else
 fi
 
 # Git hooks
-if git -C "$REPO_DIR" config --get core.hooksPath 2>/dev/null | grep -q scripts; then
-    ok "Git hooks" "200-line pre-commit enabled"
-else
-    warn "Git hooks" "not configured — run: git -C $REPO_DIR config core.hooksPath scripts"
-fi
+git -C "$REPO_DIR" config --get core.hooksPath 2>/dev/null | grep -q scripts \
+    && ok "Git hooks" "200-line pre-commit enabled" \
+    || warn "Git hooks" "not configured — run: git -C $REPO_DIR config core.hooksPath scripts"
 
 # Available updates
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
