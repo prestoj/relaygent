@@ -14,6 +14,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { summarizeInput, summarizeResult, extractResultText, findLatestSession } from './src/lib/relayActivity.js';
 import { createSessionParser } from './src/lib/sessionParser.js';
+import { handleStreamUpload } from './src/lib/streamUpload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
@@ -23,7 +24,10 @@ const HOOK_OUTPUT = '/tmp/relaygent-hook-output.json';
 if (!process.env.BODY_SIZE_LIMIT) process.env.BODY_SIZE_LIMIT = String(50 * 1024 * 1024);
 
 const { handler } = await import('./build/handler.js');
-const server = createServer(handler);
+const server = createServer((req, res) => {
+	if (req.method === 'POST' && req.url?.startsWith('/api/files/stream')) handleStreamUpload(req, res);
+	else handler(req, res);
+});
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
