@@ -4,6 +4,7 @@ Extracted from relay.py to keep it under 200 lines. Contains pure decision
 logic — no side effects (logging, sleeping, status updates). The caller
 (relay.py) interprets ErrorResult and performs side effects.
 """
+from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass

@@ -1,4 +1,5 @@
 """Handoff validation and goal extraction for HANDOFF.md."""
+from __future__ import annotations
 
 import re
 from pathlib import Path

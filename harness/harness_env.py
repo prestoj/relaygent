@@ -1,4 +1,6 @@
 """Environment setup and prompt building for the relay harness."""
+from __future__ import annotations
+
 import json
 import os
 import re

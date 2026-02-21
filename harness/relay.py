@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Relaygent - Autonomous context-based Claude runner."""
+from __future__ import annotations
 
 import os
 import signal
