@@ -10,15 +10,6 @@
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
 	let deadKbLinks = $derived(data.deadKbLinks || 0);
-	let notifCount = $state(0);
-
-	onMount(() => {
-		const poll = async () => {
-			try { notifCount = ((await (await fetch('/api/notifications/pending?fast=1')).json()).notifications || []).length; } catch {}
-		};
-		poll(); const id = setInterval(poll, 60000); return () => clearInterval(id);
-	});
-
 	// Sync dueTasks when layout data changes (e.g. navigation)
 	$effect(() => { dueTasks = data.dueTasks || 0; });
 
@@ -39,7 +30,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',notifications:'Notifications',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
 
 </script>
 
@@ -66,7 +57,6 @@
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
-		<a href="/notifications" class="notif-bell" class:active={isActive('/notifications')} onclick={closeMenu} title="Notifications">&#x1F514;{#if notifCount > 0}<span class="unread-badge">{notifCount}</span>{/if}</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
 		</button>
