@@ -9,7 +9,6 @@
 	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 	import NotificationsWidget from '$lib/components/NotificationsWidget.svelte';
-	import QuickActions from '$lib/components/QuickActions.svelte';
 	import SummaryButton from '$lib/components/SummaryButton.svelte';
 	import AttentionBanner from '$lib/components/AttentionBanner.svelte';
 	let { data } = $props();
@@ -73,7 +72,6 @@
 	function handleScroll() { const { scrollTop, scrollHeight, clientHeight } = document.documentElement; if (scrollTop + clientHeight >= scrollHeight - 200) loadMore(); }
 	onMount(() => { connect(); if (browser) { window.addEventListener('scroll', handleScroll); svcInterval = setInterval(refreshServices, 30000); } });
 	onDestroy(() => { if (ws) ws.close(); clearInterval(svcInterval); if (browser) window.removeEventListener('scroll', handleScroll); });
-	$effect(() => { if (browser) document.title = `Relaygent · ${relayRunning ? 'Live' : 'Offline'}${contextPct ? ` (${contextPct}%)` : ''}`; });
 </script>
 
 <svelte:head><title>Relaygent</title></svelte:head>
@@ -103,7 +101,6 @@
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <TodoWidget {activities} />
 <NotificationsWidget />
-<QuickActions />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>

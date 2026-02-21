@@ -5,16 +5,6 @@
 	let showTags = $state(false);
 	let newTitle = $state('');
 	let showNewForm = $state(false);
-	let committing = $state(false);
-	let commitDone = $state(false);
-
-	async function commitKb() {
-		if (committing) return;
-		committing = true;
-		try { const r = await fetch('/api/kb', { method: 'POST' }); if (r.ok) { commitDone = true; setTimeout(() => { commitDone = false; }, 3000); } } catch { /* ignore */ }
-		committing = false;
-	}
-
 	function toSlug(s) {
 		return s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 	}
@@ -47,7 +37,6 @@
 		</form>
 	{:else}
 		<button class="new-btn" onclick={() => showNewForm = true}>+ New</button>
-		<button class="commit-btn" onclick={commitKb} disabled={committing}>{committing ? '…' : commitDone ? '✓ Committed' : 'Commit KB'}</button>
 	{/if}
 </div>
 
@@ -103,12 +92,6 @@
 		border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.85em; cursor: pointer; white-space: nowrap;
 	}
 	.new-btn:hover { border-color: var(--link); background: color-mix(in srgb, var(--link) 8%, transparent); }
-	.commit-btn {
-		background: none; border: 1px solid var(--border); color: var(--text-muted);
-		border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.85em; cursor: pointer; white-space: nowrap;
-	}
-	.commit-btn:hover { border-color: var(--link); color: var(--link); }
-	.commit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 	.new-form { display: flex; gap: 0.4em; align-items: center; }
 	.new-input {
 		padding: 0.35em 0.6em; border: 1px solid var(--border); border-radius: 6px;
