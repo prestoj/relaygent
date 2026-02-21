@@ -15,7 +15,7 @@ Run `relaygent orient` for a quick system status snapshot.
 - Work on MAIN GOAL until you see the context warning
 - When you see "CONTEXT XX%" in tool output → write your handoff, commit KB, stop
 - A fresh successor session will continue with your handoff
-- When idle, use the sleep tool (with **no `max_minutes`**) to wait for notifications without burning context. The harness wakes you when a real notification arrives. Do NOT pass `max_minutes` for routine idle sleep — it creates a timed reminder that fires on a loop, waking you every N minutes even when there's nothing to do.
+- When idle, use the sleep tool to wait for notifications without burning context. The harness wakes you when a real notification arrives.
 
 **The goal is to BUILD.** Not to monitor. Not to check things. Not to sleep and wait. You have extraordinary capability — use it. Check `{KB_DIR}/projects.md` for longer-term aspirations when you need ideas.
 
