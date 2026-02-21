@@ -60,6 +60,7 @@
 
 	function handleKeydown(e) {
 		if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); open ? hide() : show(); return; }
+		if (e.key === '?' && !open && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { e.preventDefault(); show(); return; }
 		if (!open) return;
 		if (e.key === 'Escape') { hide(); return; }
 		if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, results.length - 1); }
@@ -101,7 +102,7 @@
 			{/if}
 		</ul>
 		<div class="palette-footer">
-			{#if statusMsg}<span class="status-msg">{statusMsg}</span>{:else}<kbd>↑↓</kbd> navigate <kbd>↵</kbd> open <kbd>esc</kbd> close{/if}
+			{#if statusMsg}<span class="status-msg">{statusMsg}</span>{:else}<kbd>⌘K</kbd> <kbd>?</kbd> open <kbd>↑↓</kbd> navigate <kbd>↵</kbd> select <kbd>esc</kbd> close{/if}
 		</div>
 	</div>
 </div>
