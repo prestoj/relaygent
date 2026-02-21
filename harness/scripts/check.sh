@@ -163,6 +163,21 @@ else ck_warn "Slack" "not configured (optional — run ./setup.sh)"; fi
 [ -d "$REPO_DIR/email/node_modules" ] || ck_warn "Email MCP" "deps missing — run: npm install --prefix $REPO_DIR/email"
 [ -f "$HOME/.relaygent/gmail/credentials.json" ] || ck_warn "Gmail" "not configured (optional — run: node $REPO_DIR/email/setup-gmail.mjs)"
 
+# GitHub CLI
+if command -v gh &>/dev/null; then
+    if gh auth status &>/dev/null; then ck_ok "GitHub CLI" "authenticated"
+    else ck_warn "GitHub CLI" "installed but not authenticated — run: gh auth login"; fi
+else ck_warn "GitHub CLI" "not installed (optional — needed for GitHub notifications)"; fi
+
+# Linear
+LINEAR_KEY="$HOME/.relaygent/linear/api-key"
+if [ -f "$LINEAR_KEY" ] && [ -s "$LINEAR_KEY" ]; then ck_ok "Linear" "API key configured"
+else ck_warn "Linear" "no API key (optional — needed for issue tracking)"; fi
+
+# CLAUDE.md
+if [ -f "$REPO_DIR/CLAUDE.md" ]; then ck_ok "CLAUDE.md" "project instructions present"
+else ck_warn "CLAUDE.md" "missing — run: ./setup.sh to generate"; fi
+
 # --- Summary ---
 echo ""
 ck_summary
