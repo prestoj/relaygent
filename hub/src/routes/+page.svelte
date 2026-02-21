@@ -12,7 +12,7 @@
 	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 	import PrWidget from '$lib/components/PrWidget.svelte';
 	import NotificationsWidget from '$lib/components/NotificationsWidget.svelte';
-	import Heatmap from '$lib/components/Heatmap.svelte';
+
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -107,7 +107,7 @@
 <TodoWidget {activities} />
 <NotificationsWidget />
 <PrWidget />
-<Heatmap />
+
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
 		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
