@@ -17,6 +17,16 @@
 		<span class="ob-label">Knowledge Base</span>
 		<span class="ob-desc">Persistent memory across sessions</span>
 	</a>
+	<a href="/help" class="ob-card">
+		<span class="ob-icon">&#128161;</span>
+		<span class="ob-label">Help</span>
+		<span class="ob-desc">Getting started guide and shortcuts</span>
+	</a>
+	<a href="/settings" class="ob-card">
+		<span class="ob-icon">&#9881;</span>
+		<span class="ob-label">Settings</span>
+		<span class="ob-desc">Services, integrations, and setup</span>
+	</a>
 </div>
 <div class="start-hint">Click <strong>Start</strong> above to launch the agent, or run <code>relaygent start</code></div>
 
@@ -25,8 +35,8 @@
 	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }
 	.waiting-hint { font-size: 0.85em; color: var(--text-muted); margin-bottom: 1.5em; }
 	.onboard { display: flex; gap: 1em; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5em; }
-	.ob-card { display: flex; flex-direction: column; align-items: center; gap: 0.3em; padding: 1em 1.2em; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; min-width: 140px; transition: border-color 0.15s, box-shadow 0.15s; cursor: pointer; font: inherit; }
+	.ob-card { display: flex; flex-direction: column; align-items: center; gap: 0.3em; padding: 1em 1.2em; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; min-width: 130px; transition: border-color 0.15s, box-shadow 0.15s; cursor: pointer; font: inherit; }
 	.ob-card:hover { border-color: var(--link); box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; }
-	.ob-icon { font-size: 1.5em; }  .ob-label { font-weight: 600; color: var(--text); font-size: 0.9em; }  .ob-desc { color: var(--text-muted); font-size: 0.75em; }
+	.ob-icon { font-size: 1.5em; }  .ob-label { font-weight: 600; color: var(--text); font-size: 0.9em; }  .ob-desc { color: var(--text-muted); font-size: 0.75em; text-align: center; }
 	.start-hint { font-size: 0.8em; color: var(--text-muted); }
 </style>
