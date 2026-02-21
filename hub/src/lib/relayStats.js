@@ -3,8 +3,6 @@ import path from 'path';
 
 const CLAUDE_PROJECTS = path.join(process.env.HOME, '.claude', 'projects');
 const CACHE_TTL = 5 * 60 * 1000;
-// Opus 4.6 pricing per token (USD). Update if model changes.
-const PRICE = { input: 15e-6, output: 75e-6, cacheRead: 1.5e-6, cacheCreate: 18.75e-6 };
 let cached = null;
 let cacheTime = 0;
 
@@ -31,7 +29,6 @@ export function parseSessionStats(jsonlPath) {
 		if (lines.length < 2) return null;
 
 		let startTs = null, endTs = null, totalTokens = 0, outputTokens = 0;
-		let inputTokens = 0, cacheReadTokens = 0, cacheCreateTokens = 0;
 		const tools = {};
 		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null, handoffGoal = null;
 
@@ -47,11 +44,9 @@ export function parseSessionStats(jsonlPath) {
 					turns++;
 					const usage = entry.message?.usage;
 					if (usage) {
-						const inp = usage.input_tokens || 0;
-						const cr = usage.cache_read_input_tokens || 0;
-						const cc = usage.cache_creation_input_tokens || 0;
-						inputTokens += inp; cacheReadTokens += cr; cacheCreateTokens += cc;
-						totalTokens += inp + cr + cc;
+						totalTokens += (usage.input_tokens || 0)
+							+ (usage.cache_creation_input_tokens || 0)
+							+ (usage.cache_read_input_tokens || 0);
 						outputTokens += usage.output_tokens || 0;
 					}
 					const content = entry.message?.content;
@@ -79,11 +74,9 @@ export function parseSessionStats(jsonlPath) {
 		const start = new Date(startTs);
 		const end = new Date(endTs);
 		const durationMin = Math.round((end - start) / 60000);
-		const cost = inputTokens * PRICE.input + outputTokens * PRICE.output
-			+ cacheReadTokens * PRICE.cacheRead + cacheCreateTokens * PRICE.cacheCreate;
 
 		return {
-			start: startTs, durationMin, totalTokens, outputTokens, cost,
+			start: startTs, durationMin, totalTokens, outputTokens,
 			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
 			contextPct: Math.round(totalTokens / 2000),
 		};
@@ -104,7 +97,7 @@ export function getRelayStats() {
 	const workspaces = getAllWorkspaces();
 	const sessions = [];
 	const globalTools = {};
-	let totalTokensAll = 0, totalOutputAll = 0, totalToolCalls = 0, totalCostAll = 0;
+	let totalTokensAll = 0, totalOutputAll = 0, totalToolCalls = 0;
 
 	for (const ws of workspaces) {
 		try {
@@ -116,7 +109,6 @@ export function getRelayStats() {
 				totalTokensAll += s.totalTokens;
 				totalOutputAll += s.outputTokens;
 				totalToolCalls += s.toolCalls;
-				totalCostAll += s.cost || 0;
 				for (const [name, count] of Object.entries(s.tools)) {
 					globalTools[name] = (globalTools[name] || 0) + count;
 				}
@@ -153,7 +145,6 @@ export function getRelayStats() {
 		totalTokens: totalTokensAll,
 		totalOutput: totalOutputAll,
 		totalToolCalls,
-		totalCost: totalCostAll,
 		avgDuration: durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0,
 		avgContext: contexts.length ? Math.round(contexts.reduce((a, b) => a + b, 0) / contexts.length) : 0,
 		medianDuration: durations.length ? durations.sort((a, b) => a - b)[Math.floor(durations.length / 2)] : 0,

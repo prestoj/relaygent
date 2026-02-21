@@ -6,7 +6,6 @@
 		if (n >= 1000) return `${(n/1000).toFixed(0)}K`;
 		return String(n);
 	}
-	function fmtCost(n) { return n != null ? `$${n.toFixed(2)}` : ''; }
 	function fmtRelative(id) {
 		try {
 			const m = id.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
@@ -31,7 +30,7 @@
 <div class="stats-row">
 	<span class="stat"><strong>{st.totalSessions}</strong> sessions</span>
 	<span class="sep">·</span>
-	<span class="stat"><strong>{fmtCost(st.totalCost)}</strong> total cost</span>
+	<span class="stat"><strong>{fmtTokens(st.totalTokens)}</strong> tokens in</span>
 	<span class="sep">·</span>
 	<span class="stat"><strong>{st.avgDuration}m</strong> avg</span>
 	{#if st.topTools[0]}<span class="sep">·</span>
@@ -49,7 +48,7 @@
 					<a href="/sessions/{s.id}">{s.displayTime}</a>
 					{#if fmtRelative(s.id)}<span class="rel">{fmtRelative(s.id)}</span>{/if}
 					<span class="meta">
-						{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.cost != null}{fmtCost(s.cost)} · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
+						{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{i === 0 ? ' · current' : ''}
 					</span>
 				</div>
 				{#if s.summary}<p class="sum">{s.summary}</p>{/if}
