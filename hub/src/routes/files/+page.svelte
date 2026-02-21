@@ -4,11 +4,13 @@
 	let uploading = $state(false);
 	let dragOver = $state(false);
 	let error = $state('');
+	let uploadProgress = $state('');
 
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 	}
 
 	function fmtDate(iso) {
@@ -18,20 +20,34 @@
 		return d.toLocaleDateString();
 	}
 
+	function uploadOne(file) {
+		return new Promise((resolve) => {
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', `/api/files/stream?name=${encodeURIComponent(file.name)}`);
+			xhr.upload.onprogress = (e) => {
+				if (e.lengthComputable) {
+					const pct = Math.round(e.loaded / e.total * 100);
+					uploadProgress = `${file.name}: ${pct}% (${fmtSize(e.loaded)} / ${fmtSize(e.total)})`;
+				}
+			};
+			xhr.onload = () => {
+				try {
+					const d = JSON.parse(xhr.responseText);
+					if (xhr.status >= 200 && xhr.status < 300) { files = [d, ...files.filter(f => f.name !== d.name)]; }
+					else { error = d.error || 'Upload failed'; }
+				} catch { error = 'Upload failed'; }
+				resolve();
+			};
+			xhr.onerror = () => { error = 'Upload failed'; resolve(); };
+			xhr.send(file);
+		});
+	}
+
 	async function uploadFiles(fileList) {
 		if (!fileList?.length) return;
-		uploading = true; error = '';
-		for (const file of fileList) {
-			const form = new FormData();
-			form.append('file', file);
-			try {
-				const res = await fetch('/api/files', { method: 'POST', body: form });
-				const d = await res.json();
-				if (!res.ok) { error = d.error || 'Upload failed'; continue; }
-				files = [d, ...files.filter(f => f.name !== d.name)];
-			} catch { error = 'Upload failed'; }
-		}
-		uploading = false;
+		uploading = true; error = ''; uploadProgress = '';
+		for (const file of fileList) await uploadOne(file);
+		uploading = false; uploadProgress = '';
 	}
 
 	function onDrop(e) { e.preventDefault(); dragOver = false; uploadFiles(e.dataTransfer?.files); }
@@ -54,7 +70,7 @@
 
 <div class="drop-zone" class:over={dragOver} class:uploading ondrop={onDrop} ondragover={onDragOver} ondragleave={onDragLeave}>
 	{#if uploading}
-		<div class="dz-text">Uploading...</div>
+		<div class="dz-text">{uploadProgress || 'Uploading...'}</div>
 	{:else}
 		<div class="dz-text">Drag & drop files here</div>
 		<div class="dz-or">or</div>
