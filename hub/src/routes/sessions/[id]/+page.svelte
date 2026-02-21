@@ -53,6 +53,7 @@
 	<span class="stat"><strong>{toolCalls}</strong> tools</span>
 	<span class="sep">·</span>
 	<span class="stat"><strong>{textBlocks}</strong> text blocks</span>
+	{#if data.cost != null}<span class="sep">·</span><span class="stat"><strong>${data.cost.toFixed(2)}</strong> est. cost</span>{/if}
 </div>
 {/if}
 {#if data.summary}<p class="sum">{data.summary}</p>{/if}
