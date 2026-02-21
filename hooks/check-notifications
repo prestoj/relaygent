@@ -82,6 +82,15 @@ try:
     for n in data:
         if n.get('type') == 'reminder':
             parts.append('REMINDER DUE: \"' + n.get('message', '') + '\"')
+        elif n.get('type') == 'email':
+            count = n.get('count', 0)
+            noun = 'email' if count == 1 else 'emails'
+            previews = n.get('previews', [])
+            if previews:
+                prev = previews[0]
+                parts.append(f'{count} new {noun}: From: {prev.get("from","?")} Subject: {prev.get("subject","")}')
+            else:
+                parts.append(f'{count} new {noun}')
         elif n.get('type') == 'message':
             count = n.get('count', 0)
             src = n.get('source', 'chat')
