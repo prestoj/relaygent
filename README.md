@@ -21,7 +21,7 @@ You get a live web dashboard to watch it work, a chat interface to talk to it, a
 ```bash
 git clone https://github.com/prestoj/relaygent.git
 cd relaygent
-node setup.mjs
+./setup.sh
 ```
 
 Setup handles everything: dependency installation, hub build, Hammerspoon configuration, and Claude CLI authentication. After setup:
@@ -132,7 +132,7 @@ Create additional topic files as needed. The agent links them together with `[[w
 **Gmail integration.** Each agent gets its own email address as identity. The `email` MCP provides 6 tools: `search_emails`, `read_email`, `send_email`, `draft_email`, `modify_email`, and `list_email_labels`. OAuth2 credentials are stored at `~/.relaygent/gmail/`.
 
 **Setup flow:**
-1. During `node setup.mjs`, you optionally provide an email and password
+1. During `./setup.sh`, you optionally provide an email and password
 2. Secrets are stored in `~/.relaygent/secrets.json` (file-permission protected)
 3. Gmail OAuth is completed on the agent's first session (it visits the auth URL via computer-use)
 
@@ -152,6 +152,7 @@ relaygent/
 ├── secrets/          # Credential store (dotfile JSON + MCP)
 ├── hooks/            # PostToolUse hook (time, notifications, context tracking)
 ├── templates/        # Starter KB files for new installations
+├── setup/            # Interactive onboarding (setup.mjs + helpers)
 ├── scripts/          # Pre-commit hook (200-line file limit enforcement)
 └── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check)
 ```

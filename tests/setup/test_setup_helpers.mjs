@@ -26,7 +26,7 @@ before(() => {
 after(() => rmSync(TEST_DIR, { recursive: true, force: true }));
 
 const { envFromConfig, setupClaudeMd, setupHooks } =
-	await import('../../setup-helpers.mjs');
+	await import('../../setup/setup-helpers.mjs');
 
 const C = { reset: '', bold: '', dim: '', cyan: '', green: '', yellow: '', red: '' };
 
