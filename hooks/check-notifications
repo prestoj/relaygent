@@ -69,11 +69,13 @@ if ! pgrep -f "slack-socket-listener" &>/dev/null; then
     fi
 fi
 
-# Ensure hub is running (auto-restart if crashed — same pattern as poller/socket)
-HUB_PID_FILE="$HOME/.relaygent/hub.pid"
-hub_alive=false
-[ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE" 2>/dev/null)" 2>/dev/null && hub_alive=true
+# Ensure hub is running (auto-restart — detects LaunchAgent/systemd/bare process)
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CFG="$HOME/.relaygent/config.json"
+HP=$(python3 -c "import json; print(json.load(open('$CFG'))['hub']['port'])" 2>/dev/null || echo 8080)
+hub_alive=false
+# HTTP check works regardless of how hub was started (LaunchAgent, systemd, bare nohup)
+curl -sf --max-time 1 "http://127.0.0.1:$HP/api/health" >/dev/null 2>&1 && hub_alive=true
 if [ "$hub_alive" = false ] && [ -f "$REPO_DIR/hub/build/handler.js" ]; then
     HUB_CRASH_FILE="/tmp/relaygent-hub-last-start"
     hub_ok=true
@@ -83,16 +85,21 @@ if [ "$hub_alive" = false ] && [ -f "$REPO_DIR/hub/build/handler.js" ]; then
     fi
     if [[ "$hub_ok" = true ]]; then
         date +%s > "$HUB_CRASH_FILE"
-        CFG="$HOME/.relaygent/config.json"
-        HP=$(python3 -c "import json; print(json.load(open('$CFG'))['hub']['port'])" 2>/dev/null || echo 8080)
-        NP=$(python3 -c "import json; print(json.load(open('$CFG'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
-        KD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['kb'])" 2>/dev/null || echo "$REPO_DIR/knowledge/topics")
-        DD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
-        mkdir -p "$REPO_DIR/logs"
-        PORT="$HP" RELAY_STATUS_FILE="$DD/relay-status.json" RELAYGENT_KB_DIR="$KD" \
-            RELAYGENT_DATA_DIR="$DD" RELAYGENT_NOTIFICATIONS_PORT="$NP" \
-            nohup node "$REPO_DIR/hub/ws-server.mjs" >> "$REPO_DIR/logs/relaygent-hub.log" 2>&1 &
-        echo $! > "$HUB_PID_FILE"
+        # Prefer service manager restart (handles env, logging, auto-restart)
+        if [ "$(uname)" = "Darwin" ] && launchctl list 2>/dev/null | grep -q com.relaygent.hub; then
+            launchctl start com.relaygent.hub 2>/dev/null
+        elif [ "$(uname)" = "Linux" ] && systemctl --user is-enabled relaygent-hub &>/dev/null; then
+            systemctl --user start relaygent-hub 2>/dev/null
+        else
+            NP=$(python3 -c "import json; print(json.load(open('$CFG'))['services']['notifications']['port'])" 2>/dev/null || echo 8083)
+            KD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['kb'])" 2>/dev/null || echo "$REPO_DIR/knowledge/topics")
+            DD=$(python3 -c "import json; print(json.load(open('$CFG'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
+            mkdir -p "$REPO_DIR/logs"
+            PORT="$HP" RELAY_STATUS_FILE="$DD/relay-status.json" RELAYGENT_KB_DIR="$KD" \
+                RELAYGENT_DATA_DIR="$DD" RELAYGENT_NOTIFICATIONS_PORT="$NP" \
+                nohup node "$REPO_DIR/hub/ws-server.mjs" >> "$REPO_DIR/logs/relaygent-hub.log" 2>&1 &
+            echo $! > "$HOME/.relaygent/hub.pid"
+        fi
     fi
 fi
 
@@ -182,7 +189,6 @@ for line in reversed(data.strip().split(chr(10))):
 fi
 
 export _HOOK_CTX="$CTX"
-# Write hook output to file for hub dashboard visibility
 HOOK_FILE="/tmp/relaygent-hook-output.json"
 _TOOL_NAME="${TOOL_NAME:-unknown}" _FILL="${FILL_PCT:-0}" python3 -c "
 import json,os,time

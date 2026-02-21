@@ -20,11 +20,40 @@ case "${1:-help}" in
         check_process "Email-poller" "email-poller"
         [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } \
             || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
+        # Agent state + context fill
+        STATUS_FILE="${DATA_DIR:-$SCRIPT_DIR/data}/relay-status.json"
+        if [ -f "$STATUS_FILE" ]; then
+            read -r AGENT_ST UPDATED <<< "$(python3 -c "
+import json,sys
+from datetime import datetime as D
+d=json.load(open('$STATUS_FILE'))
+s=d.get('status','unknown')
+u=d.get('updated','')
+try:
+ dt=D.fromisoformat(u); elapsed=int((D.now(dt.tzinfo)-dt).total_seconds())
+ h,m=divmod(elapsed//60,60); t=f'{h}h{m:02d}m' if h else f'{m}m'
+except: t='?'
+print(s,t)
+" 2>/dev/null || echo "unknown ?")"
+            case "$AGENT_ST" in
+                working)  echo -e "\n  Agent: ${GREEN}$AGENT_ST${NC} (${UPDATED} in state)" ;;
+                sleeping) echo -e "\n  Agent: ${YELLOW}$AGENT_ST${NC} (${UPDATED})" ;;
+                *)        echo -e "\n  Agent: $AGENT_ST" ;;
+            esac
+        fi
+        PCT_FILE="/tmp/relaygent-context-pct"
+        if [ -f "$PCT_FILE" ]; then
+            PCT=$(cat "$PCT_FILE" 2>/dev/null || echo "0")
+            if [ "${PCT:-0}" -ge 85 ] 2>/dev/null; then
+                echo -e "  Context: ${RED}${PCT}%${NC} (wrapping up)"
+            elif [ "${PCT:-0}" -ge 50 ] 2>/dev/null; then
+                echo -e "  Context: ${YELLOW}${PCT}%${NC}"
+            else
+                echo -e "  Context: ${PCT}%"
+            fi
+        fi
         ;;
-    logs)
-        SVC="${2:-}"; [ -n "$SVC" ] && F="$SCRIPT_DIR/logs/relaygent-$SVC.log" || F="$SCRIPT_DIR/logs/relaygent*.log"
-        tail -f $F 2>/dev/null || echo -e "${RED}No logs found${NC}"
-        ;;
+    logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     orient|check|update|health|clean-logs) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
@@ -43,7 +72,7 @@ case "${1:-help}" in
             "stop" "Stop everything" \
             "restart" "Restart all services" \
             "status" "Show what's running" \
-            "logs [service]" "Tail live service logs" \
+            "logs [service]" "View logs (-f follow, -n lines, --list)" \
             "orient" "Quick system status snapshot" \
             "check" "Diagnose configuration" \
             "health" "Ping all services and report status" \
