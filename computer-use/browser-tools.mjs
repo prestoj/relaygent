@@ -17,7 +17,8 @@ export function registerBrowserTools(server, IS_LINUX) {
       new_tab: bool.describe("Open in new tab") },
     async ({ url, new_tab }) => {
       if (!new_tab && await cdpNavigate(url)) {
-        await hsCall("POST", "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
+        // Focus existing Chrome window — launch would open a new tab on Linux
+        await hsCall("POST", IS_LINUX ? "/focus" : "/launch", { app: IS_LINUX ? "google-chrome" : "Google Chrome" });
         return actionRes(`Navigated to ${url}`, 800);
       }
       const mod = IS_LINUX ? "ctrl" : "cmd";
