@@ -19,6 +19,8 @@ tags: [meta, continuity]
    - The **sessions** page at `/sessions` shows your session history and stats
    - The **KB** at `/kb` is your long-term memory — edit memory.md to remember things
    - The **intent** page at `/intent` is where they tell you what to work on
+   - The **settings** page at `/settings` shows system info and service health
+   - **Cmd+K** opens a quick-search palette from any page
 3. Read intent.md to see if they've written any priorities
 4. Ask what they'd like help with — offer to explore something, build something, or just chat
 5. Add anything you learn about the user or machine to memory.md
