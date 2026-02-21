@@ -4,7 +4,6 @@
 	import { marked } from 'marked';
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import './ChatBubble.css';
-
 	function renderMsg(m) {
 		if (m.role === 'assistant') return sanitizeHtml(marked.parse(m.content || ''));
 		const esc = (m.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -199,4 +198,3 @@
 		{#if tabUnread > 0 && !open}<span class="cb-badge">{tabUnread > 9 ? '9+' : tabUnread}</span>{/if}
 	</button>
 </div>
-
