@@ -21,6 +21,17 @@ const SCALED_PATH = '/tmp/claude-screenshot-scaled.png';
 const MAX_BYTES = 5 * 1024 * 1024;
 const FAKE_PNG = Buffer.from('fake-png-content');
 
+// Build a minimal fake PNG header with a given width (bytes 16-19 big-endian).
+function fakePngHeader(width, totalSize) {
+	const buf = Buffer.alloc(totalSize || 24, 0);
+	buf.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0); // PNG sig
+	buf.writeUInt32BE(13, 8); // IHDR length
+	buf.set([0x49, 0x48, 0x44, 0x52], 12); // "IHDR"
+	buf.writeUInt32BE(width, 16); // width
+	buf.writeUInt32BE(720, 20); // height
+	return buf;
+}
+
 // --- Fake sips CLI (prepend to PATH before module import) ---
 const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-sips-'));
 const sipsBin = path.join(binDir, 'sips');
@@ -75,17 +86,15 @@ test('GET /api/screen: returns PNG bytes and correct headers on success', async 
 	assert.ok(body.equals(FAKE_PNG), 'response body should match screenshot file');
 });
 
-test('GET /api/screen: oversized file triggers sips scaling', async () => {
+test('GET /api/screen: wide image (Retina) triggers sips scaling', async () => {
 	clearScreenshots();
-	fileToWrite = Buffer.alloc(MAX_BYTES + 1, 0); // just over 5 MB
+	fileToWrite = fakePngHeader(2560, 1024); // 2560px wide — exceeds MAX_WIDTH
 	const res = await GET();
 	fileToWrite = null;
 
 	assert.equal(res.status, 200);
 	assert.equal(res.headers.get('Content-Type'), 'image/png');
-	// sips should have written the scaled file
 	assert.ok(fs.existsSync(SCALED_PATH), 'sips should have created scaled file');
-	// Response body should come from scaled path
 	const body = Buffer.from(await res.arrayBuffer());
 	assert.ok(body.toString().includes('SCALED'), 'body should be sips output');
 });
