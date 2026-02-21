@@ -7,6 +7,7 @@ CYAN='\033[0;36m'; NC='\033[0m'; RED='\033[0;31m'
 
 case "${1:-help}" in
     setup)   bash "$SCRIPT_DIR/setup.sh" ;;
+    chat)    bash "$SCRIPT_DIR/harness/scripts/chat.sh" "${@:2}" ;;
     start)   bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
     stop)    bash "$SCRIPT_DIR/harness/scripts/stop.sh"; exit 0 ;;
     restart) bash "$SCRIPT_DIR/harness/scripts/stop.sh"; sleep 1; bash "$SCRIPT_DIR/harness/scripts/start.sh" ;;
@@ -99,6 +100,7 @@ print(s,t)
             "set-password" "Set/remove hub dashboard auth (--remove)" \
             "mcp" "Manage MCP servers (list, add, remove)" \
             "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
+            "chat <msg>" "Send a message to the agent (--read to view)" \
             "open [page]" "Open hub dashboard in browser" \
             "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
             "version" "Show version info"
