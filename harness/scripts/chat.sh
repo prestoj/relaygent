@@ -12,7 +12,7 @@ CYAN='\033[0;36m'; DIM='\033[2m'; NC='\033[0m'; GREEN='\033[0;32m'
 
 # Check hub is reachable
 if ! curl -sf -o /dev/null "$URL?limit=1" 2>/dev/null; then
-    echo "Error: Hub not reachable at localhost:$PORT" >&2; exit 1
+    echo -e "Error: Hub not reachable at localhost:$PORT\n  Run: ${CYAN}relaygent start${NC}" >&2; exit 1
 fi
 
 case "${1:---help}" in
