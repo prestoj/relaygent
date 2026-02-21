@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url';
 import { summarizeInput, summarizeResult, extractResultText, findLatestSession } from './src/lib/relayActivity.js';
 import { createSessionParser } from './src/lib/sessionParser.js';
 import { handleStreamUpload } from './src/lib/streamUpload.js';
+import { isAuthEnabled, validateSession, COOKIE_NAME } from './src/lib/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
@@ -24,18 +25,24 @@ const HOOK_OUTPUT = '/tmp/relaygent-hook-output.json';
 if (!process.env.BODY_SIZE_LIMIT) process.env.BODY_SIZE_LIMIT = String(50 * 1024 * 1024);
 
 const { handler } = await import('./build/handler.js');
+function checkReqAuth(req) {
+	if (!isAuthEnabled()) return true;
+	const cookies = (req.headers.cookie || '').split(';').reduce((o, c) => {
+		const [k, ...v] = c.trim().split('='); o[k] = v.join('='); return o;
+	}, {});
+	return validateSession(cookies[COOKIE_NAME]);
+}
 const server = createServer((req, res) => {
-	if (req.method === 'POST' && req.url?.startsWith('/api/files/stream')) handleStreamUpload(req, res);
-	else handler(req, res);
+	if (req.method === 'POST' && req.url?.startsWith('/api/files/stream')) {
+		if (!checkReqAuth(req)) { res.writeHead(401); res.end('Unauthorized'); return; }
+		handleStreamUpload(req, res);
+	} else handler(req, res);
 });
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
-	if (req.url === '/ws') {
-		wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
-	} else {
-		socket.destroy();
-	}
+	if (req.url !== '/ws' || !checkReqAuth(req)) { socket.destroy(); return; }
+	wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
 });
 
 function broadcast(msg) {
