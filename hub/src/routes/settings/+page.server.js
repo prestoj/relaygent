@@ -1,6 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { getServiceHealth } from '$lib/serviceHealth.js';
 
 function fmtBytes(b) {
@@ -48,5 +49,12 @@ export async function load() {
 		memUsed: fmtBytes(os.totalmem() - os.freemem()),
 		memTotal: fmtBytes(os.totalmem()),
 	};
-	return { system, services, mcpServers: loadMcpServers(), config: loadConfig() };
+	let version = '';
+	try {
+		const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
+		const hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
+		const date = execFileSync('git', ['log', '-1', '--format=%cd', '--date=short'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
+		version = `${hash} (${date})`;
+	} catch { /* not in git repo */ }
+	return { system, services, mcpServers: loadMcpServers(), config: loadConfig(), version };
 }
