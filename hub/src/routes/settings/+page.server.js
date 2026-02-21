@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { getServiceHealth } from '$lib/serviceHealth.js';
-import { getCodeHealth } from '$lib/codeHealth.js';
 
 function fmtBytes(b) {
 	if (b >= 1e9) return `${(b / 1e9).toFixed(1)} GB`;
@@ -86,6 +85,5 @@ export async function load() {
 		version = `${hash} (${date})`;
 	} catch { /* not in git repo */ }
 	const config = loadConfig();
-	const codeHealth = getCodeHealth(repoRoot);
-	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config), codeHealth };
+	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config) };
 }
