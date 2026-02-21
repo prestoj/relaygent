@@ -18,8 +18,14 @@ export async function GET() {
 			signal: AbortSignal.timeout(8000),
 		});
 		let imgPath = SCREENSHOT_PATH;
-		const stat = fs.statSync(SCREENSHOT_PATH);
-		if (stat.size > MAX_BYTES) {
+		// Read PNG width from header (bytes 16-19, big-endian uint32).
+		// Always scale Retina screenshots so interactive control coords match screen points.
+		const hdr = Buffer.alloc(24);
+		const fd = fs.openSync(SCREENSHOT_PATH, 'r');
+		fs.readSync(fd, hdr, 0, 24, 0);
+		fs.closeSync(fd);
+		const pngWidth = hdr.readUInt32BE(16);
+		if (pngWidth > MAX_WIDTH) {
 			execSync(`sips -Z ${MAX_WIDTH} --out "${SCALED_PATH}" "${SCREENSHOT_PATH}"`, { timeout: 5000 });
 			imgPath = SCALED_PATH;
 		}
