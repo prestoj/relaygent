@@ -1,4 +1,5 @@
 <script>
+	import '../app.css';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
@@ -81,38 +82,6 @@
 </div>
 
 <style>
-	:global(html), :global(body) {
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-		margin: 0; padding: 0; line-height: 1.6; background: #fafafa;
-		overflow-x: hidden; -webkit-text-size-adjust: 100%;
-	}
-	:global(body.dark-mode) { background: #0d1117; }
-
-	.app-wrapper {
-		--bg: #fafafa; --bg-surface: #fff; --text: #1a1a1a; --text-muted: #555;
-		--link: #2563eb; --border: #e5e5e5; --code-bg: #f0f0f0; --th-bg: #f5f5f5;
-		--error: #ef4444; --success: #22c55e; --warning: #f59e0b;
-		--error-bg: #fef2f2; --success-bg: #f0fdf4; --warning-bg: #fffbeb;
-		background: var(--bg); color: var(--text); min-height: 100vh;
-	}
-	.app-wrapper.dark {
-		--bg: #0d1117; --bg-surface: #161b22; --text: #e6edf3; --text-muted: #8b949e;
-		--link: #58a6ff; --border: #30363d; --code-bg: #21262d; --th-bg: #21262d;
-		--error: #f87171; --success: #4ade80; --warning: #fbbf24;
-		--error-bg: #451a1a; --success-bg: #14291a; --warning-bg: #422006;
-	}
-
-	:global(a) { color: var(--link); text-decoration: none; }
-	:global(a:hover) { text-decoration: underline; }
-	:global(code) { background: var(--code-bg); padding: 0.15em 0.4em; border-radius: 3px; font-size: 0.9em; }
-	:global(pre) { background: var(--code-bg); padding: 1em; border-radius: 6px; overflow-x: auto; }
-	:global(pre code) { background: none; padding: 0; }
-	:global(table) { border-collapse: collapse; width: 100%; }
-	:global(th, td) { border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: left; }
-	:global(th) { background: var(--th-bg); }
-	:global(blockquote) { border-left: 3px solid var(--border); margin-left: 0; padding-left: 1em; color: var(--text-muted); }
-	:global(h1, h2, h3) { margin-top: 1.5em; margin-bottom: 0.5em; }
-
 	nav {
 		display: flex; align-items: center; justify-content: space-between;
 		padding: 0.75em 1.5em; background: var(--bg-surface);
