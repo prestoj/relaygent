@@ -9,7 +9,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import {
 	isConfigured, listTeams, listIssues, getIssue,
-	createIssue, updateIssue, listStates, listLabels,
+	createIssue, updateIssue, archiveIssue, listStates, listLabels,
 } from "../hub/src/lib/linear.js";
 
 const server = new McpServer({ name: "linear", version: "1.0.0" });
@@ -122,6 +122,17 @@ server.tool("update_issue", "Update a Linear issue (status, assignee, title, etc
 			if (!result.success) return txt("Failed to update issue.");
 			const i = result.issue;
 			return txt(`Updated ${i.identifier}: ${i.title} [${i.state?.name}]`);
+		} catch (e) { return txt(`Error: ${e.message}`); }
+	}
+);
+
+server.tool("archive_issue", "Archive a Linear issue (removes from active count).",
+	{ issue_id: z.string().describe("Issue UUID") },
+	async ({ issue_id }) => {
+		try {
+			checkConfigured();
+			const result = await archiveIssue(issue_id);
+			return txt(result.success ? `Archived issue ${issue_id}` : "Failed to archive issue.");
 		} catch (e) { return txt(`Error: ${e.message}`); }
 	}
 );
