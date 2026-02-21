@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats test logs orient check health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open version help"
+_relaygent_commands="setup start stop restart status stats test logs orient check health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -33,6 +33,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'install-services:Set up auto-restart services'
             'set-password:Set/remove hub auth (--remove)'
             'mcp:Manage MCP servers (list, add, remove, test)'
+            'chat:Send a message to the agent (--read to view)'
             'open:Open hub dashboard in browser'
             'archive-linear:Archive old Linear issues'
             'version:Show version info'
@@ -49,6 +50,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 logs) compadd -- --list -f -n ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
+                chat) compadd -- --read ;;
             esac
         fi
     }
@@ -73,6 +75,8 @@ else
                 COMPREPLY=($(compgen -W "--dry-run --days" -- "$cur")) ;;
             set-password)
                 COMPREPLY=($(compgen -W "--remove" -- "$cur")) ;;
+            chat)
+                COMPREPLY=($(compgen -W "--read" -- "$cur")) ;;
         esac
     }
     complete -F _relaygent relaygent
