@@ -86,3 +86,13 @@ check_process() {
         echo -e "  $n: ${RED}stopped${NC}"
     fi
 }
+
+verify_service() {
+    local name=$1 url=$2 retries=${3:-5}
+    for i in $(seq 1 "$retries"); do
+        sleep 1
+        if curl -sf --max-time 2 "$url" >/dev/null 2>&1; then return 0; fi
+    done
+    echo -e "    ${YELLOW}Warning: $name started but not responding after ${retries}s${NC}"
+    return 1
+}

@@ -77,11 +77,13 @@ start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" \
     RELAY_STATUS_FILE="$REPO_DIR/data/relay-status.json" \
     RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$REPO_DIR/data" \
     RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$REPO_DIR/hub/ws-server.mjs"
+verify_service "Hub" "http://localhost:$HUB_PORT/" 5 || true
 
 # Notifications
 ensure_venv "$REPO_DIR/notifications"
 start_service "Notifications (port $NOTIF_PORT)" "notifications" \
     "$REPO_DIR/notifications/.venv/bin/python3" "$REPO_DIR/notifications/server.py"
+verify_service "Notifications" "http://localhost:$NOTIF_PORT/health" 3 || true
 
 # Optional services
 [ -f "$HOME/.relaygent/slack/app-token" ] && \
