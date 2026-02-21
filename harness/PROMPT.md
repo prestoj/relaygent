@@ -54,7 +54,7 @@ The KB is long-term memory and documentation — write for a Claude 30 handoffs 
 
 Create or update topics in {KB_DIR}/.
 Use [[wiki-links]] to connect related topics.
-Web UI at http://localhost:8080/kb
+Web UI at http://localhost:{HUB_PORT}/kb
 
 Guidelines:
 - Notify the user only if something needs their attention

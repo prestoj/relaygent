@@ -19,6 +19,7 @@ def _build_prompt() -> bytes:
         cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
         kb = Path(cfg["paths"]["kb"])
         prompt = prompt.replace(b"{KB_DIR}", str(kb).encode())
+        prompt = prompt.replace(b"{HUB_PORT}", str(cfg.get("hub", {}).get("port", 8080)).encode())
         mem = (kb / "MEMORY.md").read_text().strip()
         if mem:
             prompt += b"\n\n<memory>\n" + mem.encode() + b"\n</memory>\n"
