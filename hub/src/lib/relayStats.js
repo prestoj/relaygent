@@ -6,6 +6,10 @@ const CACHE_TTL = 5 * 60 * 1000;
 let cached = null;
 let cacheTime = 0;
 
+// Per-file stats cache: avoids re-parsing unchanged JSONL files
+const _statsCache = new Map(); // path → { mtimeMs, size, stats }
+const MAX_STATS_CACHE = 200;
+
 function extractMainGoal(content) {
 	const lines = content.split('\n');
 	for (let i = 0; i < lines.length; i++) {
@@ -23,6 +27,10 @@ export function parseSessionStats(jsonlPath) {
 	try {
 		const stat = fs.statSync(jsonlPath);
 		if (stat.size < 500) return null;
+
+		// Check per-file cache (keyed on mtime + size)
+		const hit = _statsCache.get(jsonlPath);
+		if (hit && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size) return hit.stats;
 
 		const content = fs.readFileSync(jsonlPath, 'utf-8');
 		const lines = content.trim().split('\n');
@@ -75,11 +83,20 @@ export function parseSessionStats(jsonlPath) {
 		const end = new Date(endTs);
 		const durationMin = Math.round((end - start) / 60000);
 
-		return {
+		const result = {
 			start: startTs, durationMin, totalTokens, outputTokens,
 			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
 			contextPct: Math.round(totalTokens / 2000),
 		};
+
+		// Evict oldest entries if cache is full
+		if (_statsCache.size >= MAX_STATS_CACHE) {
+			const first = _statsCache.keys().next().value;
+			_statsCache.delete(first);
+		}
+		_statsCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, size: stat.size, stats: result });
+
+		return result;
 	} catch { return null; }
 }
 

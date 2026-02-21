@@ -14,11 +14,8 @@ export function summarizeInput(toolName, input) {
 	if (toolName === 'WebFetch') return input.url?.replace(/^https?:\/\//, '').slice(0, 60) || '';
 	if (toolName === 'WebSearch') return input.query || '';
 	if (toolName === 'Task') return input.description || '';
-	// MCP tools — extract the meaningful param
-	const n = toolName;
-	if (n.startsWith('mcp__wake-triggers__')) return input.message?.slice(0, 40) || '';
-	if (n.startsWith('mcp__')) {
-		// Generic MCP tool summary
+	if (toolName.startsWith('mcp__wake-triggers__')) return input.message?.slice(0, 40) || '';
+	if (toolName.startsWith('mcp__')) {
 		const firstVal = Object.values(input || {})[0];
 		return typeof firstVal === 'string' ? firstVal.slice(0, 60) : '';
 	}
@@ -144,9 +141,17 @@ export function getRelayActivity() {
 	};
 }
 
+let _sessionsCache = null; // { home, time, result }
+const SESSIONS_TTL = 30_000;
+export function clearSessionsCache() { _sessionsCache = null; }
+
 /** List all relay sessions, newest first. Each entry: { id, displayTime, size }. */
 export function listSessions() {
-	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
+	const home = process.env.HOME;
+	if (_sessionsCache && _sessionsCache.home === home && Date.now() - _sessionsCache.time < SESSIONS_TTL) {
+		return _sessionsCache.result;
+	}
+	const claudeProjects = path.join(home, '.claude', 'projects');
 	const prefix = getRunsPrefix();
 	const sessions = [];
 	try {
@@ -168,7 +173,9 @@ export function listSessions() {
 			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 		}
 	} catch { /* ignore */ }
-	return sessions.sort((a, b) => b.id.localeCompare(a.id));
+	const result = sessions.sort((a, b) => b.id.localeCompare(a.id));
+	_sessionsCache = { home, time: Date.now(), result };
+	return result;
 }
 
 /** Load a session by id (timestamp suffix of run dir). Returns parsed activity array. */
