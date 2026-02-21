@@ -1,6 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import { KEY_MAP } from '$lib/screenKeys.js';
+	import { toNativeCoords, sendScreenAction, buildKeyAction } from '$lib/screenInteraction.js';
 
 	let { fps = 10 } = $props();
 	let imgEl = $state(null);
@@ -11,9 +11,9 @@
 	let lastAction = $state('');
 	let interval = null;
 	let pending = false;
-	let dragState = null; // { startX, startY, moved } when dragging
-	let justDragged = false; // prevents click from firing after drag
-	let nativeWidth = 0; // actual screen width (before scaling)
+	let dragState = null;
+	let justDragged = false;
+	let nativeWidth = 0;
 
 	function refresh() {
 		if (!imgEl || pending) return;
@@ -26,57 +26,39 @@
 			})
 			.then(blob => {
 				imgEl.src = URL.createObjectURL(blob);
-				online = true;
-				everLoaded = true;
-				pending = false;
+				online = true; everLoaded = true; pending = false;
 			})
 			.catch(() => { online = false; pending = false; });
 	}
 
-	function toNative(e) {
-		const rect = imgEl.getBoundingClientRect();
-		// Use nativeWidth if available (corrects for server-side scaling to MAX_WIDTH)
-		const effectiveW = nativeWidth || imgEl.naturalWidth;
-		const effectiveH = imgEl.naturalWidth > 0
-			? effectiveW * imgEl.naturalHeight / imgEl.naturalWidth
-			: imgEl.naturalHeight;
-		const scaleX = effectiveW / rect.width;
-		const scaleY = effectiveH / rect.height;
-		return { x: Math.round((e.clientX - rect.left) * scaleX), y: Math.round((e.clientY - rect.top) * scaleY) };
-	}
-
-	async function sendAction(body) {
-		try {
-			const res = await fetch('/api/screen/action', {
-				method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body),
-			});
-			if (!res.ok) lastAction = `Error: ${(await res.json()).error}`;
-			else lastAction = `${body.action} OK`;
-		} catch { lastAction = 'Network error'; }
+	async function doAction(body, label) {
+		lastAction = label;
+		const res = await sendScreenAction(body);
+		if (!res.ok) lastAction = `Error: ${res.error}`;
 		setTimeout(refresh, 150);
 	}
 
+	function coords(e) { return toNativeCoords(e, imgEl, nativeWidth); }
+
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		const { x, y } = toNative(e);
+		const { x, y } = coords(e);
 		dragState = { startX: x, startY: y, moved: false };
 	}
 
 	function handleMouseMove(e) {
 		if (!dragState) return;
-		const { x, y } = toNative(e);
-		const dx = Math.abs(x - dragState.startX), dy = Math.abs(y - dragState.startY);
-		if (dx > 5 || dy > 5) dragState.moved = true;
+		const { x, y } = coords(e);
+		if (Math.abs(x - dragState.startX) > 5 || Math.abs(y - dragState.startY) > 5) dragState.moved = true;
 	}
 
 	function handleMouseUp(e) {
 		if (!dragState) return;
 		if (dragState.moved) {
 			justDragged = true;
-			const { x, y } = toNative(e);
-			sendAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y });
-			lastAction = `drag ${dragState.startX},${dragState.startY} → ${x},${y}`;
+			const { x, y } = coords(e);
+			doAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y },
+				`drag ${dragState.startX},${dragState.startY} → ${x},${y}`);
 			setTimeout(() => { justDragged = false; }, 100);
 		}
 		dragState = null;
@@ -85,68 +67,45 @@
 	function handleClick(e) {
 		if (!interactive || !imgEl || justDragged) return;
 		e.preventDefault();
-		const { x, y } = toNative(e);
-		sendAction({ action: 'click', x, y });
-		lastAction = `click ${x},${y}`;
+		const { x, y } = coords(e);
+		doAction({ action: 'click', x, y }, `click ${x},${y}`);
 	}
 
 	function handleDblClick(e) {
 		if (!interactive || !imgEl) return;
 		e.preventDefault();
-		const { x, y } = toNative(e);
-		sendAction({ action: 'click', x, y, double: true });
-		lastAction = `dblclick ${x},${y}`;
+		const { x, y } = coords(e);
+		doAction({ action: 'click', x, y, double: true }, `dblclick ${x},${y}`);
 	}
 
 	function handleContextMenu(e) {
 		if (!interactive) return;
 		e.preventDefault();
 		if (!imgEl) return;
-		const { x, y } = toNative(e);
-		sendAction({ action: 'click', x, y, right: true });
-		lastAction = `right-click ${x},${y}`;
+		const { x, y } = coords(e);
+		doAction({ action: 'click', x, y, right: true }, `right-click ${x},${y}`);
 	}
 
 	function handleKeyDown(e) {
 		if (!interactive) return;
 		e.preventDefault();
-		const modifiers = [];
-		if (e.metaKey) modifiers.push('cmd');
-		if (e.ctrlKey) modifiers.push('ctrl');
-		if (e.altKey) modifiers.push('alt');
-		if (e.shiftKey) modifiers.push('shift');
-		const mods = modifiers.length ? modifiers : undefined;
-		const named = KEY_MAP[e.key];
-		if (named) {
-			sendAction({ action: 'type', key: named, modifiers: mods });
-			lastAction = `key: ${mods ? mods.join('+') + '+' : ''}${named}`;
-		} else if (e.key.length === 1) {
-			// For printable chars, shift is already reflected in e.key (Shift+2 → '@')
-			// Only pass modifiers when cmd/ctrl/alt are held (keyboard shortcuts)
-			if (e.metaKey || e.ctrlKey || e.altKey) {
-				sendAction({ action: 'type', key: e.key, modifiers: mods });
-				lastAction = `key: ${mods.join('+')}+${e.key}`;
-			} else {
-				sendAction({ action: 'type', text: e.key });
-				lastAction = `type: "${e.key}"`;
-			}
-		}
+		const action = buildKeyAction(e);
+		if (action) doAction(action.body, action.label);
 	}
 
 	function handleScroll(e) {
 		if (!interactive || !imgEl) return;
 		e.preventDefault();
-		const { x, y } = toNative(e);
-		const direction = e.deltaY > 0 ? 'down' : 'up';
-		sendAction({ action: 'scroll', x, y, direction, amount: 3 });
-		lastAction = `scroll ${direction} at ${x},${y}`;
+		const { x, y } = coords(e);
+		const dir = e.deltaY > 0 ? 'down' : 'up';
+		doAction({ action: 'scroll', x, y, direction: dir, amount: 3 }, `scroll ${dir} at ${x},${y}`);
 	}
 
 	function handlePaste(e) {
 		if (!interactive) return;
 		e.preventDefault();
 		const text = e.clipboardData?.getData('text');
-		if (text) { sendAction({ action: 'type', text }); lastAction = `paste (${text.length} chars)`; }
+		if (text) doAction({ action: 'type', text }, `paste (${text.length} chars)`);
 	}
 
 	onMount(() => { refresh(); interval = setInterval(refresh, 1000 / fps); });
