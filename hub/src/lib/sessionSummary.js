@@ -22,13 +22,20 @@ export function compactActivity(activity, maxItems = 40) {
 	return lines.join('\n').slice(0, 6000);
 }
 
+/** Build a clean env for subprocess — strips CLAUDECODE to avoid nested-session error. */
+function cleanEnv() {
+	const env = { ...process.env, DISABLE_INTERACTIVITY: '1' };
+	delete env.CLAUDECODE;
+	return env;
+}
+
 /** Run claude CLI with haiku to summarize text. Returns the summary string. */
 function callHaiku(prompt) {
 	return new Promise((resolve, reject) => {
-		const child = execFile('claude', ['-p', prompt, '--model', 'claude-haiku-4-5-20251001'], {
+		execFile('claude', ['-p', prompt, '--model', 'claude-haiku-4-5-20251001'], {
 			timeout: 30000,
 			maxBuffer: 1024 * 64,
-			env: { ...process.env, DISABLE_INTERACTIVITY: '1', CLAUDECODE: '' },
+			env: cleanEnv(),
 		}, (err, stdout) => {
 			if (err) return reject(err);
 			resolve(stdout.trim());
