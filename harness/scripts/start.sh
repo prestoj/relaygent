@@ -77,8 +77,8 @@ if is_platform_managed hub; then
     platform_start "Hub (port $HUB_PORT)" "hub"
 else
     start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" \
-        RELAY_STATUS_FILE="$REPO_DIR/data/relay-status.json" \
-        RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$REPO_DIR/data" \
+        RELAY_STATUS_FILE="$DATA_DIR/relay-status.json" \
+        RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$DATA_DIR" \
         RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$REPO_DIR/hub/ws-server.mjs"
 fi
 verify_service "Hub" "http://localhost:$HUB_PORT/" 5 || true

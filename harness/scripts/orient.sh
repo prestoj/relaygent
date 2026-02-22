@@ -79,7 +79,7 @@ if [ "$PENDING_COUNT" -gt 0 ] 2>/dev/null; then
 fi
 
 # Relay status + context
-STATUS_FILE="$REPO_DIR/data/relay-status.json"
+STATUS_FILE="$DATA_DIR/relay-status.json"
 if [ -f "$STATUS_FILE" ]; then
     RELAY_ST=$(python3 -c "import json; d=json.load(open('$STATUS_FILE')); print(d.get('status','?'))" 2>/dev/null || echo "?")
     CTX_PCT=$(cat /tmp/relaygent-context-pct 2>/dev/null || echo "")

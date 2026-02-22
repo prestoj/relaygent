@@ -175,14 +175,14 @@ ck_summary() {
 }
 
 load_config_soft() {
-    HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""
+    HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""; DATA_DIR="$REPO_DIR/data"
     [ ! -f "$CONFIG_FILE" ] && return 1
     local cv
     cv="$(python3 -c "
 import json,shlex,sys
 try:
  c=json.load(open('$CONFIG_FILE'));s=c['services']
- for k,v in[('HUB_PORT',c['hub']['port']),
+ for k,v in[('HUB_PORT',c['hub']['port']),('DATA_DIR',c['paths']['data']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
   ('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
 except Exception: sys.exit(1)

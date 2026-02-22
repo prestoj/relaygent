@@ -55,7 +55,7 @@ if curl -sf --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/health" >/dev/null 2>
     ck_ok "Hub" "running on :$HUB_PORT"
 else ck_fail "Hub" "not responding on :$HUB_PORT — run: relaygent start"; fi
 
-BUILD_COMMIT_FILE="$REPO_DIR/data/hub-build-commit"
+BUILD_COMMIT_FILE="$DATA_DIR/hub-build-commit"
 CURRENT_HEAD=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo "")
 BUILT_HEAD=$(head -c 40 "$BUILD_COMMIT_FILE" 2>/dev/null || echo "")
 if [ ! -d "$REPO_DIR/hub/build" ]; then
