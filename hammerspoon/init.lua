@@ -15,6 +15,7 @@ local input = dofile(hs.configdir .. "/input_handlers.lua")
 local held = dofile(hs.configdir .. "/held_input.lua")
 local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
 local ax_press = dofile(hs.configdir .. "/ax_press.lua")
+local window_manage = dofile(hs.configdir .. "/window_manage.lua")
 
 -- Get Hammerspoon RSS in MB (returns nil on error)
 local function getRSSMB()
@@ -129,6 +130,7 @@ local function handleRequest(method, path, headers, body)
                 if a then a:activate() end
             end)
             return json.encode({launched=params.app}), 200
+        elseif key == "POST /window_manage" then return window_manage(params)
         elseif key == "POST /type_from_file" then
             return input.type_from_file(params)
         elseif key == "POST /element_at" then
