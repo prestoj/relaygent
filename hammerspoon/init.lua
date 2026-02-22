@@ -37,13 +37,15 @@ end)
 
 local function annotateWithIndicator(img, ix, iy)
     local sz = img:size()
-    local r = 18
+    local s = (hs.screen.mainScreen():currentMode() or {}).scale or 1
+    ix = ix * s; iy = iy * s
+    local r = 18 * s; local d = 3 * s
     local c = hs.canvas.new(hs.geometry.rect(0, 0, sz.w, sz.h))
     c:appendElements(
         {type="image", image=img, frame={x=0,y=0,w=sz.w,h=sz.h}},
         {type="oval", frame={x=ix-r, y=iy-r, w=r*2, h=r*2},
-         strokeColor={red=1,green=0,blue=0,alpha=0.9}, strokeWidth=3, action="stroke"},
-        {type="oval", frame={x=ix-3, y=iy-3, w=6, h=6},
+         strokeColor={red=1,green=0,blue=0,alpha=0.9}, strokeWidth=3*s, action="stroke"},
+        {type="oval", frame={x=ix-d, y=iy-d, w=d*2, h=d*2},
          fillColor={red=1,green=0,blue=0,alpha=0.9}, action="fill"}
     )
     local result = c:imageFromCanvas()
