@@ -41,7 +41,11 @@ try:
                         m = msgs[-1]
                         txt = (m.get('text') or '')[:60].replace('\n',' ')
                         ch_name = ch.get('name') or '?'
-                        previews.append('[#' + ch_name + '] ' + txt)
+                        sender = m.get('user_name') or m.get('user') or ''
+                        prefix = '[#' + ch_name + '] '
+                        if sender:
+                            prefix += sender + ': '
+                        previews.append(prefix + txt)
                 summary = str(count) + ' unread Slack' + (': ' + ' | '.join(previews) if previews else ' message(s)')
                 parts.append(summary)
             else:
