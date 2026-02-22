@@ -179,5 +179,10 @@ async function _denyPerms() {
 }
 export function cdpConnected() { return _ws && _ws.readyState === 1; }
 export const cdpAvailable = async () => { const t = await cdpHttp("/json/list"); return t !== null && Array.isArray(t); };
+export async function cdpSendCommand(method, params = {}) {
+  const conn = await getConnection();
+  if (!conn) return null;
+  try { return await send(method, params); } catch (e) { log(`cdp cmd error: ${e.message}`); return null; }
+}
 export function cdpChromePid() { try { return parseInt(execSync(`lsof -ti :${CDP_PORT} -s TCP:LISTEN`, { timeout: 2000 }).toString().trim()); } catch { return null; } }
 export { cdpHttp };
