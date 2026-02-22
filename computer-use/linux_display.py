@@ -97,25 +97,19 @@ def windows(_params: dict) -> tuple[dict, int]:
 
 
 def apps(_params: dict) -> tuple[dict, int]:
-    result = []
-    seen = set()
+    result, seen = [], set()
     try:
-        out = _run(["wmctrl", "-l", "-p"])
-        for line in out.splitlines():
+        for line in _run(["wmctrl", "-l", "-p"]).splitlines():
             parts = line.split(None, 4)
-            if len(parts) >= 5:
-                pid = int(parts[2]) if parts[2] != "0" else 0
-                name = parts[4]
-                if pid:
-                    try:
-                        name = _run(["ps", "-p", str(pid), "-o", "comm="])
-                    except (subprocess.SubprocessError, FileNotFoundError):
-                        pass
-                if name not in seen:
-                    seen.add(name)
-                    result.append({"name": name, "pid": pid})
-    except (subprocess.SubprocessError, FileNotFoundError, ValueError):
-        logger.debug("wmctrl not available or failed")
+            if len(parts) < 5: continue
+            pid = int(parts[2]) if parts[2] != "0" else 0
+            name = parts[4]
+            if pid:
+                try: name = _run(["ps", "-p", str(pid), "-o", "comm="])
+                except (subprocess.SubprocessError, FileNotFoundError): pass
+            if name not in seen:
+                seen.add(name); result.append({"name": name, "pid": pid})
+    except (subprocess.SubprocessError, FileNotFoundError, ValueError): pass
     return {"apps": result}, 200
 
 
@@ -138,30 +132,28 @@ def focus(params: dict) -> tuple[dict, int]:
     if not app:
         return {"error": "app, window_id, or pid required"}, 400
     try:
-        out = _run(["wmctrl", "-l", "-x"])
-        app_lower = app.lower()
-        for line in out.splitlines():
-            if app_lower in line.lower():
-                wid = line.split()[0]
-                _run(["wmctrl", "-i", "-a", wid])
+        for line in _run(["wmctrl", "-l", "-x"]).splitlines():
+            if app.lower() in line.lower():
+                _run(["wmctrl", "-i", "-a", line.split()[0]])
                 return {"focused": app}, 200
-    except (subprocess.SubprocessError, FileNotFoundError):
-        pass
+    except (subprocess.SubprocessError, FileNotFoundError): pass
     return {"error": "not found"}, 404
 
 _ALIASES = {
     "google-chrome": ["google-chrome-stable", "chromium-browser", "chromium", "firefox"],
     "firefox": ["firefox-esr"],
+    "terminal": ["xfce4-terminal", "gnome-terminal", "mate-terminal", "konsole", "xterm"],
+    "text-editor": ["gedit", "mousepad", "xed", "pluma", "kate"],
+    "file-manager": ["nautilus", "thunar", "nemo", "caja", "dolphin"],
 }
-
+# gnome-terminal's client-server model doesn't create visible windows on Xvfb
+_XVFB_PREFER = {"gnome-terminal": ["xfce4-terminal", "mate-terminal", "konsole", "xterm"]}
 _CHROME_NAMES = {"google-chrome", "google-chrome-stable", "chromium-browser", "chromium"}
 _CHROME_DATA = os.path.expanduser("~/data/chrome-debug-profile")
 _CHROME_ARGS = [
-    "--no-sandbox", "--no-first-run", "--start-maximized",
-    "--disable-default-apps", "--disable-sync",
-    "--disable-background-networking", "--disable-component-update",
-    "--disable-session-crashed-bubble", "--disable-infobars",
-    "--test-type",  # suppresses --no-sandbox warning bar
+    "--no-sandbox", "--no-first-run", "--start-maximized", "--disable-default-apps",
+    "--disable-sync", "--disable-background-networking", "--disable-component-update",
+    "--disable-session-crashed-bubble", "--disable-infobars", "--test-type",
     "--remote-debugging-port=9223", "--remote-allow-origins=*",
     f"--user-data-dir={_CHROME_DATA}",
 ]
@@ -170,31 +162,36 @@ def _patch_chrome_prefs() -> None:
     import json as _json
     pref = f"{_CHROME_DATA}/Default/Preferences"
     try:
-        with open(pref) as f:
-            data = _json.load(f)
-        data.setdefault("profile", {})["exit_type"] = "Normal"
-        data["profile"]["exited_cleanly"] = True
-        with open(pref, "w") as f:
-            _json.dump(data, f)
+        data = _json.load(open(pref))
+        data.setdefault("profile", {}).update(exit_type="Normal", exited_cleanly=True)
+        _json.dump(data, open(pref, "w"))
     except (FileNotFoundError, ValueError, OSError):
         pass
+
+_xvfb: bool | None = None
+def _on_xvfb() -> bool:
+    global _xvfb
+    if _xvfb is None:
+        d = os.environ.get("DISPLAY", "")
+        n = d.split(":")[1].split(".")[0] if ":" in d else ""
+        _xvfb = bool(n and subprocess.run(["pgrep", "-f", f"Xvfb.*:{n}"], capture_output=True).returncode == 0)
+    return _xvfb
 
 def launch(params: dict) -> tuple[dict, int]:
     app = params.get("app")
     if not app:
         return {"error": "app required"}, 400
-    # Try original name, lowercase, hyphenated-lowercase, then aliases
     candidates = [app, app.lower(), app.lower().replace(" ", "-")]
     base = app.lower().replace(" ", "-")
+    if base in _XVFB_PREFER and _on_xvfb():
+        candidates = list(_XVFB_PREFER[base]) + candidates
     candidates.extend(_ALIASES.get(base, []))
-    for name in dict.fromkeys(candidates):  # dedup preserving order
+    for name in dict.fromkeys(candidates):
         try:
             extra = _CHROME_ARGS if name in _CHROME_NAMES else []
-            if name in _CHROME_NAMES:
-                _patch_chrome_prefs()
+            if name in _CHROME_NAMES: _patch_chrome_prefs()
             subprocess.Popen([name] + extra, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             return {"launched": name}, 200
-        except FileNotFoundError:
-            continue
+        except FileNotFoundError: continue
     return {"error": f"could not find executable for '{app}'"}, 404
