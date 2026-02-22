@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+import threading
 import time
 
 # xdotool modifier key mapping (macOS names -> X11 names)
@@ -104,24 +105,16 @@ def drag(params: dict) -> tuple[dict, int]:
     ex, ey = params.get("endX"), params.get("endY")
     if None in (sx, sy, ex, ey):
         return {"error": "startX, startY, endX, endY required"}, 400
-
     steps = params.get("steps", 10)
-    duration = params.get("duration", 0.3)
-    step_delay = duration / max(steps, 1)
-
+    step_delay = params.get("duration", 0.3) / max(steps, 1)
     _xdotool("mousemove", "--sync", str(int(sx)), str(int(sy)))
     _xdotool("mousedown", "1")
-
     for i in range(1, steps + 1):
         t = i / steps
-        cx = sx + (ex - sx) * t
-        cy = sy + (ey - sy) * t
-        _xdotool("mousemove", "--sync", str(int(cx)), str(int(cy)))
+        _xdotool("mousemove", "--sync", str(int(sx + (ex - sx) * t)), str(int(sy + (ey - sy) * t)))
         time.sleep(step_delay)
-
     _xdotool("mouseup", "1")
-    return {"dragged": {"from": {"x": sx, "y": sy},
-                        "to": {"x": ex, "y": ey}, "steps": steps}}, 200
+    return {"dragged": {"from": {"x": sx, "y": sy}, "to": {"x": ex, "y": ey}}}, 200
 
 
 def key_down(params: dict) -> tuple[dict, int]:
@@ -166,8 +159,7 @@ def mouse_up(params: dict) -> tuple[dict, int]:
     return {"released": f"mouse{btn}"}, 200
 
 
-_RELEASE_KEYS = "Up Down Left Right space Return shift ctrl alt".split()
-_RELEASE_KEYS += list("abcdefghijklmnopqrstuvwxyz")
+_RELEASE_KEYS = "Up Down Left Right space Return shift ctrl alt".split() + list("abcdefghijklmnopqrstuvwxyz")
 
 
 def release_all(_params: dict) -> tuple[dict, int]:
@@ -180,15 +172,29 @@ def release_all(_params: dict) -> tuple[dict, int]:
     return {"released": "all", "count": len(_RELEASE_KEYS) + 3}, 200
 
 
+def input_sequence(params: dict) -> tuple[dict, int]:
+    actions = params.get("actions", [])
+    if not actions:
+        return {"error": "actions array required"}, 400
+    dispatch = {"key_down": key_down, "key_up": key_up, "mouse_down": mouse_down,
+                "mouse_up": mouse_up, "release_all": release_all,
+                "key_press": lambda a: (key_down(a), key_up(a))}
+    for a in actions:
+        fn = dispatch.get(a.get("action"))
+        if not fn: continue
+        delay = (a.get("delay") or 0) / 1000.0
+        if delay > 0: threading.Timer(delay, fn, args=[a]).start()
+        else: fn(a)
+    return {"queued": len(actions), "duration_ms": max((a.get("delay") or 0) for a in actions)}, 200
+
+
 def type_from_file(params: dict) -> tuple[dict, int]:
     path = params.get("path")
     if not path:
         return {"error": "path required"}, 400
     try:
-        with open(path) as f:
-            text = f.read().rstrip()
+        with open(path) as f: text = f.read().rstrip()
     except FileNotFoundError:
         return {"error": "file not found"}, 404
-
     _xdotool("type", "--clearmodifiers", "--delay", "12", text)
     return {"typed": len(text), "source": path}, 200
