@@ -148,6 +148,11 @@ server.tool("mouse_up", "Release a previously held mouse button.",
 	async (p) => { const np = { ...p }; if (p.x != null) np.x = sx(p.x); if (p.y != null) np.y = sx(p.y); const r = await hsCall("POST", "/mouse_up", np); return actionRes(JSON.stringify(r), 100); }
 );
 
+server.tool("mouse_move", "Move mouse cursor to coordinates without clicking. For camera control in 3D games.",
+	{ x: n.describe("X"), y: n.describe("Y") },
+	async (p) => { const r = await hsCall("POST", "/mouse_move", { x: sx(p.x), y: sx(p.y) }); return actionRes(JSON.stringify(r), 100); }
+);
+
 server.tool("release_all", "Release ALL held keys and mouse buttons. Safety valve for gaming.",
 	{},
 	async () => { const r = await hsCall("POST", "/release_all", {}); return actionRes(JSON.stringify(r), 100); }
@@ -155,7 +160,7 @@ server.tool("release_all", "Release ALL held keys and mouse buttons. Safety valv
 
 server.tool("input_sequence", "Execute a timed sequence of key/mouse actions in one call. Eliminates round-trip latency for gaming combos.",
 	{ actions: z.array(z.object({
-		action: z.enum(["key_down", "key_up", "key_press", "mouse_down", "mouse_up", "release_all"]).describe("Action type"),
+		action: z.enum(["key_down", "key_up", "key_press", "mouse_down", "mouse_up", "mouse_move", "release_all"]).describe("Action type"),
 		key: z.string().optional().describe("Key name (for key actions)"),
 		modifiers: z.array(z.string()).optional().describe("Modifier keys"),
 		x: n.optional().describe("X coordinate (for mouse actions)"),

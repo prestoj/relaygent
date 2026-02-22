@@ -34,6 +34,14 @@ function M.key_up(params)
     return json.encode({released=label}), 200
 end
 
+function M.mouse_move(params)
+    local x = params.x; local y = params.y
+    if not x or not y then return json.encode({error="x,y required"}), 400 end
+    local pt = hs.geometry.point(x, y)
+    hs.mouse.absolutePosition(pt)
+    return json.encode({moved={x=x, y=y}}), 200
+end
+
 function M.mouse_down(params)
     local btn = params.button or 1
     local types = hs.eventtap.event.types
@@ -95,6 +103,7 @@ function M.input_sequence(params)
             M.key_down(a); M.key_up(a)
         elseif a.action == "mouse_down" then M.mouse_down(a)
         elseif a.action == "mouse_up" then M.mouse_up(a)
+        elseif a.action == "mouse_move" then M.mouse_move(a)
         elseif a.action == "release_all" then M.release_all({})
         end
     end
