@@ -10,6 +10,7 @@ import { hsCall, takeScreenshot, readScreenshot, scaleFactor, checkHealth, SCREE
 import { registerBrowserTools } from "./browser-tools.mjs";
 import { registerBrowserQueryTools } from "./browser-query.mjs";
 import { registerBrowserNavTools } from "./browser-nav.mjs";
+import { registerBrowserFileTools } from "./browser-files.mjs";
 import { registerNativeTools } from "./native-tools.mjs";
 const IS_LINUX = platform() === "linux";
 
@@ -134,6 +135,7 @@ server.tool("focus_window", "Focus a window by app name. Auto-returns screenshot
 registerBrowserTools(server, IS_LINUX);
 registerBrowserQueryTools(server);
 registerBrowserNavTools(server);
+registerBrowserFileTools(server);
 registerNativeTools(server);
 
 await checkHealth();
