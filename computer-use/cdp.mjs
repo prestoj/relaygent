@@ -1,11 +1,9 @@
 // Chrome DevTools Protocol — connects to Chrome for browser automation with auto-reconnect
 import http from "node:http";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { spawn, execSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { ensureChrome } from "./cdp-chrome.mjs";
 
 const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT || "9223", 10);
-const CHROME_DATA = `${process.env.HOME}/data/chrome-debug-profile`;
-const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
 let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null;
 const _pending = new Map();
@@ -73,17 +71,6 @@ function waitForEvent(method, timeoutMs = 10000) {
     const entry = { method, cb: () => { clearTimeout(timer); resolve(); } };
     _events.push(entry);
   });
-}
-let _chromeStarting = false;
-async function ensureChrome() {
-  if (_chromeStarting) return; _chromeStarting = true;
-  try { execSync("pkill -f google-chrome", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
-  const bin = existsSync("/Applications/Google Chrome.app")
-    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
-  try { spawn(bin, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"],
-    { detached: true, stdio: "ignore" }).unref();
-    log("auto-launched Chrome with CDP"); await new Promise(r => setTimeout(r, 4000));
-  } catch (e) { log(`Chrome launch failed: ${e.message}`); } finally { _chromeStarting = false; }
 }
 export async function getConnection() {
   if (_connectPromise) return _connectPromise;
@@ -169,16 +156,6 @@ export async function cdpSyncToVisibleTab(url) {
   log(`synced to tab: ${target.url.substring(0, 60)}`);
 }
 
-export function patchChromePrefs() {
-  try {
-    const prefs = JSON.parse(readFileSync(CHROME_PREFS, "utf8"));
-    prefs.profile = { ...prefs.profile, exit_type: "Normal", exited_cleanly: true,
-      default_content_setting_values: { ...(prefs.profile.default_content_setting_values || {}),
-        clipboard: 2, notifications: 2, geolocation: 2, media_stream_camera: 2, media_stream_mic: 2 } };
-    writeFileSync(CHROME_PREFS, JSON.stringify(prefs));
-    log("patched Chrome prefs: exit_type=Normal, permissions=blocked");
-  } catch (e) { log(`patchChromePrefs failed: ${e.message}`); }
-}
 let _permsDenied = false;
 async function _denyPerms() {
   if (_permsDenied) return; _permsDenied = true;
@@ -192,5 +169,4 @@ export async function cdpSendCommand(method, params = {}) {
   if (!conn) return null;
   try { return await send(method, params); } catch (e) { log(`cdp cmd error: ${e.message}`); return null; }
 }
-export function cdpChromePid() { try { return parseInt(execSync(`lsof -ti :${CDP_PORT} -s TCP:LISTEN`, { timeout: 2000 }).toString().trim()); } catch { return null; } }
 export { cdpHttp };

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { hsCall, takeScreenshot } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpChromePid, cdpSendCommand } from "./cdp.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpSyncToVisibleTab, cdpConnected, cdpSendCommand } from "./cdp.mjs";
+import { patchChromePrefs, cdpChromePid } from "./cdp-chrome.mjs";
 import { CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
