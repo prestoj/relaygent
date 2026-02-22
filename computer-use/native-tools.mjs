@@ -65,6 +65,20 @@ export function registerNativeTools(server) {
 		}
 	);
 
+	server.tool("window_manage", "Manage window: maximize, minimize, restore, resize, move, or fullscreen. Auto-returns screenshot.",
+		{ action: z.enum(["maximize", "minimize", "restore", "resize", "move", "fullscreen"]).describe("Action to perform"),
+			app: z.string().optional().describe("Target app name (default: focused window)"),
+			x: n.optional().describe("X position (for move)"),
+			y: n.optional().describe("Y position (for move)"),
+			w: n.optional().describe("Width (for resize)"),
+			h: n.optional().describe("Height (for resize)") },
+		async (p) => {
+			const r = await hsCall("POST", "/window_manage", p);
+			if (r.error) return jsonRes(r);
+			return actionRes(`${p.action}: ${r.app || "window"}`, 500);
+		}
+	);
+
 	server.tool("reload_config", "Reload Hammerspoon config", {},
 		async () => jsonRes(await hsCall("POST", "/reload")));
 }
