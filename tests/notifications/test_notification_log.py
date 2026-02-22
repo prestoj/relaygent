@@ -9,7 +9,8 @@ os.environ.setdefault("RELAYGENT_DATA_DIR", "/tmp/relaygent-test-notiflog")
 import pytest
 import notif_config as config
 import db as notif_db
-import routes as routes_mod
+import routes as routes_mod  # noqa: F401 — ensures routes are registered
+import notif_logger
 
 
 @pytest.fixture(autouse=True)
@@ -112,7 +113,7 @@ class TestPruneNotificationLog:
 
 
 class TestLogNotificationsTaskType:
-    """Test _log_notifications properly formats task-type notifications."""
+    """Test log_notifications properly formats task-type notifications."""
 
     def test_task_notification_logs_description(self, _isolated):
         notifications = [{
@@ -122,7 +123,7 @@ class TestLogNotificationsTaskType:
             "overdue": "3h overdue",
             "last": "2026-02-20",
         }]
-        routes_mod._log_notifications(notifications)
+        notif_logger.log_notifications(notifications)
         entries = notif_db.get_notification_history()
         assert len(entries) == 1
         assert entries[0]["type"] == "task"
@@ -138,7 +139,7 @@ class TestLogNotificationsTaskType:
             "overdue": "",
             "last": "never",
         }]
-        routes_mod._log_notifications(notifications)
+        notif_logger.log_notifications(notifications)
         entries = notif_db.get_notification_history()
         assert entries[0]["summary"] == "Run tests"
 
@@ -150,7 +151,7 @@ class TestLogNotificationsTaskType:
             "overdue": "1d overdue",
             "last": "2026-02-14",
         }]
-        routes_mod._log_notifications(notifications)
+        notif_logger.log_notifications(notifications)
         entries = notif_db.get_notification_history()
         # Must NOT contain raw dict markers
         assert "{'type'" not in entries[0]["summary"]
