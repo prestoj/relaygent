@@ -80,4 +80,35 @@ function M.release_all(_params)
     return json.encode({released=released, count=#released}), 200
 end
 
+-- Execute a timed sequence of input actions in one call.
+-- Each action: {action="key_down"|"key_up"|"key_press"|"release_all", key=..., delay=ms}
+-- Delays are relative to start of sequence (not to previous action).
+function M.input_sequence(params)
+    local actions = params.actions
+    if not actions or #actions == 0 then
+        return json.encode({error="actions array required"}), 400
+    end
+    local function doAction(a)
+        if a.action == "key_down" then M.key_down(a)
+        elseif a.action == "key_up" then M.key_up(a)
+        elseif a.action == "key_press" then
+            M.key_down(a); M.key_up(a)
+        elseif a.action == "mouse_down" then M.mouse_down(a)
+        elseif a.action == "mouse_up" then M.mouse_up(a)
+        elseif a.action == "release_all" then M.release_all({})
+        end
+    end
+    local total_ms = 0
+    for _, a in ipairs(actions) do
+        local delay = (a.delay or 0) / 1000.0
+        if delay > 0 then
+            hs.timer.doAfter(delay, function() doAction(a) end)
+        else
+            doAction(a)
+        end
+        if (a.delay or 0) > total_ms then total_ms = a.delay end
+    end
+    return json.encode({queued=#actions, duration_ms=total_ms}), 200
+end
+
 return M

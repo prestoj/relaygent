@@ -153,6 +153,24 @@ server.tool("release_all", "Release ALL held keys and mouse buttons. Safety valv
 	async () => { const r = await hsCall("POST", "/release_all", {}); return actionRes(JSON.stringify(r), 100); }
 );
 
+server.tool("input_sequence", "Execute a timed sequence of key/mouse actions in one call. Eliminates round-trip latency for gaming combos.",
+	{ actions: z.array(z.object({
+		action: z.enum(["key_down", "key_up", "key_press", "mouse_down", "mouse_up", "release_all"]).describe("Action type"),
+		key: z.string().optional().describe("Key name (for key actions)"),
+		modifiers: z.array(z.string()).optional().describe("Modifier keys"),
+		x: n.optional().describe("X coordinate (for mouse actions)"),
+		y: n.optional().describe("Y coordinate (for mouse actions)"),
+		button: n.optional().describe("Mouse button: 1=left, 2=right"),
+		delay: n.optional().describe("Delay in ms from start of sequence (0 = immediate)"),
+	})).describe("Array of timed input actions") },
+	async ({ actions }) => {
+		const scaled = actions.map(a => ({ ...a, x: a.x != null ? sx(a.x) : a.x, y: a.y != null ? sx(a.y) : a.y }));
+		const r = await hsCall("POST", "/input_sequence", { actions: scaled });
+		const maxDelay = Math.max(...actions.map(a => a.delay || 0));
+		return actionRes(JSON.stringify(r), maxDelay + 200);
+	}
+);
+
 server.tool("launch_app", "Launch or activate an application. Auto-returns screenshot.",
 	{ app: z.string().describe("Application name") },
 	async ({ app }) => { await hsCall("POST", "/launch", { app }); return actionRes(`Launched ${app}`, 500); }
