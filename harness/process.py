@@ -4,7 +4,8 @@ import subprocess, time
 from dataclasses import dataclass
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, SILENCE_TIMEOUT, Timer, log
 from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings
-from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size, strip_old_images
+from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size
+from jsonl_images import strip_old_images
 
 @dataclass
 class ClaudeResult:
