@@ -51,26 +51,34 @@ export function searchSessions(query, maxResults = 8) {
 
 		const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
 		if (!m) continue;
+		const runId = m[0];
 
-		let bestFile = null, maxSize = 0;
-		for (const f of fs.readdirSync(fullPath)) {
-			if (!f.endsWith('.jsonl')) continue;
+		let files;
+		try { files = fs.readdirSync(fullPath).filter(f => f.endsWith('.jsonl')); } catch { continue; }
+		// Search newest sessions first (by mtime)
+		files.sort((a, b) => {
+			try { return fs.statSync(path.join(fullPath, b)).mtimeMs - fs.statSync(path.join(fullPath, a)).mtimeMs; }
+			catch { return 0; }
+		});
+
+		for (const f of files) {
+			if (results.length >= maxResults) break;
 			const fp = path.join(fullPath, f);
-			const sz = fs.statSync(fp).size;
-			if (sz > maxSize) { maxSize = sz; bestFile = fp; }
-		}
-		if (!bestFile || maxSize < 200) continue;
+			try { if (fs.statSync(fp).size < 200) continue; } catch { continue; }
+			const uuid8 = f.slice(0, -6).slice(0, 8);
+			const id = `${runId}--${uuid8}`;
 
-		try {
-			const lines = fs.readFileSync(bestFile, 'utf-8').split('\n');
-			for (const line of lines) {
-				if (line.toLowerCase().includes(q)) {
-					const snippet = extractSnippet(line, q);
-					results.push({ type: 'session', id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, snippet });
-					break; // one match per session
+			try {
+				const lines = fs.readFileSync(fp, 'utf-8').split('\n');
+				for (const line of lines) {
+					if (line.toLowerCase().includes(q)) {
+						const snippet = extractSnippet(line, q);
+						results.push({ type: 'session', id, displayTime: `${m[1]} ${m[2]}:${m[3]}`, snippet });
+						break;
+					}
 				}
-			}
-		} catch { /* ignore */ }
+			} catch { /* ignore */ }
+		}
 	}
 
 	return results;
