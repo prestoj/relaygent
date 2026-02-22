@@ -37,6 +37,7 @@ server.tool("screenshot", "Capture screenshot. Use find_elements for precise coo
 		if (r.error) return { content: [{ type: "text", text: JSON.stringify(r) }] };
 		try {
 			const img = readScreenshot(r.width);
+			if (!img) return { content: [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }] };
 			const sf = scaleFactor();
 			const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
 			return { content: [

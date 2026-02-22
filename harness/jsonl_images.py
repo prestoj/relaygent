@@ -57,3 +57,21 @@ def strip_old_images(session_id: str, workspace: Path, keep_last: int = 5) -> in
         with open(jsonl, "w") as f: f.writelines(new_lines)
         return len(to_strip)
     except OSError: return 0
+
+
+def strip_all_images(session_id: str, workspace: Path) -> int:
+    """Strip ALL base64 images from the JSONL — used for bad-image recovery.
+
+    Rewrites the JSONL in place. Returns number of images stripped.
+    """
+    jsonl = find_jsonl_path(session_id, workspace)
+    if not jsonl or not jsonl.exists(): return 0
+    try:
+        with open(jsonl) as f: lines = f.readlines()
+        img_indices = [i for i, l in enumerate(lines) if _has_image(l)]
+        if not img_indices: return 0
+        to_strip = set(img_indices)
+        new_lines = [_strip_images_from_line(l) if i in to_strip else l for i, l in enumerate(lines)]
+        with open(jsonl, "w") as f: f.writelines(new_lines)
+        return len(to_strip)
+    except OSError: return 0

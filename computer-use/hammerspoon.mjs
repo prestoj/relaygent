@@ -21,8 +21,24 @@ const SCALED_WIDTH = 1280; // Always downscale to this width for consistent visi
 let _scaleFactor = 1;
 export function scaleFactor() { return _scaleFactor; }
 
-/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64. */
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** Validate a PNG file: check magic bytes, non-empty, within size limit. Returns null if OK, error string if bad. */
+function validatePng(path) {
+	try {
+		const stat = statSync(path);
+		if (stat.size === 0) return "empty file";
+		if (stat.size > MAX_BYTES) return `too large (${(stat.size / 1024 / 1024).toFixed(1)}MB > ${MAX_BYTES / 1024 / 1024}MB)`;
+		const fd = readFileSync(path, { start: 0, end: 7 });
+		if (fd.length < 8 || !fd.subarray(0, 8).equals(PNG_MAGIC)) return "not a valid PNG";
+	} catch (e) { return `read error: ${e.message}`; }
+	return null;
+}
+
+/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64 or null if invalid. */
 export function readScreenshot(nativeWidth) {
+	const srcErr = validatePng(SCREENSHOT_PATH);
+	if (srcErr) { process.stderr.write(`[computer-use] Bad screenshot: ${srcErr}\n`); return null; }
 	try {
 		if (nativeWidth && nativeWidth > SCALED_WIDTH) {
 			_scaleFactor = nativeWidth / SCALED_WIDTH;
@@ -31,12 +47,15 @@ export function readScreenshot(nativeWidth) {
 			} else {
 				execFileSync("sips", ["-Z", String(SCALED_WIDTH), "--out", SCALED_PATH, SCREENSHOT_PATH], { timeout: 5000 });
 			}
+			const scaledErr = validatePng(SCALED_PATH);
+			if (scaledErr) { process.stderr.write(`[computer-use] Bad scaled screenshot: ${scaledErr}\n`); return null; }
 			return readFileSync(SCALED_PATH).toString("base64");
 		}
 		_scaleFactor = 1;
 		return readFileSync(SCREENSHOT_PATH).toString("base64");
-	} catch {
-		return readFileSync(SCREENSHOT_PATH).toString("base64");
+	} catch (e) {
+		process.stderr.write(`[computer-use] Screenshot read failed: ${e.message}\n`);
+		return null;
 	}
 }
 
@@ -98,7 +117,7 @@ export async function takeScreenshot(delayMs = 300, indicator) {
 	if (r.error) return [{ type: "text", text: `(screenshot failed: ${r.error})` }];
 	try {
 		const img = readScreenshot(r.width);
-		if (!img) return [{ type: "text", text: "(screenshot empty)" }];
+		if (!img) return [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }];
 		const sf = scaleFactor();
 		const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
 		return [
