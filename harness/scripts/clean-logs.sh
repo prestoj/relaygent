@@ -63,8 +63,8 @@ for f in "$LOGS_DIR"/*.log; do
         if [ "$DRY_RUN" = true ]; then
             echo -e "  ${YELLOW}would truncate${NC}: $(basename "$f") (${SIZE}K -> last 1000 lines)"
         else
-            TAIL=$(tail -1000 "$f")
-            echo "$TAIL" > "$f"
+            tail -1000 "$f" > "$f.tmp" || { rm -f "$f.tmp"; continue; }
+            mv "$f.tmp" "$f"
             NEW_SIZE=$(du -k "$f" 2>/dev/null | cut -f1)
             SAVED=$((SIZE - ${NEW_SIZE:-0}))
             FREED=$((FREED + SAVED))
