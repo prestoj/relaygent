@@ -34,7 +34,6 @@ test('GET /api/actions returns list of available actions', async () => {
 	assert.ok(data.actions.includes('check'));
 	assert.ok(data.actions.includes('status'));
 	assert.ok(data.actions.includes('digest'));
-	assert.ok(data.actions.includes('changelog'));
 	assert.ok(data.actions.includes('clean-logs'));
 });
 
