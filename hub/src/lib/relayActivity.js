@@ -110,7 +110,7 @@ let _sessionsCache = null; // { home, time, result }
 const SESSIONS_TTL = 30_000;
 export function clearSessionsCache() { _sessionsCache = null; }
 
-/** List all relay sessions, newest first. Each entry: { id, displayTime, size }. */
+/** List all relay sessions (one per JSONL file), newest first. */
 export function listSessions() {
 	const home = process.env.HOME;
 	if (_sessionsCache && _sessionsCache.home === home && Date.now() - _sessionsCache.time < SESSIONS_TTL) {
@@ -124,35 +124,46 @@ export function listSessions() {
 			if (prefix && !dir.startsWith(prefix)) continue;
 			const fullPath = path.join(claudeProjects, dir);
 			try { if (!fs.statSync(fullPath).isDirectory()) continue; } catch { continue; }
-			let best = null, bestMtime = 0, bestSize = 0;
+			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
+			if (!m) continue;
+			const runId = m[0];
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
 				const fp = path.join(fullPath, f);
-				const st = fs.statSync(fp);
-				if (st.size > 200 && st.mtimeMs > bestMtime) { bestMtime = st.mtimeMs; best = fp; bestSize = st.size; }
+				const fst = fs.statSync(fp);
+				if (fst.size < 200) continue;
+				const uuid8 = f.slice(0, 8);
+				const id = `${runId}--${uuid8}`;
+				const st = parseSessionStats(fp) || {};
+				const displayTime = st.start ? st.start.replace('T', ' ').slice(0, 16) : `${m[1]} ${m[2]}:${m[3]}`;
+				sessions.push({ id, displayTime, size: fst.size, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 			}
-			if (!best) continue;
-			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
-			if (!m) continue;
-			const st = parseSessionStats(best) || {};
-			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: bestSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 		}
 	} catch { /* ignore */ }
 	flushStatsCache();
-	const result = sessions.sort((a, b) => b.id.localeCompare(a.id));
+	const result = sessions.sort((a, b) => b.displayTime.localeCompare(a.displayTime));
 	_sessionsCache = { home, time: Date.now(), result };
 	return result;
 }
 
-/** Load a session by id (timestamp suffix of run dir). Returns parsed activity array. */
+/** Load a session by id. Accepts "runTimestamp--uuid8" or legacy "runTimestamp". */
 export function loadSession(id) {
 	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
 	const prefix = getRunsPrefix();
+	const [runId, uuid8] = id.includes('--') ? id.split('--') : [id, null];
 	try {
 		for (const dir of fs.readdirSync(claudeProjects)) {
 			if (prefix && !dir.startsWith(prefix)) continue;
-			if (!dir.endsWith(id)) continue;
+			if (!dir.endsWith(runId)) continue;
 			const fullPath = path.join(claudeProjects, dir);
+			if (uuid8) {
+				for (const f of fs.readdirSync(fullPath)) {
+					if (f.startsWith(uuid8) && f.endsWith('.jsonl')) {
+						const fp = path.join(fullPath, f);
+						return { activity: parseSession(fp, 500), stats: parseSessionStats(fp) };
+					}
+				}
+			}
 			let best = null, bestMtime = 0;
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;

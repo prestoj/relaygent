@@ -1,6 +1,6 @@
 import { loadSession } from '$lib/relayActivity.js';
 
-const SESSION_ID_RE = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/;
+const SESSION_ID_RE = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(--[a-f0-9]{8})?$/;
 
 function fmtTokens(n) {
 	if (!n) return '0';

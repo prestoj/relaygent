@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { summarizeCurrent, summarizeSession } from '$lib/sessionSummary.js';
 import { loadSession } from '$lib/relayActivity.js';
 
-const SESSION_ID_RE = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/;
+const SESSION_ID_RE = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}(--[a-f0-9]{8})?$/;
 
 /** GET /api/summary?session=current or ?session=<id> */
 export async function GET({ url }) {

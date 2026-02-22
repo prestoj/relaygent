@@ -6,11 +6,10 @@
 		if (n >= 1000) return `${(n/1000).toFixed(0)}K`;
 		return String(n);
 	}
-	function fmtRelative(id) {
+	function fmtRelative(displayTime) {
 		try {
-			const m = id.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
-			if (!m) return '';
-			const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+			const d = new Date(displayTime.replace(' ', 'T'));
+			if (isNaN(d)) return '';
 			const diffMin = Math.round((Date.now() - d) / 60000);
 			if (diffMin < 2) return 'just now';
 			if (diffMin < 60) return `${diffMin}m ago`;
@@ -19,9 +18,8 @@
 			return `${Math.round(diffH / 24)}d ago`;
 		} catch { return ''; }
 	}
-	function dateFromId(id) {
-		const m = id.match(/^(\d{4})-(\d{2})-(\d{2})/);
-		return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+	function dateFromDisplayTime(dt) {
+		try { const d = new Date(dt); return isNaN(d) ? null : d; } catch { return null; }
 	}
 	function groupSessions(sessions) {
 		const now = new Date();
@@ -31,7 +29,7 @@
 		const groups = [];
 		let cur = null;
 		for (const s of sessions) {
-			const d = dateFromId(s.id);
+			const d = dateFromDisplayTime(s.displayTime);
 			const label = !d ? 'Older' : d >= today ? 'Today' : d >= yesterday ? 'Yesterday' : d >= weekAgo ? 'This Week' : 'Older';
 			if (!cur || cur.label !== label) { cur = { label, items: [] }; groups.push(cur); }
 			cur.items.push(s);
@@ -92,7 +90,7 @@
 				<li class:current={isFirst}>
 					<div class="row">
 						<a href="/sessions/{s.id}">{s.displayTime}</a>
-						{#if fmtRelative(s.id)}<span class="rel">{fmtRelative(s.id)}</span>{/if}
+						{#if fmtRelative(s.displayTime)}<span class="rel">{fmtRelative(s.displayTime)}</span>{/if}
 						<span class="meta">
 							{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{isFirst ? ' · current' : ''}
 						</span>
