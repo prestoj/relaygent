@@ -11,7 +11,7 @@ freqs = {'6h': 0.25, '12h': 0.5, 'daily': 1, '2d': 2, '3d': 3, 'weekly': 7, 'mon
 now = datetime.now()
 due = []
 try:
-    lines = open(tasks_file).readlines()
+    with open(tasks_file) as f: lines = f.readlines()
 except OSError:
     sys.exit(0)
 for line in lines:
