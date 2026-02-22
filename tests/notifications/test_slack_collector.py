@@ -91,6 +91,34 @@ class TestAckSlackEndpoint:
         assert float(last_check.read_text().strip()) >= before
 
 
+class TestResolveUsername:
+    def test_resolves_display_name(self, _isolated, monkeypatch):
+        monkeypatch.setattr(sc, "_USER_CACHE", {})
+        fake_resp = {"ok": True, "user": {"real_name": "Preston Jensen", "name": "preston"}}
+        with patch.object(sc.urllib.request, "urlopen") as mock_open:
+            resp = MagicMock()
+            resp.read.return_value = json.dumps(fake_resp).encode()
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda s, *a: None
+            mock_open.return_value = resp
+            assert sc._resolve_username("token", "U0AG66N31Q8") == "Preston Jensen"
+
+    def test_caches_result(self, _isolated, monkeypatch):
+        monkeypatch.setattr(sc, "_USER_CACHE", {"UCACHED": "Cached Name"})
+        assert sc._resolve_username("token", "UCACHED") == "Cached Name"
+
+    def test_returns_uid_on_api_failure(self, _isolated, monkeypatch):
+        monkeypatch.setattr(sc, "_USER_CACHE", {})
+        with patch.object(sc.urllib.request, "urlopen",
+                          side_effect=sc.urllib.error.URLError("fail")):
+            assert sc._resolve_username("token", "UFAIL123") == "UFAIL123"
+
+    def test_returns_uid_for_non_user_id(self, _isolated, monkeypatch):
+        monkeypatch.setattr(sc, "_USER_CACHE", {})
+        assert sc._resolve_username("token", "bot") == "bot"
+        assert sc._resolve_username("token", "") == "unknown"
+
+
 class TestSlackApi:
     def test_rate_limit_retry(self):
         call_count = 0

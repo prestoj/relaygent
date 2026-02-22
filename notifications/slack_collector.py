@@ -24,6 +24,23 @@ _LAST_CHECK_FILE = os.path.join(
 
 
 _SELF_UID = None
+_USER_CACHE = {}
+
+
+def _resolve_username(token, uid):
+    """Resolve a Slack user ID to display name. Caches results."""
+    if not uid or not uid.startswith("U"):
+        return uid or "unknown"
+    if uid in _USER_CACHE:
+        return _USER_CACHE[uid]
+    result = _slack_api(token, "users.info", {"user": uid})
+    if result and result.get("user"):
+        u = result["user"]
+        name = u.get("real_name") or u.get("name") or uid
+    else:
+        name = uid
+    _USER_CACHE[uid] = name
+    return name
 
 
 def _get_self_uid(token):
@@ -120,7 +137,12 @@ def collect(notifications):
         if msgs and msgs[0].get("ts", "0") > last_ts:
             # Include message previews (newest-first → reverse for chronological)
             previews = [
-                {"user": m.get("user", ""), "text": m.get("text", ""), "ts": m.get("ts", "")}
+                {
+                    "user": m.get("user", ""),
+                    "user_name": _resolve_username(token, m.get("user", "")),
+                    "text": m.get("text", ""),
+                    "ts": m.get("ts", ""),
+                }
                 for m in reversed(msgs[:5])
             ]
             unread_channels.append({
