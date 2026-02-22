@@ -23,6 +23,7 @@ def _result(**kwargs) -> ClaudeResult:
 def runner(tmp_path):
     """RelayRunner with mocked subprocess and timer."""
     with (
+        patch("relay.find_claude_binary", return_value="/usr/bin/claude"),
         patch("relay.acquire_lock", return_value=3),
         patch("relay.startup_init"),
         patch("relay.commit_kb"),

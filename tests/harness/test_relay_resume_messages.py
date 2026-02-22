@@ -21,6 +21,7 @@ def _result(**kwargs) -> ClaudeResult:
 @pytest.fixture
 def runner(tmp_path):
     with (
+        patch("relay.find_claude_binary", return_value="/usr/bin/claude"),
         patch("relay.acquire_lock", return_value=3),
         patch("relay.startup_init"),
         patch("relay.commit_kb"),

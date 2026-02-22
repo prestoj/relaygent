@@ -26,6 +26,7 @@ def _result(**kwargs) -> ClaudeResult:
 def _make_runner(tmp_path, idle_side_effect):
     """Build a RelayRunner with last_output_is_idle controlled by a list."""
     with (
+        patch("relay.find_claude_binary", return_value="/usr/bin/claude"),
         patch("relay.acquire_lock", return_value=3),
         patch("relay.startup_init"),
         patch("relay.commit_kb"),

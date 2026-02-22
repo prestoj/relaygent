@@ -13,6 +13,7 @@ from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from handoff import validate_and_log
 from jsonl_checks import should_sleep, last_output_is_idle
+from harness_env import find_claude_binary
 from process import ClaudeProcess
 from relay_loop import Action, LoopState, handle_error
 from relay_utils import (acquire_lock, cleanup_context_file, cleanup_pid_file,
@@ -37,7 +38,7 @@ class RelayRunner:
         cleanup_context_file()
         state.new_session()
         state.crash_count = state.idle_continuation_count = 0
-        self.claude = ClaudeProcess(state.session_id, self.timer, workspace)
+        self.claude = ClaudeProcess(state.session_id, self.timer, workspace, self.claude._claude_bin)
         log(f"Successor session: {state.session_id}")
         time.sleep(3)
 
@@ -57,6 +58,14 @@ class RelayRunner:
         """Main entry point. Returns exit code."""
         rotate_log()
         cleanup_context_file()
+
+        claude_bin = find_claude_binary()
+        if not claude_bin:
+            log("ERROR: 'claude' CLI not found. Install Claude Code "
+                "(npm install -g @anthropic-ai/claude-code) and ensure it's in PATH, "
+                "or set CLAUDE_BIN=/path/to/claude")
+            return 1
+
         workspace = get_workspace_dir()
         log(f"Workspace: {workspace}")
         cleanup_old_workspaces(days=7)
@@ -66,7 +75,7 @@ class RelayRunner:
 
         state = LoopState(session_id=str(uuid.uuid4()))
         log(f"Starting relay run (session: {state.session_id})")
-        self.claude = ClaudeProcess(state.session_id, self.timer, workspace)
+        self.claude = ClaudeProcess(state.session_id, self.timer, workspace, claude_bin)
 
         def _shutdown(*_):
             set_status("off")

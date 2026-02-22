@@ -57,7 +57,7 @@ write_plist() {
         <key>HOME</key>
         <string>$HOME</string>
         <key>PATH</key>
-        <string>$HOME/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>$HOME/.local/bin:$HOME/.claude/local/bin:$HOME/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
 ${env_extra}
     </dict>
     <key>RunAtLoad</key>

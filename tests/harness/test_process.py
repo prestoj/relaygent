@@ -198,4 +198,7 @@ class TestCleanEnv:
     def test_preserves_normal_vars(self, monkeypatch):
         monkeypatch.setenv("HOME", "/home/claude"); monkeypatch.setenv("PATH", "/usr/bin")
         env = clean_env()
-        assert env["HOME"] == "/home/claude" and env["PATH"] == "/usr/bin"
+        assert env["HOME"] == "/home/claude"
+        assert env["PATH"].startswith("/usr/bin")
+        # PATH should be augmented with common binary dirs
+        assert "/usr/local/bin" in env["PATH"]
