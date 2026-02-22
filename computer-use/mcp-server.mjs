@@ -123,6 +123,35 @@ server.tool("type_from_file", "Type text from file (secure password entry). Auto
 	async ({ path }) => { const r = await hsCall("POST", "/type_from_file", { path }); return actionRes(JSON.stringify(r)); }
 );
 
+server.tool("key_down", "Press and hold a key down without releasing. Use key_up to release. For gaming/held inputs.",
+	{ key: z.string().describe("Key name (e.g. 'w', 'up', 'space', 'shift')"),
+		modifiers: z.array(z.string()).optional().describe("Modifier keys to hold simultaneously") },
+	async (p) => { const r = await hsCall("POST", "/key_down", p); return actionRes(JSON.stringify(r), 100); }
+);
+
+server.tool("key_up", "Release a previously held key.",
+	{ key: z.string().describe("Key name to release"),
+		modifiers: z.array(z.string()).optional().describe("Modifier keys to release") },
+	async (p) => { const r = await hsCall("POST", "/key_up", p); return actionRes(JSON.stringify(r), 100); }
+);
+
+server.tool("mouse_down", "Press and hold a mouse button at position. Use mouse_up to release.",
+	{ x: n.optional().describe("X coordinate"), y: n.optional().describe("Y coordinate"),
+		button: n.optional().describe("Button: 1=left (default), 2=right") },
+	async (p) => { const np = { ...p }; if (p.x != null) np.x = sx(p.x); if (p.y != null) np.y = sx(p.y); const r = await hsCall("POST", "/mouse_down", np); return actionRes(JSON.stringify(r), 100); }
+);
+
+server.tool("mouse_up", "Release a previously held mouse button.",
+	{ x: n.optional().describe("X coordinate"), y: n.optional().describe("Y coordinate"),
+		button: n.optional().describe("Button: 1=left (default), 2=right") },
+	async (p) => { const np = { ...p }; if (p.x != null) np.x = sx(p.x); if (p.y != null) np.y = sx(p.y); const r = await hsCall("POST", "/mouse_up", np); return actionRes(JSON.stringify(r), 100); }
+);
+
+server.tool("release_all", "Release ALL held keys and mouse buttons. Safety valve for gaming.",
+	{},
+	async () => { const r = await hsCall("POST", "/release_all", {}); return actionRes(JSON.stringify(r), 100); }
+);
+
 server.tool("launch_app", "Launch or activate an application. Auto-returns screenshot.",
 	{ app: z.string().describe("Application name") },
 	async ({ app }) => { await hsCall("POST", "/launch", { app }); return actionRes(`Launched ${app}`, 500); }
