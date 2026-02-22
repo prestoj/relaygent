@@ -11,6 +11,7 @@ import { registerBrowserTools } from "./browser-tools.mjs";
 import { registerBrowserQueryTools } from "./browser-query.mjs";
 import { registerBrowserNavTools } from "./browser-nav.mjs";
 import { registerBrowserFileTools } from "./browser-files.mjs";
+import { registerBrowserDialogTools } from "./browser-dialog.mjs";
 import { registerNativeTools } from "./native-tools.mjs";
 const IS_LINUX = platform() === "linux";
 
@@ -136,6 +137,7 @@ registerBrowserTools(server, IS_LINUX);
 registerBrowserQueryTools(server);
 registerBrowserNavTools(server);
 registerBrowserFileTools(server);
+registerBrowserDialogTools(server);
 registerNativeTools(server);
 
 await checkHealth();
