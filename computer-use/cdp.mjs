@@ -77,8 +77,20 @@ export async function getConnection() {
   _connectPromise = _getConnectionImpl();
   try { return await _connectPromise; } finally { _connectPromise = null; }
 }
+async function _syncToActiveTab() {
+  if (!_ws || _ws.readyState !== 1) return;
+  const tabs = await cdpHttp("/json/list");
+  if (!tabs) return;
+  const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
+  const active = pages[0];
+  if (active && active.id !== _currentTabId) {
+    log(`tab switched → ${active.url.substring(0, 60)}`);
+    try { _ws.close(); } catch {} _ws = null; _saveTabId(active.id);
+  }
+}
 async function _getConnectionImpl() {
   _cancelReconnect();
+  await _syncToActiveTab();
   if (_ws && _ws.readyState === 1) {
     try {
       const r = await Promise.race([
