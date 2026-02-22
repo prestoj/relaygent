@@ -14,7 +14,9 @@ const ACTIONS = {
 	digest: ['digest'],
 	'clean-logs': ['clean-logs', '--dry-run'],
 	restart: ['restart'],
+	update: ['update'],
 };
+const LONG_TIMEOUT = new Set(['update', 'restart']);
 
 function stripAnsi(s) { return s.replace(/\x1b\[[0-9;]*m/g, ''); }
 
@@ -24,8 +26,9 @@ export async function POST({ request }) {
 	if (!ACTIONS[action]) return json({ error: `Unknown action: ${action}` }, { status: 400 });
 	const start = Date.now();
 	try {
+		const timeout = LONG_TIMEOUT.has(action) ? 120000 : 30000;
 		const { stdout, stderr } = await exec(BIN, ACTIONS[action], {
-			timeout: 30000,
+			timeout,
 			env: { ...process.env, NO_COLOR: '1', TERM: 'dumb' },
 		});
 		return json({ output: stripAnsi(stdout + (stderr || '')), ms: Date.now() - start });
