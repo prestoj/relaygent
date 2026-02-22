@@ -119,22 +119,6 @@ async function _getConnectionImpl() {
   } catch (e) { log(`connect failed: ${e.message}`); return null; }
 }
 
-export async function cdpClick(x, y) {
-  const conn = await getConnection();
-  if (!conn) return false;
-  try {
-    const posResult = await send("Runtime.evaluate", {
-      expression: "JSON.stringify({x:window.screenX,y:window.screenY,ch:window.outerHeight-window.innerHeight})",
-      returnByValue: true,
-    });
-    const pos = JSON.parse(posResult?.result?.result?.value || "{}");
-    const vx = Math.round(x - (pos.x || 0)), vy = Math.round(y - (pos.y || 0) - (pos.ch || 87));
-    log(`click screen(${x},${y}) → viewport(${vx},${vy})`);
-    for (const type of ["mousePressed", "mouseReleased"])
-      await send("Input.dispatchMouseEvent", { type, x: vx, y: vy, button: "left", clickCount: 1 });
-    return true;
-  } catch (e) { log(`click error: ${e.message}`); _ws = null; return false; }
-}
 async function _eval(expression, awaitPromise = false) {
   const conn = await getConnection();
   if (!conn) return null;
