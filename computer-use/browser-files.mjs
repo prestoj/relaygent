@@ -12,10 +12,10 @@ export function registerBrowserFileTools(server) {
     async ({ selector, files }) => {
       if (!cdpConnected()) return jsonRes({ error: "CDP not connected — use browser_navigate first" });
       const doc = await cdpSendCommand("DOM.getDocument");
-      if (!doc) return jsonRes({ error: "Failed to get document" });
-      const node = await cdpSendCommand("DOM.querySelector", { nodeId: doc.root.nodeId, selector });
-      if (!node?.nodeId) return jsonRes({ error: `Element not found: ${selector}` });
-      const result = await cdpSendCommand("DOM.setFileInputFiles", { files, nodeId: node.nodeId });
+      if (!doc?.result?.root) return jsonRes({ error: "Failed to get document" });
+      const node = await cdpSendCommand("DOM.querySelector", { nodeId: doc.result.root.nodeId, selector });
+      if (!node?.result?.nodeId) return jsonRes({ error: `Element not found: ${selector}` });
+      const result = await cdpSendCommand("DOM.setFileInputFiles", { files, nodeId: node.result.nodeId });
       if (!result) return jsonRes({ error: "Failed to set files" });
       return { content: [{ type: "text", text: `Set ${files.length} file(s) on ${selector}` }, ...await takeScreenshot(400)] };
     }
