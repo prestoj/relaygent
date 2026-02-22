@@ -71,7 +71,11 @@ fi
 # Hub — build if needed
 if [ ! -d "$REPO_DIR/hub/build" ]; then
     echo "  Building hub..."
-    (cd "$REPO_DIR/hub" && npm run build >/dev/null 2>&1)
+    if ! (cd "$REPO_DIR/hub" && npm run build >/dev/null 2>&1); then
+        echo -e "  ${RED}Hub build failed.${NC} Run manually to see errors:"
+        echo -e "    cd $REPO_DIR/hub && npm run build"
+        exit 1
+    fi
 fi
 if is_platform_managed hub; then
     platform_start "Hub (port $HUB_PORT)" "hub"

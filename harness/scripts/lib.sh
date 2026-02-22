@@ -67,7 +67,7 @@ ensure_venv() {
         if ! python3 -m venv "$dir/.venv" 2>/dev/null; then
             echo -e "  ${RED}Failed to create venv in $dir${NC}"; return 1
         fi
-        if ! "$dir/.venv/bin/pip" install -q -r "$dir/requirements.txt" 2>&1 | tail -1; then
+        if ! "$dir/.venv/bin/pip" install -q -r "$dir/requirements.txt" 2>/dev/null; then
             echo -e "  ${RED}Failed to install deps in $dir${NC}"; return 1
         fi
     fi
