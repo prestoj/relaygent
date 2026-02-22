@@ -27,4 +27,8 @@
 	.summary-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .summary-btn:disabled { opacity: 0.6; cursor: wait; }
 	.summary-dismiss { background: none; border: none; font-size: 0.78em; color: var(--text-muted); cursor: pointer; padding: 0.2em 0.4em; }  .summary-dismiss:hover { color: var(--text); }
 	.summary-text { margin-top: 0.5em; padding: 0.6em 0.8em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; line-height: 1.5; color: var(--text); }
+	.summary-text :global(ul), .summary-text :global(ol) { margin: 0.3em 0; padding-left: 1.5em; }
+	.summary-text :global(li) { margin: 0.15em 0; }
+	.summary-text :global(p) { margin: 0.3em 0; } .summary-text :global(p:first-child) { margin-top: 0; } .summary-text :global(p:last-child) { margin-bottom: 0; }
+	.summary-text :global(strong) { color: var(--text); }
 </style>
