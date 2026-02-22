@@ -60,10 +60,21 @@ function jsonContent(result) { return JSON.parse(result.content[0].text); }
 
 // ── Tool registration ──
 describe("browser-nav tool registration", () => {
-	it("registers browser_switch_tab and browser_close_tab", () => {
+	it("registers browser_switch_tab, browser_close_tab, and browser_tabs", () => {
 		assert.ok(handlers.browser_switch_tab, "missing browser_switch_tab");
 		assert.ok(handlers.browser_close_tab, "missing browser_close_tab");
-		assert.equal(Object.keys(handlers).length, 2);
+		assert.ok(handlers.browser_tabs, "missing browser_tabs");
+		assert.equal(Object.keys(handlers).length, 3);
+	});
+});
+
+// ── browser_tabs ──
+describe("browser_tabs", () => {
+	it("returns empty tab list from fake CDP", async () => {
+		const r = await handlers.browser_tabs({});
+		const j = jsonContent(r);
+		assert.ok(Array.isArray(j.tabs));
+		assert.equal(j.count, 0);
 	});
 });
 

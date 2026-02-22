@@ -76,36 +76,17 @@ function textContent(result) {
 // ── Tool registration ────────────────────────────────────────────────────────
 describe("tool registration", () => {
 	const EXPECTED = [
-		"browser_navigate", "browser_eval", "browser_coords", "browser_type",
-		"browser_click", "browser_click_text", "browser_hover", "browser_select", "browser_scroll",
-		"browser_wait", "browser_get_text", "browser_url", "browser_fill", "browser_tabs",
+		"browser_navigate", "browser_type", "browser_click", "browser_click_text",
+		"browser_hover", "browser_select", "browser_scroll", "browser_fill",
 	];
 
-	it("registers all 14 browser tools", () => {
+	it("registers all 8 browser action tools", () => {
 		for (const name of EXPECTED) assert.ok(handlers[name], `missing: ${name}`);
 		assert.equal(Object.keys(handlers).length, EXPECTED.length);
 	});
 
 	it("each tool has a description", () => {
 		for (const name of EXPECTED) assert.ok(descriptions[name], `no desc: ${name}`);
-	});
-});
-
-// ── browser_eval (CDP disconnected → null) ───────────────────────────────────
-describe("browser_eval", () => {
-	it("returns null result when CDP has no pages", async () => {
-		const r = await handlers.browser_eval({ expression: "1+1" });
-		assert.equal(jsonContent(r).result, null);
-	});
-});
-
-// ── browser_coords ───────────────────────────────────────────────────────────
-describe("browser_coords", () => {
-	it("returns error when CDP disconnected", async () => {
-		const r = await handlers.browser_coords({ selector: "#btn" });
-		const data = jsonContent(r);
-		assert.ok(data.error);
-		assert.ok(data.error.includes("CDP not connected"));
 	});
 });
 
@@ -176,42 +157,6 @@ describe("browser_scroll", () => {
 	});
 });
 
-// ── browser_wait ─────────────────────────────────────────────────────────────
-describe("browser_wait", () => {
-	it("returns timeout when CDP disconnected", async () => {
-		const r = await handlers.browser_wait({ selector: "#el", timeout: 100 });
-		const data = jsonContent(r);
-		assert.equal(data.status, "timeout");
-		assert.equal(data.selector, "#el");
-	});
-});
-
-// ── browser_get_text ─────────────────────────────────────────────────────────
-describe("browser_get_text", () => {
-	it("returns CDP error when disconnected (no selector)", async () => {
-		const r = await handlers.browser_get_text({});
-		const data = jsonContent(r);
-		assert.ok(data.error);
-		assert.ok(data.error.includes("CDP not connected"));
-	});
-
-	it("returns CDP error with selector in message", async () => {
-		const r = await handlers.browser_get_text({ selector: "#content" });
-		const data = jsonContent(r);
-		assert.ok(data.error);
-	});
-});
-
-// ── browser_url ──────────────────────────────────────────────────────────────
-describe("browser_url", () => {
-	it("returns CDP error when disconnected", async () => {
-		const r = await handlers.browser_url({});
-		const data = jsonContent(r);
-		assert.ok(data.error);
-		assert.ok(data.error.includes("CDP not connected"));
-	});
-});
-
 // ── browser_fill ─────────────────────────────────────────────────────────────
 describe("browser_fill", () => {
 	it("fills fields and returns count (CDP disconnected → falls through)", async () => {
@@ -229,16 +174,6 @@ describe("browser_fill", () => {
 		});
 		const data = jsonContent(r);
 		assert.ok(data.error);
-	});
-});
-
-// ── browser_tabs ─────────────────────────────────────────────────────────────
-describe("browser_tabs", () => {
-	it("returns empty tab list from fake CDP", async () => {
-		const r = await handlers.browser_tabs({});
-		const data = jsonContent(r);
-		assert.ok(Array.isArray(data.tabs));
-		assert.equal(data.count, 0);
 	});
 });
 

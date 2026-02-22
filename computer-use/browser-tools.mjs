@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpClick, cdpDisconnect, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpHttp, cdpChromePid } from "./cdp.mjs";
-import { COORD_EXPR, CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, WAIT_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpChromePid } from "./cdp.mjs";
+import { CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const actionRes = async (text, delay) => ({ content: [{ type: "text", text }, ...await takeScreenshot(delay ?? 1500)] });
@@ -34,27 +34,6 @@ export function registerBrowserTools(server, IS_LINUX) {
       await hsCall("POST", "/type", { key: "return" });
       await cdpSyncToVisibleTab(url);
       return actionRes(`Navigated to ${url}`, 1500);
-    }
-  );
-
-  server.tool("browser_eval",
-    "Run JavaScript in Chrome's active tab via CDP. Returns the result value. Use JSON.stringify() for objects.",
-    { expression: z.string().describe("JavaScript expression to evaluate") },
-    async ({ expression }) => jsonRes({ result: await cdpEval(expression) })
-  );
-
-  server.tool("browser_coords",
-    "Get screen coordinates {sx, sy} for a CSS selector in Chrome. Use result with click().",
-    { selector: z.string().describe("CSS selector (e.g. 'input', 'a.nav-link', '#submit')"),
-      frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
-    async ({ selector, frame }) => {
-      const raw = await cdpEval(COORD_EXPR(selector, frame));
-      if (!raw) return jsonRes({ error: cdpErr(selector) });
-      try {
-        const c = JSON.parse(raw), sf = scaleFactor();
-        if (sf !== 1) { c.sx = Math.round(c.sx / sf); c.sy = Math.round(c.sy / sf); }
-        return jsonRes(c);
-      } catch { return jsonRes({ error: "Parse failed", raw }); }
     }
   );
 
@@ -146,40 +125,6 @@ export function registerBrowserTools(server, IS_LINUX) {
     }
   );
 
-  server.tool("browser_wait",
-    "Wait for a CSS selector to appear in the page (polls up to timeout). Returns 'found' or 'timeout'.",
-    { selector: z.string().describe("CSS selector to wait for"),
-      timeout: z.coerce.number().optional().describe("Max wait ms, max 8000 (default: 5000)") },
-    async ({ selector, timeout = 5000 }) => {
-      const result = await cdpEvalAsync(WAIT_EXPR(selector, Math.min(timeout, 8000))).catch(() => null);
-      return jsonRes({ status: result ?? "timeout", selector });
-    }
-  );
-
-  server.tool("browser_get_text",
-    "Get visible text content from the page or a specific element. Useful for reading content without screenshots.",
-    { selector: z.string().optional().describe("CSS selector (default: body)"),
-      max_length: z.coerce.number().optional().describe("Max characters (default: 4000)") },
-    async ({ selector, max_length = 4000 }) => {
-      const sel = selector ? `_dq(${JSON.stringify(selector)})` : `document.body`;
-      const expr = `(function(){${_deep}var el=${sel};return el?(el.innerText||'').substring(0,${max_length}):'not found'})()`;
-      const text = await cdpEval(expr);
-      if (text === null) return jsonRes({ error: cdpErr(selector || 'body') });
-      if (text === 'not found') return jsonRes({ error: `Element not found: ${selector}` });
-      return jsonRes({ text, length: text.length });
-    }
-  );
-
-  server.tool("browser_url",
-    "Get the current page URL and title.",
-    {},
-    async () => {
-      const r = await cdpEval(`JSON.stringify({url:location.href,title:document.title})`);
-      if (!r) return jsonRes({ error: 'CDP not connected — use browser_navigate first' });
-      try { return jsonRes(JSON.parse(r)); } catch { return jsonRes({ url: r }); }
-    }
-  );
-
   server.tool("browser_fill", "Fill multiple form fields at once, more efficient than repeated browser_type calls. Auto-returns screenshot.",
     { fields: z.array(z.object({ selector: z.string(), value: z.string() })).describe("Array of {selector, value} pairs"),
       submit: z.string().optional().describe("CSS selector to click after filling"), frame: z.coerce.number().optional().describe("iframe index") },
@@ -188,11 +133,4 @@ export function registerBrowserTools(server, IS_LINUX) {
       if (submit) { const r = await cdpEval(CLICK_EXPR(submit, frame)); if (!r) return jsonRes({ error: cdpErr(submit) }); }
       return actionRes(`Filled ${fields.length} fields${submit ? ' and submitted' : ''}`, submit ? 1500 : 400);
     });
-
-  server.tool("browser_tabs", "List all open Chrome tabs with URLs and titles.", {}, async () => {
-    const tabs = await cdpHttp("/json/list");
-    if (!tabs) return jsonRes({ error: "CDP not available — Chrome may not be running" });
-    const pages = tabs.filter(t => t.type === "page").map(t => ({ id: t.id, title: t.title, url: t.url }));
-    return jsonRes({ tabs: pages, count: pages.length });
-  });
 }

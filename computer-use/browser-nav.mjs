@@ -27,4 +27,11 @@ export function registerBrowserNavTools(server) {
       return { content: [{ type: "text", text: `Closed tab ${id}` }, ...await takeScreenshot(400)] };
     }
   );
+
+  server.tool("browser_tabs", "List all open Chrome tabs with URLs and titles.", {}, async () => {
+    const tabs = await cdpHttp("/json/list");
+    if (!tabs) return jsonRes({ error: "CDP not available — Chrome may not be running" });
+    const pages = tabs.filter(t => t.type === "page").map(t => ({ id: t.id, title: t.title, url: t.url }));
+    return jsonRes({ tabs: pages, count: pages.length });
+  });
 }
