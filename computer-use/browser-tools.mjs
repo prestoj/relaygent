@@ -78,7 +78,13 @@ export function registerBrowserTools(server, IS_LINUX) {
       if (!raw) return jsonRes({ error: cdpConnected() ? `No elements found containing: ${text}` : `CDP not connected — use browser_navigate to open a page first` });
       let coords;
       try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
-      if (coords.error) return jsonRes(coords);
+      if (coords.error) {
+        const hints = [];
+        if (coords.iframes) hints.push(`page has ${coords.iframes} iframe(s) — try frame: 0`);
+        if (coords.canvas) hints.push(`page uses <canvas> — text may not be in DOM, use click() with coordinates`);
+        if (coords.clickable === 0) hints.push(`no clickable elements found — page may not be loaded`);
+        return jsonRes({ ...coords, ...(hints.length && { hints }) });
+      }
       return actionRes(`Clicked "${coords.text}" at (${coords.sx},${coords.sy}) [${coords.count} matches]`, 1000);
     }
   );
