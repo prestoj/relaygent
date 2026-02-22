@@ -5,11 +5,30 @@
 	let aiSummary = $state('');
 	let summaryLoading = $state(false);
 	let filter = $state('all');
+	let query = $state('');
 
 	const filters = [
 		{ key: 'all', label: 'All' }, { key: 'file', label: 'Files' },
 		{ key: 'bash', label: 'Bash' }, { key: 'mcp', label: 'MCP' }, { key: 'text', label: 'Text' },
 	];
+
+	const act = data.activity || [];
+	const st = data.stats || {};
+	const topTools = Object.entries(st.tools || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+	const filesTouched = (() => {
+		const files = new Map();
+		for (const a of act) {
+			if (a.type !== 'tool' || !a.params) continue;
+			const p = a.params.file_path || a.params.path || a.params.pattern;
+			if (!p || typeof p !== 'string' || p.length < 2) continue;
+			const op = { Read: 'read', Glob: 'search', Grep: 'search', Edit: 'modified', Write: 'modified' }[a.name];
+			if (!op) continue;
+			const cur = files.get(p);
+			if (!cur || (op === 'modified' && cur === 'read')) files.set(p, op);
+		}
+		return [...files.entries()].sort((a, b) => (a[1] === b[1] ? a[0].localeCompare(b[0]) : a[1] === 'modified' ? -1 : 1));
+	})();
 
 	async function fetchSummary() {
 		if (summaryLoading) return;
@@ -19,12 +38,17 @@
 		summaryLoading = false;
 	}
 
-	const act = data.activity || [];
-	const st = data.stats || {};
-	const topTools = Object.entries(st.tools || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
-
-	let filtered = $derived(filter === 'all' ? act : act.filter(a =>
-		filter === 'text' ? a.type === 'text' : a.type === 'tool' && cat(a.name) === filter));
+	let filtered = $derived.by(() => {
+		let list = filter === 'all' ? act : act.filter(a =>
+			filter === 'text' ? a.type === 'text' : a.type === 'tool' && cat(a.name) === filter);
+		if (query.trim()) {
+			const q = query.toLowerCase();
+			list = list.filter(a => (a.name || '').toLowerCase().includes(q)
+				|| (a.input || '').toLowerCase().includes(q) || (a.text || '').toLowerCase().includes(q)
+				|| (a.result || '').toLowerCase().includes(q));
+		}
+		return list;
+	});
 </script>
 
 <svelte:head><title>Session {data.displayTime} — Relaygent</title></svelte:head>
@@ -55,11 +79,20 @@
 	{#if aiSummary}<p class="ai-sum">{aiSummary}</p>{/if}
 </div>
 
+{#if filesTouched.length > 0}
+<details class="files-touched">
+	<summary>{filesTouched.length} file{filesTouched.length === 1 ? '' : 's'} touched</summary>
+	<ul>{#each filesTouched as [path, op]}<li><span class="fop {op}">{op}</span><span class="fp">{path.split('/').pop()}</span><span class="fdir">{path.split('/').slice(0, -1).join('/')}/</span></li>{/each}</ul>
+</details>
+{/if}
+
 {#if !act.length}
 	<p style="color: var(--text-muted)">No activity recorded for this session.</p>
 {:else}
 	<div class="fbar">
 		{#each filters as f}<button class="fb" class:active={filter === f.key} onclick={() => filter = f.key}>{f.label}</button>{/each}
+		<input type="text" class="fsearch" bind:value={query} placeholder="Search..." />
+		{#if query}<button class="fclear" onclick={() => query = ''}>x</button>{/if}
 		<span class="cnt">{filtered.length}</span>
 	</div>
 	<div class="feed">
@@ -118,7 +151,18 @@
 	.fbar { display: flex; gap: 0.3em; align-items: center; margin-bottom: 0.5em; }
 	.fb { padding: 0.2em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.78em; }
 	.fb.active { background: var(--link); color: white; border-color: var(--link); }
-	.cnt { margin-left: auto; font-size: 0.78em; color: var(--text-muted); }
+	.fsearch { margin-left: auto; width: 8em; padding: 0.2em 0.5em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text); font-size: 0.78em; outline: none; }
+	.fsearch:focus { border-color: var(--link); width: 12em; }
+	.fclear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78em; padding: 0.1em 0.3em; }
+	.fclear:hover { color: var(--text); }
+	.cnt { font-size: 0.78em; color: var(--text-muted); }
+	.files-touched { margin-bottom: 1em; font-size: 0.82em; }
+	.files-touched summary { cursor: pointer; font-weight: 600; color: var(--text-muted); }
+	.files-touched ul { list-style: none; padding: 0; margin: 0.3em 0 0; display: flex; flex-direction: column; gap: 0.15em; }
+	.files-touched li { display: flex; gap: 0.5em; align-items: baseline; font-family: monospace; font-size: 0.9em; }
+	.fop { font-size: 0.72em; font-weight: 700; text-transform: uppercase; padding: 0.1em 0.3em; border-radius: 3px; }
+	.fop.modified { color: var(--warning); } .fop.read { color: var(--text-muted); } .fop.search { color: #8b5cf6; }
+	.fp { font-weight: 600; color: var(--text); } .fdir { color: var(--text-muted); font-size: 0.85em; }
 	.feed { display: flex; flex-direction: column; gap: 0.25em; }
 	.ai { display: grid; grid-template-columns: 3.5em 1fr; gap: 0.4em; font-size: 0.85em; padding: 0.35em 0.5em; background: var(--bg-surface); border-radius: 4px; border-left: 3px solid var(--border); cursor: pointer; transition: background 0.15s; }
 	.ai:hover { background: var(--code-bg); }
