@@ -124,6 +124,62 @@ def drag(params: dict) -> tuple[dict, int]:
                         "to": {"x": ex, "y": ey}, "steps": steps}}, 200
 
 
+def key_down(params: dict) -> tuple[dict, int]:
+    key = params.get("key")
+    if not key:
+        return {"error": "key required"}, 400
+    xkey = KEY_MAP.get(key.lower(), key)
+    mods = _mod_flags(params.get("modifiers"))
+    for m in mods:
+        _xdotool("keydown", m)
+    _xdotool("keydown", xkey)
+    label = ("+".join(mods) + "+" if mods else "") + key
+    return {"held": label}, 200
+
+
+def key_up(params: dict) -> tuple[dict, int]:
+    key = params.get("key")
+    if not key:
+        return {"error": "key required"}, 400
+    xkey = KEY_MAP.get(key.lower(), key)
+    mods = _mod_flags(params.get("modifiers"))
+    _xdotool("keyup", xkey)
+    for m in reversed(mods):
+        _xdotool("keyup", m)
+    label = ("+".join(mods) + "+" if mods else "") + key
+    return {"released": label}, 200
+
+
+def mouse_down(params: dict) -> tuple[dict, int]:
+    btn = str(params.get("button", 1))
+    if params.get("x") is not None and params.get("y") is not None:
+        _xdotool("mousemove", "--sync", str(int(params["x"])), str(int(params["y"])))
+    _xdotool("mousedown", btn)
+    return {"held": f"mouse{btn}"}, 200
+
+
+def mouse_up(params: dict) -> tuple[dict, int]:
+    btn = str(params.get("button", 1))
+    if params.get("x") is not None and params.get("y") is not None:
+        _xdotool("mousemove", "--sync", str(int(params["x"])), str(int(params["y"])))
+    _xdotool("mouseup", btn)
+    return {"released": f"mouse{btn}"}, 200
+
+
+_RELEASE_KEYS = "Up Down Left Right space Return shift ctrl alt".split()
+_RELEASE_KEYS += list("abcdefghijklmnopqrstuvwxyz")
+
+
+def release_all(_params: dict) -> tuple[dict, int]:
+    for key in _RELEASE_KEYS:
+        try: _xdotool("keyup", key)
+        except Exception: pass
+    for btn in "1", "2", "3":
+        try: _xdotool("mouseup", btn)
+        except Exception: pass
+    return {"released": "all", "count": len(_RELEASE_KEYS) + 3}, 200
+
+
 def type_from_file(params: dict) -> tuple[dict, int]:
     path = params.get("path")
     if not path:

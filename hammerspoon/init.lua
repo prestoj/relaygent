@@ -12,6 +12,7 @@ local json = hs.json
 local PORT = tonumber(os.getenv("HAMMERSPOON_PORT")) or 8097
 local MEM_LIMIT_MB = tonumber(os.getenv("HAMMERSPOON_MEM_LIMIT_MB")) or 500
 local input = dofile(hs.configdir .. "/input_handlers.lua")
+local held = dofile(hs.configdir .. "/held_input.lua")
 local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
 local ax_press = dofile(hs.configdir .. "/ax_press.lua")
 
@@ -90,6 +91,11 @@ local function handleRequest(method, path, headers, body)
             return input.drag(params)
         elseif key == "POST /scroll" then
             return input.scroll(params)
+        elseif key == "POST /key_down" then return held.key_down(params)
+        elseif key == "POST /key_up" then return held.key_up(params)
+        elseif key == "POST /mouse_down" then return held.mouse_down(params)
+        elseif key == "POST /mouse_up" then return held.mouse_up(params)
+        elseif key == "POST /release_all" then return held.release_all(params)
         elseif key == "GET /windows" then
             local wins = {}
             for _, w in ipairs(hs.window.allWindows()) do
