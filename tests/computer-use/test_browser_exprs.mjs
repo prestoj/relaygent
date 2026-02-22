@@ -139,6 +139,12 @@ describe('TEXT_CLICK_EXPR', () => {
 		assert.ok(expr.includes('createTreeWalker'), 'missing TreeWalker fallback');
 		assert.ok(expr.includes('NodeFilter.SHOW_TEXT'), 'should filter for text nodes');
 	});
+
+	it('TreeWalker checks for adjacent INPUT sibling', () => {
+		const expr = TEXT_CLICK_EXPR('option', 0, undefined);
+		assert.ok(expr.includes('previousSibling'), 'should walk previousSibling');
+		assert.ok(expr.includes("tagName==='INPUT'"), 'should detect adjacent INPUT');
+	});
 });
 
 describe('TYPE_EXPR', () => {
