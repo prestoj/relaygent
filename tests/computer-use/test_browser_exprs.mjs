@@ -133,6 +133,12 @@ describe('TEXT_CLICK_EXPR', () => {
 		assert.ok(expr.includes('[role=checkbox]'), 'missing [role=checkbox]');
 		assert.ok(expr.includes('[tabindex="0"]'), 'missing [tabindex="0"]');
 	});
+
+	it('includes TreeWalker fallback for bare text nodes', () => {
+		const expr = TEXT_CLICK_EXPR('Large', 0, undefined);
+		assert.ok(expr.includes('createTreeWalker'), 'missing TreeWalker fallback');
+		assert.ok(expr.includes('NodeFilter.SHOW_TEXT'), 'should filter for text nodes');
+	});
 });
 
 describe('TYPE_EXPR', () => {
