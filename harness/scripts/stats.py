@@ -1,92 +1,80 @@
 #!/usr/bin/env python3
-"""Parse relay log and display session statistics."""
+"""Display session statistics from the session-stats cache."""
 
 import json
-import re
 import sys
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
-LOG_FILE = SCRIPT_DIR.parent / "logs" / "relaygent.log"
-STATUS_FILE = Path.home() / ".relaygent" / "relay-status.json"
+REPO_DIR = SCRIPT_DIR.parent
+DATA_DIR = Path(
+    __import__("os").environ.get("RELAYGENT_DATA_DIR", str(REPO_DIR / "data"))
+)
+CACHE_FILE = DATA_DIR / "session-stats-cache.json"
+STATUS_FILE = DATA_DIR / "relay-status.json"
 PCT_FILE = Path("/tmp/relaygent-context-pct")
 
 C = {"cyan": "\033[0;36m", "green": "\033[0;32m", "yellow": "\033[1;33m",
      "red": "\033[0;31m", "bold": "\033[1m", "dim": "\033[2m", "nc": "\033[0m"}
-TS_RE = re.compile(r"^\[(.+?)\] (.+)")
-CTX_RE = re.compile(r"Context at (\d+)%")
 
 
-def parse_log():
-    """Parse relay log into structured events."""
-    if not LOG_FILE.exists():
+def load_sessions():
+    """Load sessions from the stats cache (shared with hub)."""
+    if not CACHE_FILE.exists():
         return []
-    events = []
-    for line in LOG_FILE.read_text(errors="replace").splitlines():
-        m = TS_RE.match(line)
-        if not m:
+    try:
+        raw = json.loads(CACHE_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return []
+    sessions = []
+    for _path, entry in raw.items():
+        s = entry.get("stats")
+        if not s or not s.get("start"):
             continue
-        raw_ts, msg = m.group(1), m.group(2)
         try:
-            ts = datetime.strptime(raw_ts, "%a %b %d %H:%M:%S %Z %Y")
-        except ValueError:
+            start = datetime.fromisoformat(s["start"].replace("Z", "+00:00"))
+        except (ValueError, TypeError):
             continue
-        events.append({"ts": ts, "msg": msg})
-    return events
+        dur_min = s.get("durationMin", 0)
+        sessions.append({
+            "start": start,
+            "dur_min": dur_min,
+            "tokens": s.get("totalTokens", 0),
+            "output": s.get("outputTokens", 0),
+            "tools_total": s.get("toolCalls", 0),
+            "tools": s.get("tools", {}),
+            "turns": s.get("turns", 0),
+            "goal": s.get("handoffGoal"),
+        })
+    sessions.sort(key=lambda x: x["start"])
+    return sessions
 
 
-def compute_stats(events):
-    """Compute session statistics from parsed events."""
-    sessions, errors = [], Counter()
-    current_start = None
-    max_ctx = 0.0
-
-    for ev in events:
-        msg = ev["msg"]
-        if "Starting relay run" in msg:
-            if current_start:
-                sessions.append({"start": current_start, "end": ev["ts"], "ctx": max_ctx})
-            current_start = ev["ts"]
-            max_ctx = 0.0
-        elif (m := CTX_RE.search(msg)):
-            max_ctx = max(max_ctx, float(m.group(1)))
-        elif "Crashed" in msg:
-            errors["crashes"] += 1
-        elif "rate limit" in msg.lower():
-            errors["rate_limits"] += 1
-        elif "Hung" in msg:
-            errors["hangs"] += 1
-        elif "Relay run complete" in msg and current_start:
-            sessions.append({"start": current_start, "end": ev["ts"], "ctx": max_ctx})
-            current_start = None
-            max_ctx = 0.0
-
-    if current_start:
-        sessions.append({"start": current_start, "end": datetime.now(), "ctx": max_ctx,
-                         "active": True})
-    return sessions, errors
-
-
-def fmt_duration(td):
-    """Format timedelta as human-readable string."""
-    total_s = int(td.total_seconds())
-    if total_s < 60:
-        return f"{total_s}s"
-    h, m = divmod(total_s // 60, 60)
+def fmt_dur(minutes):
+    if minutes < 1:
+        return "<1m"
+    h, m = divmod(minutes, 60)
     return f"{h}h {m:02d}m" if h else f"{m}m"
 
 
+def fmt_tokens(n):
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1000:
+        return f"{n / 1000:.0f}K"
+    return str(n)
+
+
 def print_stats():
-    """Print formatted session statistics."""
-    events = parse_log()
-    if not events:
-        print("No relay log found. Start the relay with: relaygent start")
+    sessions = load_sessions()
+    if not sessions:
+        print("No session data found. Start the relay with: relaygent start")
         return
 
-    sessions, errors = compute_stats(events)
-    today = datetime.now().date()
+    now = datetime.now(timezone.utc)
+    today = now.date()
     today_sessions = [s for s in sessions if s["start"].date() == today]
 
     print(f"\n{C['cyan']}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{C['nc']}")
@@ -96,48 +84,58 @@ def print_stats():
     # Today
     print(f"\n{C['bold']}Today ({today.strftime('%b %d')}){C['nc']}")
     if today_sessions:
-        total_time = sum((s["end"] - s["start"] for s in today_sessions), timedelta())
-        ctx_vals = [s["ctx"] for s in today_sessions if s["ctx"] > 0]
+        total_min = sum(s["dur_min"] for s in today_sessions)
+        total_tok = sum(s["tokens"] for s in today_sessions)
         print(f"  Sessions: {len(today_sessions)}")
-        print(f"  Run time: {fmt_duration(total_time)}")
-        if ctx_vals:
-            print(f"  Avg context: {sum(ctx_vals)/len(ctx_vals):.0f}%")
+        print(f"  Run time: {fmt_dur(total_min)}")
+        print(f"  Tokens: {fmt_tokens(total_tok)}")
         print(f"\n  {C['dim']}Timeline:{C['nc']}")
         for i, s in enumerate(today_sessions, 1):
             start = s["start"].strftime("%H:%M")
-            dur = fmt_duration(s["end"] - s["start"])
-            ctx_str = f" ctx:{s['ctx']:.0f}%" if s["ctx"] > 0 else ""
-            tag = f" {C['green']}(active){C['nc']}" if s.get("active") else ""
-            print(f"  {C['dim']}#{i}{C['nc']} {start}  {dur}{ctx_str}{tag}")
+            dur = fmt_dur(s["dur_min"])
+            goal = f"  {C['dim']}{s['goal'][:60]}{C['nc']}" if s.get("goal") else ""
+            print(f"  {C['dim']}#{i}{C['nc']} {start}  {dur}  {fmt_tokens(s['tokens'])}{goal}")
     else:
         print(f"  {C['dim']}No sessions today{C['nc']}")
 
     # All time
-    if sessions:
-        print(f"\n{C['bold']}All time ({len(sessions)} sessions){C['nc']}")
-        total_time = sum((s["end"] - s["start"] for s in sessions), timedelta())
-        ctx_vals = [s["ctx"] for s in sessions if s["ctx"] > 0]
-        first = sessions[0]["start"].strftime("%b %d")
-        print(f"  Since: {first}")
-        print(f"  Total run time: {fmt_duration(total_time)}")
-        if ctx_vals:
-            print(f"  Avg context: {sum(ctx_vals)/len(ctx_vals):.0f}%")
-        if any(errors.values()):
-            parts = []
-            for k in ("crashes", "rate_limits", "hangs"):
-                if errors[k]:
-                    parts.append(f"{errors[k]} {k.replace('_', ' ')}")
-            print(f"  Errors: {', '.join(parts)}")
-        else:
-            print(f"  Errors: {C['green']}none{C['nc']}")
+    total_min = sum(s["dur_min"] for s in sessions)
+    total_tok = sum(s["tokens"] for s in sessions)
+    total_out = sum(s["output"] for s in sessions)
+    total_tools = sum(s["tools_total"] for s in sessions)
+    first = sessions[0]["start"].strftime("%b %d")
+
+    print(f"\n{C['bold']}All time ({len(sessions)} sessions){C['nc']}")
+    print(f"  Since: {first}")
+    print(f"  Total run time: {fmt_dur(total_min)}")
+    print(f"  Tokens: {fmt_tokens(total_tok)} in, {fmt_tokens(total_out)} out")
+    print(f"  Tool calls: {total_tools:,}")
+
+    # Top tools
+    all_tools = Counter()
+    for s in sessions:
+        for name, count in s["tools"].items():
+            all_tools[name] += count
+    if all_tools:
+        top = all_tools.most_common(8)
+        parts = [f"{n}({c})" for n, c in top]
+        print(f"  Top tools: {', '.join(parts)}")
+
+    # Avg session
+    durs = [s["dur_min"] for s in sessions if s["dur_min"] > 0]
+    if durs:
+        avg = sum(durs) / len(durs)
+        print(f"  Avg session: {fmt_dur(int(avg))}")
 
     # Current status
     print(f"\n{C['bold']}Current{C['nc']}")
     status = "unknown"
+    goal = None
     if STATUS_FILE.exists():
         try:
             d = json.loads(STATUS_FILE.read_text())
             status = d.get("status", "unknown")
+            goal = d.get("goal")
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -152,10 +150,8 @@ def print_stats():
         except (ValueError, OSError):
             pass
 
-    active = [s for s in sessions if s.get("active")]
-    if active:
-        dur = datetime.now() - active[0]["start"]
-        print(f"  Session uptime: {fmt_duration(dur)}")
+    if goal:
+        print(f"  Goal: {goal[:80]}")
     print()
 
 
