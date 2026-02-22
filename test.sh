@@ -47,11 +47,10 @@ should_run email && run "email" node --test "$ROOT/tests/email/test_email_poller
 # --- Computer-use Python ---
 if should_run computer-use; then
   run "computer-use/python" python3 -m pytest "$ROOT/tests/computer-use/" -q
-  CU_NODE_TESTS=("$ROOT/tests/computer-use/test_hammerspoon_unit.mjs" "$ROOT/tests/computer-use/test_browser_exprs.mjs")
-  if [[ "$(uname)" == "Darwin" ]]; then
-    CU_NODE_TESTS+=("$ROOT/tests/computer-use/test_cdp.mjs")
+  CU_NODE_TESTS=("$ROOT"/tests/computer-use/*.mjs)
+  if [[ ${#CU_NODE_TESTS[@]} -gt 0 ]]; then
+    run "computer-use/node" node --test --test-timeout 30000 "${CU_NODE_TESTS[@]}"
   fi
-  run "computer-use/node" node --test "${CU_NODE_TESTS[@]}"
 fi
 
 # --- Slack (Node) ---
