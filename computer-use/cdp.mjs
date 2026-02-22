@@ -9,7 +9,7 @@ const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
 let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null;
 const _pending = new Map();
-let _events = [];
+let _events = []; const _persistent = {};
 let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
 function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
@@ -46,6 +46,7 @@ async function connectTab(wsUrl) {
         const msg = JSON.parse(data);
         if (msg.id && _pending.has(msg.id)) { _pending.get(msg.id)(msg); _pending.delete(msg.id); }
         else if (msg.method) {
+          if (_persistent[msg.method]) _persistent[msg.method](msg);
           const idx = _events.findIndex(e => e.method === msg.method);
           if (idx >= 0) { _events.splice(idx, 1)[0].cb(); }
         }
@@ -112,6 +113,8 @@ async function _getConnectionImpl() {
     _saveTabId(page.id);
     log(`connected to ${page.url.substring(0, 60)}`);
     await _denyPerms().catch(() => {});
+    send("Page.enable").catch(() => {});
+    _persistent['Page.javascriptDialogOpening'] = (m) => { log(`auto-dismissed ${m.params?.type} dialog`); send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {}); };
     return { ws: _ws };
   } catch (e) { log(`connect failed: ${e.message}`); return null; }
 }
