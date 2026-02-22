@@ -73,10 +73,10 @@
 		<div class="label">CPUs</div><div class="value">{data.system.cpus}</div>
 		<div class="label">Memory</div><div class="value">{data.system.memUsed} / {data.system.memTotal}</div>
 		{#if data.system.disk}<div class="label">Disk</div><div class="value">{data.system.disk.used} / {data.system.disk.total} ({data.system.disk.pct}%)</div>{/if}
-		{#if data.version}<div class="label">Version</div><div class="value mono">{data.version}</div>{/if}
+		{#if data.version}<div class="label">Version</div><div class="value mono">{data.version}{#if data.behind > 0}<span class="behind-badge">{data.behind} behind</span>{/if}</div>{/if}
 	</div>
 	<div class="svc-footer">
-		<button class="update-btn" onclick={runUpdate} disabled={updating}>{updating ? 'Updating...' : 'Pull & Rebuild'}</button>
+		<button class="update-btn" onclick={runUpdate} disabled={updating}>{updating ? 'Updating...' : (data.behind > 0 ? `Pull & Rebuild (${data.behind} new)` : 'Pull & Rebuild')}</button>
 		{#if updateMsg}<pre class="update-output">{updateMsg}</pre>{/if}
 	</div>
 </section>
@@ -156,6 +156,7 @@
 	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.check-label { font-weight: 600; min-width: 5em; }
 	.check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
+	.behind-badge { display: inline-block; background: var(--warning); color: #fff; font-size: 0.7em; font-weight: 700; padding: 0.1em 0.4em; border-radius: 8px; margin-left: 0.5em; vertical-align: middle; font-family: sans-serif; }
 	.update-btn { padding: 0.3em 0.7em; border: 1px solid var(--link); border-radius: 6px; background: var(--bg); color: var(--link); font-size: 0.78em; cursor: pointer; font-weight: 600; }
 	.update-btn:hover:not(:disabled) { background: var(--link); color: #fff; }  .update-btn:disabled { opacity: 0.5; cursor: default; }
 	.update-output { font-size: 0.75em; color: var(--text-muted); background: var(--code-bg); padding: 0.5em 0.75em; border-radius: 4px; margin: 0.5em 0 0; white-space: pre-wrap; max-height: 12em; overflow-y: auto; }

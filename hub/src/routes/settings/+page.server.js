@@ -78,12 +78,14 @@ export async function load() {
 		disk,
 	};
 	const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
-	let version = '';
+	let version = '', behind = 0;
 	try {
 		const hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
 		const date = execFileSync('git', ['log', '-1', '--format=%cd', '--date=short'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
 		version = `${hash} (${date})`;
+		execFileSync('git', ['fetch', '--quiet', 'origin', 'main'], { cwd: repoRoot, timeout: 5000 });
+		behind = parseInt(execFileSync('git', ['rev-list', 'HEAD..origin/main', '--count'], { cwd: repoRoot, timeout: 2000 }).toString().trim()) || 0;
 	} catch { /* not in git repo */ }
 	const config = loadConfig();
-	return { system, services, mcpServers: loadMcpServers(), config, version, setupChecks: getSetupChecks(config) };
+	return { system, services, mcpServers: loadMcpServers(), config, version, behind, setupChecks: getSetupChecks(config) };
 }
