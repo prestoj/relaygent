@@ -50,7 +50,7 @@ fi
 echo -e "  Rebuilding hub..."
 if (cd "$REPO_DIR/hub" && npx vite build >/dev/null 2>&1); then
     echo -e "  Hub: ${GREEN}built${NC}"
-    git -C "$REPO_DIR" rev-parse HEAD > "$REPO_DIR/data/hub-build-commit" 2>/dev/null || true
+    git -C "$REPO_DIR" rev-parse HEAD > "$DATA_DIR/hub-build-commit" 2>/dev/null || true
 else
     echo -e "  Hub: ${RED}build failed — check logs${NC}"
     exit 1
