@@ -1,5 +1,7 @@
 <script>
 	import { itemKey, fmtTime, fmtTokens, toolCategory as cat, shortName, fmtParams } from '$lib/sessionUtils.js';
+	import { sanitizeHtml } from '$lib/sanitize.js';
+	import { marked } from 'marked';
 	let { data } = $props();
 	let expandedKey = $state(null);
 	let aiSummary = $state('');
@@ -76,7 +78,7 @@
 <div class="sum-row">
 	<button class="sum-btn" onclick={fetchSummary} disabled={summaryLoading}>{summaryLoading ? 'Generating...' : 'AI Summary'}</button>
 	<a href="/api/sessions/export?id={data.id}" class="sum-btn export-btn" download>Export</a>
-	{#if aiSummary}<p class="ai-sum">{aiSummary}</p>{/if}
+	{#if aiSummary}<div class="ai-sum">{@html sanitizeHtml(marked.parse(aiSummary))}</div>{/if}
 </div>
 
 {#if filesTouched.length > 0}
@@ -147,7 +149,11 @@
 	.sum-btn { padding: 0.35em 0.7em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--text-muted); }
 	.sum-btn:hover:not(:disabled) { border-color: var(--link); color: var(--link); }  .sum-btn:disabled { opacity: 0.6; cursor: wait; }
 	.export-btn { text-decoration: none; display: inline-block; }
-	.ai-sum { margin: 0.4em 0 0; padding: 0.5em 0.7em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.82em; line-height: 1.5; }
+	.ai-sum { margin: 0.4em 0 0; padding: 0.5em 0.7em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.82em; line-height: 1.5; color: var(--text); }
+	.ai-sum :global(ul), .ai-sum :global(ol) { margin: 0.3em 0; padding-left: 1.5em; }
+	.ai-sum :global(li) { margin: 0.15em 0; }
+	.ai-sum :global(p) { margin: 0.3em 0; } .ai-sum :global(p:first-child) { margin-top: 0; } .ai-sum :global(p:last-child) { margin-bottom: 0; }
+	.ai-sum :global(strong) { color: var(--text); }
 	.fbar { display: flex; gap: 0.3em; align-items: center; margin-bottom: 0.5em; }
 	.fb { padding: 0.2em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.78em; }
 	.fb.active { background: var(--link); color: white; border-color: var(--link); }
