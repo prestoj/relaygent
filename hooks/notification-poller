@@ -56,7 +56,7 @@ try:
             ch = m.get('channel','')
             by_ch.setdefault(ch, {'id':ch,'name':m.get('channel_name',ch),'unread':0,'messages':[]})
             by_ch[ch]['unread'] += 1
-            by_ch[ch]['messages'].append({'user':m.get('user',''),'text':m.get('text',''),'ts':m.get('ts','')})
+            by_ch[ch]['messages'].append({'user':m.get('user',''),'user_name':m.get('user_name',''),'text':m.get('text',''),'ts':m.get('ts','')})
         sock_notifs = [{'type':'message','source':'slack','count':len(msgs),'channels':list(by_ch.values())}]
 except: pass
 sources = {n.get('source','') for n in fast if n.get('type')=='message'}
