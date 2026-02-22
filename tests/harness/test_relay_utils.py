@@ -71,14 +71,14 @@ class TestCleanupContextFile:
 
 class TestNotifyCrash:
     def test_logs_crash_message(self, capsys):
-        with patch("relay_utils._send_chat_alert"), patch("relay_utils._send_slack_alert"):
+        with patch("relay_alerts.send_chat_alert"), patch("relay_alerts.send_slack_alert"):
             notify_crash(3, 1)
         out = capsys.readouterr().out
         assert "3" in out
         assert "1" in out
 
     def test_sends_chat_and_slack_alerts(self):
-        with patch("relay_utils._send_chat_alert") as mc, patch("relay_utils._send_slack_alert") as ms:
+        with patch("relay_alerts.send_chat_alert") as mc, patch("relay_alerts.send_slack_alert") as ms:
             notify_crash(2, 137)
         mc.assert_called_once(); ms.assert_called_once()
         assert "2" in mc.call_args[0][0] and "137" in mc.call_args[0][0]
@@ -86,14 +86,14 @@ class TestNotifyCrash:
     def test_send_slack_alert_swallows_network_errors(self):
         import urllib.error
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("refused")):
-            from relay_utils import _send_slack_alert
-            _send_slack_alert("test")  # Should not raise
+            from relay_alerts import send_slack_alert
+            send_slack_alert("test")  # Should not raise
 
     def test_send_chat_alert_swallows_network_errors(self):
         import urllib.error
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("refused")):
-            from relay_utils import _send_chat_alert
-            _send_chat_alert("test alert")  # Should not raise
+            from relay_alerts import send_chat_alert
+            send_chat_alert("test alert")  # Should not raise
 
 
 def _make_commit_script(tmp_path, mode=0o755):
