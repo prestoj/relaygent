@@ -157,8 +157,10 @@ class ClaudeProcess:
         context_too_large = rate_limited = False
         try:
             lines = open(LOG_FILE).readlines()[log_start:]
-            if any('Request too large' in l or 'Could not process image' in l for l in lines):
-                context_too_large = True; log('Context too large or bad image — will start fresh')
+            if any('Request too large' in l for l in lines):
+                context_too_large = True; log('Context too large — will start fresh')
+            if any('Could not process image' in l for l in lines):
+                log('Bad image detected in API response (non-fatal, session continues)')
             if any('hit your limit' in l.lower() or 'usage limit' in l.lower() for l in lines):
                 rate_limited = True; log('API rate limit detected')
         except OSError: pass

@@ -34,16 +34,17 @@ server.tool("screenshot", "Capture screenshot. Use find_elements for precise coo
 		const body = { path: SCREENSHOT_PATH };
 		if (x !== null && y !== null && w !== null && h !== null) Object.assign(body, { x: sx(x), y: sx(y), w: sx(w), h: sx(h) });
 		const r = await hsCall("POST", "/screenshot", body);
-		if (r.error) return { content: [{ type: "text", text: JSON.stringify(r) }] };
+		if (r.error) return { content: [{ type: "text", text: `(screenshot failed: ${r.error})` }] };
 		try {
 			const img = readScreenshot(r.width);
+			if (!img) return { content: [{ type: "text", text: "(screenshot invalid — skipped to avoid API error)" }] };
 			const sf = scaleFactor();
 			const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
 			return { content: [
 				{ type: "image", data: img, mimeType: "image/png" },
 				{ type: "text", text: `Screenshot: ${sw}x${sh}px (use these coords for clicks)` },
 			] };
-		} catch { return { content: [{ type: "text", text: JSON.stringify(r) }] }; }
+		} catch { return { content: [{ type: "text", text: "(screenshot read error)" }] }; }
 	}
 );
 

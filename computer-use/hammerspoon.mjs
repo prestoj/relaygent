@@ -2,7 +2,7 @@
 // All requests serialized through single TCP connection
 
 import { execFile, execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import { platform } from "node:os";
 import http from "node:http";
 
@@ -21,8 +21,28 @@ const SCALED_WIDTH = 1280; // Always downscale to this width for consistent visi
 let _scaleFactor = 1;
 export function scaleFactor() { return _scaleFactor; }
 
-/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64. */
+// PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** Validate a PNG file exists, is non-empty, within size limit, and has correct header. */
+function validatePng(path) {
+	if (!existsSync(path)) return "file not found";
+	const size = statSync(path).size;
+	if (size === 0) return "empty file";
+	if (size > MAX_BYTES) return `too large (${Math.round(size/1024/1024)}MB > ${MAX_BYTES/1024/1024}MB)`;
+	if (size < 8) return "file too small for PNG header";
+	const header = Buffer.alloc(8);
+	const fd = openSync(path, "r");
+	readSync(fd, header, 0, 8, 0);
+	closeSync(fd);
+	if (!header.equals(PNG_MAGIC)) return "invalid PNG header";
+	return null; // valid
+}
+
+/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64 or null. */
 export function readScreenshot(nativeWidth) {
+	const srcErr = validatePng(SCREENSHOT_PATH);
+	if (srcErr) { process.stderr.write(`[computer-use] Screenshot invalid: ${srcErr}\n`); return null; }
 	try {
 		if (nativeWidth && nativeWidth > SCALED_WIDTH) {
 			_scaleFactor = nativeWidth / SCALED_WIDTH;
@@ -31,12 +51,15 @@ export function readScreenshot(nativeWidth) {
 			} else {
 				execFileSync("sips", ["-Z", String(SCALED_WIDTH), "--out", SCALED_PATH, SCREENSHOT_PATH], { timeout: 5000 });
 			}
+			const scaledErr = validatePng(SCALED_PATH);
+			if (scaledErr) { process.stderr.write(`[computer-use] Scaled screenshot invalid: ${scaledErr}\n`); return null; }
 			return readFileSync(SCALED_PATH).toString("base64");
 		}
 		_scaleFactor = 1;
 		return readFileSync(SCREENSHOT_PATH).toString("base64");
-	} catch {
-		return readFileSync(SCREENSHOT_PATH).toString("base64");
+	} catch (e) {
+		process.stderr.write(`[computer-use] Screenshot read error: ${e.message}\n`);
+		return null;
 	}
 }
 
@@ -89,23 +112,30 @@ export function hsCall(method, path, body, timeoutMs = 15000) {
 	return promise;
 }
 
-/** Take screenshot after delay. Returns MCP content blocks. */
+/** Take screenshot after delay. Returns MCP content blocks. Retries once on failure. */
 export async function takeScreenshot(delayMs = 300, indicator) {
 	await new Promise(r => setTimeout(r, delayMs));
 	const body = { path: SCREENSHOT_PATH };
 	if (indicator) { body.indicator_x = indicator.x; body.indicator_y = indicator.y; }
-	const r = await hsCall("POST", "/screenshot", body);
-	if (r.error) return [{ type: "text", text: `(screenshot failed: ${r.error})` }];
-	try {
+	for (let attempt = 0; attempt < 2; attempt++) {
+		const r = await hsCall("POST", "/screenshot", body);
+		if (r.error) {
+			if (attempt === 0) { await new Promise(res => setTimeout(res, 500)); continue; }
+			return [{ type: "text", text: `(screenshot failed: ${r.error})` }];
+		}
 		const img = readScreenshot(r.width);
-		if (!img) return [{ type: "text", text: "(screenshot empty)" }];
+		if (!img) {
+			if (attempt === 0) { await new Promise(res => setTimeout(res, 500)); continue; }
+			return [{ type: "text", text: "(screenshot invalid — skipped to avoid API error)" }];
+		}
 		const sf = scaleFactor();
 		const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
 		return [
 			{ type: "image", data: img, mimeType: "image/png" },
 			{ type: "text", text: `Screenshot: ${sw}x${sh}px (use these coords for clicks)` },
 		];
-	} catch (e) { return [{ type: "text", text: `(screenshot read failed: ${e.message})` }]; }
+	}
+	return [{ type: "text", text: "(screenshot failed after retry)" }];
 }
 
 /** Run osascript with timeout (macOS only). */
