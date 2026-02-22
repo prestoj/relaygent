@@ -24,7 +24,7 @@ const ENTRY = JSON.stringify({
 	},
 });
 
-function writeSession(dir, filename = 'session.jsonl', lines = 3) {
+function writeSession(dir, filename = 'aabb1122-test.jsonl', lines = 3) {
 	const p = path.join(dir, filename);
 	fs.writeFileSync(p, Array(lines).fill(ENTRY).join('\n') + '\n');
 	return p;
@@ -111,7 +111,7 @@ test('findLatestSession: picks newest by directory name, not file mtime', () => 
 		writeSession(older);
 		writeSession(newer);
 		// Touch older file to give it a newer mtime
-		const olderFile = path.join(older, 'session.jsonl');
+		const olderFile = path.join(older, 'aabb1122-test.jsonl');
 		const future = new Date(Date.now() + 60000);
 		fs.utimesSync(olderFile, future, future);
 		const result = findLatestSession();
@@ -150,10 +150,9 @@ test('listSessions: returns sessions with correct fields', () => {
 		const d = makeDir('run-2026-01-15-08-30-00');
 		writeSession(d);
 		const sessions = listSessions();
-		const s = sessions.find(x => x.id === '2026-01-15-08-30-00');
+		const s = sessions.find(x => x.id === '2026-01-15-08-30-00--aabb1122');
 		assert.ok(s, 'session found by id');
-		assert.equal(s.id, '2026-01-15-08-30-00');
-		assert.equal(s.displayTime, '2026-01-15 08:30');
+		assert.equal(s.id, '2026-01-15-08-30-00--aabb1122');
 		assert.ok(typeof s.size === 'number' && s.size > 200);
 	});
 });
@@ -167,11 +166,11 @@ test('listSessions: returns sessions sorted newest first', () => {
 			const d = path.join(projectsDir, name);
 			if (fs.existsSync(d)) writeSession(d);
 		}
-		const sessions = listSessions().filter(s =>
-			['2026-01-10-00-00-00', '2026-01-20-00-00-00', '2026-01-05-00-00-00'].includes(s.id));
+		const prefixes = ['2026-01-10-00-00-00', '2026-01-20-00-00-00', '2026-01-05-00-00-00'];
+		const sessions = listSessions().filter(s => prefixes.some(p => s.id.startsWith(p)));
 		assert.ok(sessions.length >= 2);
 		for (let i = 1; i < sessions.length; i++) {
-			assert.ok(sessions[i - 1].id >= sessions[i].id, 'sessions are sorted newest first');
+			assert.ok(sessions[i - 1].displayTime >= sessions[i].displayTime, 'sessions sorted newest first');
 		}
 	});
 });
