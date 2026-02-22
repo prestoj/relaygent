@@ -7,6 +7,7 @@
 	let debounceTimer;
 	let kbCount = $derived(results.filter(r => r.type === 'topic').length);
 	let sessionCount = $derived(results.filter(r => r.type === 'session').length);
+	let chatCount = $derived(results.filter(r => r.type === 'chat').length);
 
 	function highlight(text, q) {
 		if (!text || !q) return sanitizeHtml(text || '');
@@ -34,13 +35,17 @@
 
 <h1>Search</h1>
 
-<input type="search" bind:value={query} oninput={onInput} placeholder="Search knowledge base and sessions..." class="search" autofocus />
+<input type="search" bind:value={query} oninput={onInput} placeholder="Search KB, sessions, and chat..." class="search" autofocus />
 
 {#if query.trim().length >= 2}
 	<p class="count">
 		{searching ? 'Searching...' : `${results.length} result${results.length !== 1 ? 's' : ''}`}
-		{#if kbCount && sessionCount}
-			<span class="breakdown">({kbCount} KB · {sessionCount} session{sessionCount !== 1 ? 's' : ''})</span>
+		{#if kbCount || sessionCount || chatCount}
+			<span class="breakdown">({[
+				kbCount ? `${kbCount} KB` : '',
+				sessionCount ? `${sessionCount} session${sessionCount !== 1 ? 's' : ''}` : '',
+				chatCount ? `${chatCount} chat` : '',
+			].filter(Boolean).join(' · ')})</span>
 		{/if}
 	</p>
 	<ul class="results">
@@ -49,6 +54,10 @@
 				{#if r.type === 'session'}
 					<a href="/sessions/{r.id}">{@html highlight(r.displayTime, query)}</a>
 					<span class="type-badge session">Session</span>
+				{:else if r.type === 'chat'}
+					<span class="chat-role">{r.role === 'human' ? 'You' : 'Agent'}</span>
+					<span class="type-badge chat">Chat</span>
+					{#if r.time}<span class="chat-time">{new Date(r.time).toLocaleString()}</span>{/if}
 				{:else}
 					<a href="/kb/{r.slug}">{@html highlight(r.title || r.slug, query)}</a>
 					<span class="type-badge topic">KB</span>
@@ -81,5 +90,8 @@
 	}
 	.type-badge.topic { background: #6b7280; color: white; }
 	.type-badge.session { background: #2563eb; color: white; }
+	.type-badge.chat { background: #059669; color: white; }
+	.chat-role { font-weight: 600; }
+	.chat-time { font-size: 0.8em; color: var(--text-muted); margin-left: 0.5em; }
 	:global(mark) { background: color-mix(in srgb, var(--link) 20%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
 </style>
