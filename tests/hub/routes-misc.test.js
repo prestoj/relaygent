@@ -29,10 +29,15 @@ function postReq(body) {
 }
 
 // --- Health ---
-test('GET /api/health returns {status: ok}', async () => {
+test('GET /api/health returns status, version, hostname, uptime, relay', async () => {
 	const res = healthGet();
 	assert.equal(res.status, 200);
-	assert.equal((await res.json()).status, 'ok');
+	const body = await res.json();
+	assert.equal(body.status, 'ok');
+	assert.equal(body.hostname, os.hostname());
+	assert.equal(typeof body.uptime, 'number');
+	assert.ok(body.uptime >= 0);
+	assert.ok(body.relay && typeof body.relay.status === 'string');
 });
 
 // --- Logs ---
