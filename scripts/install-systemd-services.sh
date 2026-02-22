@@ -38,7 +38,7 @@ write_env() {
     mkdir -p "$(dirname "$ENV_FILE")"
     cat > "$ENV_FILE" <<EOF
 HOME=$HOME
-PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin
+PATH=$HOME/.local/bin:$HOME/.claude/local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin
 PORT=$HUB_PORT
 RELAYGENT_KB_DIR=$KB_DIR
 RELAYGENT_DATA_DIR=$DATA_DIR
