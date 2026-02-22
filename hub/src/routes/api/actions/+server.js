@@ -12,7 +12,6 @@ const ACTIONS = {
 	check: ['check'],
 	status: ['status'],
 	digest: ['digest'],
-	changelog: ['changelog'],
 	'clean-logs': ['clean-logs', '--dry-run'],
 	restart: ['restart'],
 };

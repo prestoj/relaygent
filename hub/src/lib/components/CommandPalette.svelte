@@ -18,7 +18,6 @@
 		{ name: 'Notifications', path: '/notifications', keys: ['notifications', 'alerts'] },
 		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
-		{ name: 'Changelog', path: '/changelog', keys: ['changelog', 'prs', 'merged', 'digest', 'activity'] },
 	];
 
 	let statusMsg = $state('');

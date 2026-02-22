@@ -30,7 +30,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help',changelog:'Changelog'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
 
 </script>
 

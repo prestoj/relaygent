@@ -9,7 +9,6 @@
 		{ id: 'check', label: 'Diagnostics' },
 		{ id: 'status', label: 'Status' },
 		{ id: 'digest', label: 'Digest' },
-		{ id: 'changelog', label: 'Changelog' },
 		{ id: 'clean-logs', label: 'Clean Logs (dry)' },
 	];
 
