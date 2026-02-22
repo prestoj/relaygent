@@ -8,12 +8,38 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import linux_input as inp
 import linux_display as display
 import linux_a11y as a11y
+
+
+def clipboard_read(_params: dict) -> tuple[dict, int]:
+    try:
+        text = subprocess.run(
+            ["xclip", "-selection", "clipboard", "-o"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+        return {"text": text}, 200
+    except FileNotFoundError:
+        return {"error": "xclip not installed"}, 500
+
+
+def clipboard_write(params: dict) -> tuple[dict, int]:
+    text = params.get("text")
+    if text is None:
+        return {"error": "text required"}, 400
+    try:
+        subprocess.run(
+            ["xclip", "-selection", "clipboard"],
+            input=text, text=True, timeout=5, check=True,
+        )
+        return {"ok": True, "length": len(text)}, 200
+    except FileNotFoundError:
+        return {"error": "xclip not installed"}, 500
 
 PORT = int(os.environ.get("HAMMERSPOON_PORT", "8097"))
 
@@ -44,6 +70,7 @@ class Handler(BaseHTTPRequestHandler):
             "/health": lambda _: ({"status": "ok", "platform": "linux"}, 200),
             "/windows": display.windows,
             "/apps": display.apps,
+            "/clipboard": clipboard_read,
         }
         handler = routes.get(self.path)
         if handler:
@@ -76,6 +103,7 @@ class Handler(BaseHTTPRequestHandler):
             "/element_at": a11y.element_at,
             "/accessibility": a11y.accessibility_tree,
             "/ax_press": a11y.ax_press,
+            "/clipboard": clipboard_write,
             "/reload": lambda _: ({"status": "ok", "note": "no-op on linux"}, 200),
         }
         handler = routes.get(self.path)
