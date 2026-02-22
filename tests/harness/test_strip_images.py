@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 
-from jsonl_checks import strip_old_images
+from jsonl_images import strip_old_images
 
 
 def _img_entry(i):
