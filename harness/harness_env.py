@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -15,6 +16,14 @@ _CLAUDE_INTERNAL = {
     "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
 }
+
+# Common binary directories not in LaunchAgent/systemd PATH
+_EXTRA_PATH_DIRS = [
+    str(Path.home() / ".local" / "bin"),
+    str(Path.home() / ".claude" / "local" / "bin"),
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+]
 
 
 def configured_model() -> str | None:
@@ -63,9 +72,33 @@ def build_prompt() -> bytes:
     return prompt
 
 
+def _augmented_path() -> str:
+    """Return PATH with common binary directories appended (for LaunchAgent/systemd)."""
+    current = os.environ.get("PATH", "")
+    extra = ":".join(d for d in _EXTRA_PATH_DIRS if d not in current)
+    return f"{current}:{extra}" if extra and current else (current or extra)
+
+
 def clean_env() -> dict:
-    """Return env without Claude Code internals so nested launches don't fail."""
-    return {k: v for k, v in os.environ.items() if k not in _CLAUDE_INTERNAL}
+    """Return env without Claude Code internals, with augmented PATH."""
+    env = {k: v for k, v in os.environ.items() if k not in _CLAUDE_INTERNAL}
+    env["PATH"] = _augmented_path()
+    return env
+
+
+def find_claude_binary() -> str | None:
+    """Find the claude CLI binary. Checks env, config, PATH, common locations."""
+    override = os.environ.get("CLAUDE_BIN")
+    if override and os.path.isfile(override) and os.access(override, os.X_OK):
+        return override
+    try:
+        cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
+        cfg_path = cfg.get("claude_path")
+        if cfg_path and os.path.isfile(cfg_path) and os.access(cfg_path, os.X_OK):
+            return cfg_path
+    except (OSError, json.JSONDecodeError, KeyError):
+        pass
+    return shutil.which("claude", path=_augmented_path())
 
 
 def ensure_settings() -> Path:

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from harness_env import build_prompt, clean_env, configured_model, ensure_settings
+from harness_env import build_prompt, clean_env, configured_model, ensure_settings, find_claude_binary
 
 
 class TestConfiguredModel:
@@ -56,17 +56,35 @@ class TestCleanEnv:
         env = clean_env()
         assert env["MY_VAR"] == "hello"
 
-    def test_removes_all_known_internal_vars(self, monkeypatch):
-        internals = [
-            "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT",
-            "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
-            "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
-        ]
-        for v in internals:
-            monkeypatch.setenv(v, "1")
+    def test_augments_path(self, monkeypatch):
+        monkeypatch.setenv("PATH", "/usr/bin")
         env = clean_env()
-        for v in internals:
-            assert v not in env
+        assert env["PATH"].startswith("/usr/bin:")
+        assert "/usr/local/bin" in env["PATH"]
+
+
+class TestFindClaudeBinary:
+    def test_finds_via_env_override(self, tmp_path, monkeypatch):
+        fake = tmp_path / "claude"
+        fake.write_text("#!/bin/sh\n"); fake.chmod(0o755)
+        monkeypatch.setenv("CLAUDE_BIN", str(fake))
+        assert find_claude_binary() == str(fake)
+
+    def test_finds_via_config(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("CLAUDE_BIN", raising=False)
+        fake = tmp_path / "claude"
+        fake.write_text("#!/bin/sh\n"); fake.chmod(0o755)
+        cfg_dir = tmp_path / ".relaygent"; cfg_dir.mkdir()
+        (cfg_dir / "config.json").write_text(json.dumps({"claude_path": str(fake)}))
+        monkeypatch.setenv("HOME", str(tmp_path))
+        assert find_claude_binary() == str(fake)
+
+    def test_returns_none_when_missing(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("CLAUDE_BIN", raising=False)
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("PATH", str(tmp_path))  # empty dir
+        with patch("harness_env._EXTRA_PATH_DIRS", []):
+            assert find_claude_binary() is None
 
 
 class TestEnsureSettings:

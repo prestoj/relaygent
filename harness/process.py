@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess, time
 from dataclasses import dataclass
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, SILENCE_TIMEOUT, Timer, log
-from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings
+from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings, find_claude_binary
 from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size
 from jsonl_images import strip_old_images
 
@@ -21,10 +21,11 @@ class ClaudeResult:
 class ClaudeProcess:
     """Manages Claude subprocess with hang detection."""
 
-    def __init__(self, session_id: str, timer: Timer, workspace: Path):
+    def __init__(self, session_id: str, timer: Timer, workspace: Path, claude_bin: str = "claude"):
         self.session_id = session_id
         self.timer = timer
         self.workspace = workspace
+        self._claude_bin = claude_bin
         self.process: subprocess.Popen | None = None
         self._log_file = None
         self._context_warning_sent = False
@@ -81,7 +82,7 @@ class ClaudeProcess:
         settings_file = str(ensure_settings())
         try:
             self.process = subprocess.Popen(
-                ["claude", "--print", "--dangerously-skip-permissions",
+                [self._claude_bin, "--print", "--dangerously-skip-permissions",
                  "--settings", settings_file, "--session-id", self.session_id,
                  *self._model_args()],
                 stdin=subprocess.PIPE, stdout=self._log_file,
@@ -98,7 +99,7 @@ class ClaudeProcess:
         log_start = self._get_log_lines()
         self._log_file = self._open_log()
         settings_file = str(ensure_settings())
-        cmd = ["claude", "--resume", self.session_id,
+        cmd = [self._claude_bin, "--resume", self.session_id,
                "--print", "--dangerously-skip-permissions", "--settings", settings_file,
                *self._model_args()]
         try:
