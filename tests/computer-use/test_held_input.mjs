@@ -33,6 +33,7 @@ const hsServer = http.createServer((req, res) => {
 		else if (req.url === "/key_up") resp = { released: parsed.key };
 		else if (req.url === "/mouse_down") resp = { held: `mouse${parsed.button || 1}`, x: parsed.x, y: parsed.y };
 		else if (req.url === "/mouse_up") resp = { released: `mouse${parsed.button || 1}` };
+		else if (req.url === "/mouse_move") resp = { moved: { x: parsed.x, y: parsed.y } };
 		else if (req.url === "/release_all") resp = { released: ["a", "mouse1"], count: 2 };
 		res.writeHead(200, { "Content-Type": "application/json" });
 		res.end(JSON.stringify(resp));
@@ -93,6 +94,19 @@ describe("mouse_up", () => {
 	it("sends POST /mouse_up", async () => {
 		const r = await hsCall("POST", "/mouse_up", { button: 1 });
 		assert.equal(r.released, "mouse1");
+	});
+});
+
+// ── mouse_move ──────────────────────────────────────────────────────────────
+
+describe("mouse_move", () => {
+	it("sends POST /mouse_move with coordinates", async () => {
+		const r = await hsCall("POST", "/mouse_move", { x: 640, y: 360 });
+		assert.deepEqual(r.moved, { x: 640, y: 360 });
+		const req = requests.find((r) => r.path === "/mouse_move");
+		assert.ok(req);
+		assert.equal(req.body.x, 640);
+		assert.equal(req.body.y, 360);
 	});
 });
 

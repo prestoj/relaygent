@@ -67,6 +67,7 @@ class Handler(BaseHTTPRequestHandler):
             "/key_up": inp.key_up,
             "/mouse_down": inp.mouse_down,
             "/mouse_up": inp.mouse_up,
+            "/mouse_move": inp.mouse_move,
             "/release_all": inp.release_all,
             "/input_sequence": inp.input_sequence,
             "/type_from_file": inp.type_from_file,

@@ -24,10 +24,8 @@ def _run(args: list[str], timeout: float = 5.0) -> str:
     r = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     return r.stdout.strip()
 
-
 def _xdotool(*args: str) -> str:
     return _run(["xdotool", *args])
-
 
 def _mod_flags(modifiers: list[str] | None) -> list[str]:
     if not modifiers:
@@ -129,7 +127,6 @@ def key_down(params: dict) -> tuple[dict, int]:
     label = ("+".join(mods) + "+" if mods else "") + key
     return {"held": label}, 200
 
-
 def key_up(params: dict) -> tuple[dict, int]:
     key = params.get("key")
     if not key:
@@ -150,7 +147,6 @@ def mouse_down(params: dict) -> tuple[dict, int]:
     _xdotool("mousedown", btn)
     return {"held": f"mouse{btn}"}, 200
 
-
 def mouse_up(params: dict) -> tuple[dict, int]:
     btn = str(params.get("button", 1))
     if params.get("x") is not None and params.get("y") is not None:
@@ -158,6 +154,12 @@ def mouse_up(params: dict) -> tuple[dict, int]:
     _xdotool("mouseup", btn)
     return {"released": f"mouse{btn}"}, 200
 
+def mouse_move(params: dict) -> tuple[dict, int]:
+    x, y = params.get("x"), params.get("y")
+    if x is None or y is None:
+        return {"error": "x,y required"}, 400
+    _xdotool("mousemove", "--sync", str(int(x)), str(int(y)))
+    return {"moved": {"x": int(x), "y": int(y)}}, 200
 
 _RELEASE_KEYS = "Up Down Left Right space Return shift ctrl alt".split() + list("abcdefghijklmnopqrstuvwxyz")
 
@@ -171,13 +173,12 @@ def release_all(_params: dict) -> tuple[dict, int]:
         except Exception: pass
     return {"released": "all", "count": len(_RELEASE_KEYS) + 3}, 200
 
-
 def input_sequence(params: dict) -> tuple[dict, int]:
     actions = params.get("actions", [])
     if not actions:
         return {"error": "actions array required"}, 400
     dispatch = {"key_down": key_down, "key_up": key_up, "mouse_down": mouse_down,
-                "mouse_up": mouse_up, "release_all": release_all,
+                "mouse_up": mouse_up, "mouse_move": mouse_move, "release_all": release_all,
                 "key_press": lambda a: (key_down(a), key_up(a))}
     for a in actions:
         fn = dispatch.get(a.get("action"))
@@ -186,7 +187,6 @@ def input_sequence(params: dict) -> tuple[dict, int]:
         if delay > 0: threading.Timer(delay, fn, args=[a]).start()
         else: fn(a)
     return {"queued": len(actions), "duration_ms": max((a.get("delay") or 0) for a in actions)}, 200
-
 
 def type_from_file(params: dict) -> tuple[dict, int]:
     path = params.get("path")

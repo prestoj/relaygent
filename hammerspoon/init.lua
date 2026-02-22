@@ -95,6 +95,7 @@ local function handleRequest(method, path, headers, body)
         elseif key == "POST /key_up" then return held.key_up(params)
         elseif key == "POST /mouse_down" then return held.mouse_down(params)
         elseif key == "POST /mouse_up" then return held.mouse_up(params)
+        elseif key == "POST /mouse_move" then return held.mouse_move(params)
         elseif key == "POST /release_all" then return held.release_all(params)
         elseif key == "POST /input_sequence" then return held.input_sequence(params)
         elseif key == "GET /windows" then
