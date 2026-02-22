@@ -10,6 +10,9 @@ const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
 let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null;
 const _pending = new Map();
 let _events = []; const _persistent = {};
+let _lastDialog = null, _nextDialogConfig = null;
+export const getLastDialog = () => _lastDialog;
+export const setNextDialogConfig = (c) => { _nextDialogConfig = c; };
 let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
 function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
@@ -114,7 +117,12 @@ async function _getConnectionImpl() {
     log(`connected to ${page.url.substring(0, 60)}`);
     await _denyPerms().catch(() => {});
     send("Page.enable").catch(() => {});
-    _persistent['Page.javascriptDialogOpening'] = (m) => { log(`auto-dismissed ${m.params?.type} dialog`); send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {}); };
+    _persistent['Page.javascriptDialogOpening'] = (m) => {
+      const p = m.params || {}; _lastDialog = { type: p.type, message: p.message, defaultPrompt: p.defaultPrompt || "", url: p.url || "", timestamp: Date.now() };
+      const c = _nextDialogConfig || { accept: true }; _nextDialogConfig = null; _lastDialog.handled = c.accept !== false ? 'accepted' : 'dismissed';
+      const hp = { accept: c.accept !== false }; if (c.promptText != null) hp.promptText = c.promptText;
+      log(`${hp.accept ? 'accepted' : 'dismissed'} ${p.type} dialog`); send('Page.handleJavaScriptDialog', hp).catch(() => {});
+    };
     return { ws: _ws };
   } catch (e) { log(`connect failed: ${e.message}`); return null; }
 }
