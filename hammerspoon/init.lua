@@ -145,6 +145,12 @@ local function handleRequest(method, path, headers, body)
             return ax_handler(params)
         elseif key == "POST /ax_press" then
             return ax_press(params)
+        elseif key == "GET /clipboard" then
+            return json.encode({text=hs.pasteboard.getContents() or ""}), 200
+        elseif key == "POST /clipboard" then
+            if not params.text then return json.encode({error="text required"}), 400 end
+            hs.pasteboard.setContents(params.text)
+            return json.encode({ok=true, length=#params.text}), 200
         elseif key == "POST /dismiss_dialog" then
             local target = params.button or "Don't Allow"
             local dialogs = {"UserNotificationCenter","SecurityAgent","System Preferences","System Settings","Google Chrome"}

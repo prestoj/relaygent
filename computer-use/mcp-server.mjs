@@ -13,6 +13,7 @@ import { registerBrowserNavTools } from "./browser-nav.mjs";
 import { registerBrowserFileTools } from "./browser-files.mjs";
 import { registerBrowserDialogTools } from "./browser-dialog.mjs";
 import { registerNativeTools } from "./native-tools.mjs";
+import { registerClipboardTools } from "./clipboard-tools.mjs";
 const IS_LINUX = platform() === "linux";
 
 const server = new McpServer({ name: "computer-use", version: "1.0.0" });
@@ -192,7 +193,7 @@ registerBrowserNavTools(server);
 registerBrowserFileTools(server);
 registerBrowserDialogTools(server);
 registerNativeTools(server);
-
+registerClipboardTools(server);
 await checkHealth();
 const transport = new StdioServerTransport();
 await server.connect(transport);
