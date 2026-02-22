@@ -26,13 +26,14 @@ export function findLatestSession() {
 			if (!m) continue;
 			const id = m[1];
 			if (id <= latestId) continue;
-			let best = null, maxSize = 0;
+			let best = null, bestMtime = 0;
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
-				const sz = fs.statSync(path.join(fullPath, f)).size;
-				if (sz > maxSize) { maxSize = sz; best = path.join(fullPath, f); }
+				const fp = path.join(fullPath, f);
+				const st = fs.statSync(fp);
+				if (st.size > 200 && st.mtimeMs > bestMtime) { bestMtime = st.mtimeMs; best = fp; }
 			}
-			if (best && maxSize > 200) { latestId = id; latestSession = best; }
+			if (best) { latestId = id; latestSession = best; }
 		}
 	} catch { /* ignore */ }
 
@@ -123,18 +124,18 @@ export function listSessions() {
 			if (prefix && !dir.startsWith(prefix)) continue;
 			const fullPath = path.join(claudeProjects, dir);
 			try { if (!fs.statSync(fullPath).isDirectory()) continue; } catch { continue; }
-			let best = null, maxSize = 0;
+			let best = null, bestMtime = 0, bestSize = 0;
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
 				const fp = path.join(fullPath, f);
-				const sz = fs.statSync(fp).size;
-				if (sz > maxSize) { maxSize = sz; best = fp; }
+				const st = fs.statSync(fp);
+				if (st.size > 200 && st.mtimeMs > bestMtime) { bestMtime = st.mtimeMs; best = fp; bestSize = st.size; }
 			}
-			if (!best || maxSize < 200) continue;
+			if (!best) continue;
 			const m = dir.match(/(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-(\d{2})$/);
 			if (!m) continue;
 			const st = parseSessionStats(best) || {};
-			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: maxSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
+			sessions.push({ id: m[0], displayTime: `${m[1]} ${m[2]}:${m[3]}`, size: bestSize, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 		}
 	} catch { /* ignore */ }
 	flushStatsCache();
@@ -152,11 +153,14 @@ export function loadSession(id) {
 			if (prefix && !dir.startsWith(prefix)) continue;
 			if (!dir.endsWith(id)) continue;
 			const fullPath = path.join(claudeProjects, dir);
+			let best = null, bestMtime = 0;
 			for (const f of fs.readdirSync(fullPath)) {
 				if (!f.endsWith('.jsonl')) continue;
 				const fp = path.join(fullPath, f);
-				if (fs.statSync(fp).size > 200) return { activity: parseSession(fp, 500), stats: parseSessionStats(fp) };
+				const st = fs.statSync(fp);
+				if (st.size > 200 && st.mtimeMs > bestMtime) { bestMtime = st.mtimeMs; best = fp; }
 			}
+			if (best) return { activity: parseSession(best, 500), stats: parseSessionStats(best) };
 		}
 	} catch { /* ignore */ }
 	return null;
