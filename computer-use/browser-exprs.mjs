@@ -31,7 +31,7 @@ const _simHover = `var _hov=function(e){var r=e.getBoundingClientRect(),cx=r.lef
   `e.dispatchEvent(new PointerEvent('pointerover',o));e.dispatchEvent(new PointerEvent('pointerenter',Object.assign({},o,{bubbles:false})));` +
   `e.dispatchEvent(new MouseEvent('mouseover',o));e.dispatchEvent(new MouseEvent('mouseenter',Object.assign({},o,{bubbles:false})))};`;
 export const HOVER_EXPR = (sel, frame) =>
-  `(function(){${_deep}${_simHover}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});_hov(el);${retCoords(frame)}})()`;
+  `(function(){${_deep}${_simHover}var ROOT=${frameRoot(frame)};var S=${JSON.stringify(sel)};${_vis}if(!el)return null;el.scrollIntoView({block:'nearest'});_hov(el);${retCoords(frame, `,vx:Math.round(r.left+r.width/2),vy:Math.round(r.top+r.height/2)`)}})()`;
 
 const _norm = `var norm=s=>s.replace(/[\\u00a0]/g,' ').replace(/[\\u2018\\u2019]/g,"'").replace(/[\\u201c\\u201d]/g,'"').replace(/[\\u2013\\u2014]/g,'-').toLowerCase()`;
 const _textSel = `'a,button,input[type=submit],input[type=button],summary,span,[role=button],[role=tab],` +

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { hsCall, takeScreenshot, scaleFactor } from "./hammerspoon.mjs";
-import { cdpEval, cdpEvalAsync, cdpNavigate, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpChromePid } from "./cdp.mjs";
+import { hsCall, takeScreenshot } from "./hammerspoon.mjs";
+import { cdpEval, cdpEvalAsync, cdpNavigate, cdpSyncToVisibleTab, patchChromePrefs, cdpConnected, cdpChromePid, cdpSendCommand } from "./cdp.mjs";
 import { CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
@@ -83,7 +83,7 @@ export function registerBrowserTools(server, IS_LINUX) {
   );
 
   server.tool("browser_hover",
-    "Hover over a web element by CSS selector — triggers mouseover/mouseenter for dropdowns, tooltips, menus. Auto-returns screenshot.",
+    "Hover over a web element by CSS selector — triggers CSS :hover and JS mouseover/mouseenter for dropdowns, tooltips, menus. Auto-returns screenshot.",
     { selector: z.string().describe("CSS selector (e.g. 'nav > li', '.dropdown-trigger', '#menu-item')"),
       frame: z.coerce.number().optional().describe("iframe index (window.frames[N]) to search inside") },
     async ({ selector, frame }) => {
@@ -91,6 +91,7 @@ export function registerBrowserTools(server, IS_LINUX) {
       if (!raw) return jsonRes({ error: cdpErr(selector) });
       let coords;
       try { coords = JSON.parse(raw); } catch { return jsonRes({ error: "Parse failed", raw }); }
+      await cdpSendCommand("Input.dispatchMouseEvent", { type: "mouseMoved", x: coords.vx, y: coords.vy });
       return actionRes(`Hovered ${selector} at (${coords.sx},${coords.sy})`, 800);
     }
   );
