@@ -60,7 +60,7 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
   `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
   `el.scrollIntoView({block:'nearest'});` +
   `_clk(el);` +
-  `${retCoords(frame, `,text:(el.innerText||el.value||'').trim().substring(0,50),count:matches.length`)}})()`;
+  `${retCoords(frame, `,text:(el.tagName==='INPUT'?t:(el.innerText||el.value||'')).trim().substring(0,50),count:matches.length`)}})()`;
 
 const _setSV = `var _sv=function(e,v){var p=e.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;var d=Object.getOwnPropertyDescriptor(p,'value');if(d&&d.set)d.set.call(e,v);else e.value=v};`;
 export const TYPE_EXPR = (sel, text, submit, frame) =>
