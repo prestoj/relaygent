@@ -12,7 +12,8 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_COMMIT="$REPO_DIR/data/hub-build-commit"
+DATA_DIR=$(python3 -c "import json; print(json.load(open('$HOME/.relaygent/config.json'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
+BUILD_COMMIT="$DATA_DIR/hub-build-commit"
 LOG="$REPO_DIR/logs/hub-autobuild.log"
 FORCE="${1:-}"
 
