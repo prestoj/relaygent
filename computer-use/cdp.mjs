@@ -5,7 +5,7 @@ import { ensureChrome } from "./cdp-chrome.mjs";
 
 const CDP_PORT = parseInt(process.env.RELAYGENT_CDP_PORT || "9223", 10);
 const TAB_ID_FILE = "/tmp/relaygent-cdp-tabid";
-let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null;
+let _ws = null, _msgId = 0, _connectPromise = null, _reconnectTimer = null, _disconnecting = false;
 const _pending = new Map();
 let _events = []; const _persistent = {};
 let _lastDialog = null, _nextDialogConfig = null;
@@ -53,7 +53,7 @@ async function connectTab(wsUrl) {
         }
       } catch {}
     });
-    ws.addEventListener("close", () => { _ws = null; _scheduleReconnect(); });
+    ws.addEventListener("close", () => { _ws = null; if (!_disconnecting) _scheduleReconnect(); });
   });
 }
 function send(method, params = {}) {
@@ -73,6 +73,7 @@ function waitForEvent(method, timeoutMs = 10000) {
   });
 }
 export async function getConnection() {
+  _disconnecting = false;
   if (_connectPromise) return _connectPromise;
   _connectPromise = _getConnectionImpl();
   try { return await _connectPromise; } finally { _connectPromise = null; }
@@ -149,7 +150,7 @@ export async function cdpNavigate(url) {
     return true;
   } catch (e) { log(`navigate error: ${e.message}`); return false; }
 }
-export function cdpDisconnect() { _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(null); }
+export function cdpDisconnect() { _disconnecting = true; _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(null); }
 export async function cdpSwitchTab(tabId) {
   const ok = await cdpActivate(tabId); if (!ok) return false;
   if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(tabId); return true;
