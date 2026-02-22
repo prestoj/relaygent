@@ -108,13 +108,23 @@ class TestFormatChatSlack:
         assert "3" in result[0]  # unread count shown in fallback
 
     def test_slack_includes_message_content(self):
-        """Message text should appear in wake notification."""
+        """Message text should appear in wake notification with display name."""
         notifs = [{"source": "slack", "count": 1,
                    "channels": [{"name": "general", "unread": 1,
-                                 "messages": [{"user": "U123", "text": "hello world", "ts": "1"}]}]}]
+                                 "messages": [{"user": "U123", "user_name": "Alice", "text": "hello world", "ts": "1"}]}]}]
         result = format_chat(notifs)
         assert "hello world" in result[0]
+        assert "Alice" in result[0]
+        assert "<@" not in result[0]
+
+    def test_slack_falls_back_to_user_id(self):
+        """Falls back to raw user ID when username is missing."""
+        notifs = [{"source": "slack", "count": 1,
+                   "channels": [{"name": "general", "unread": 1,
+                                 "messages": [{"user": "U123", "text": "hi", "ts": "1"}]}]}]
+        result = format_chat(notifs)
         assert "U123" in result[0]
+        assert "<@" not in result[0]
 
     def test_slack_multiple_channels(self):
         notifs = [{"source": "slack", "count": 5,

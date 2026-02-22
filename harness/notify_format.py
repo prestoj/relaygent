@@ -7,10 +7,10 @@ def _format_slack_channel(ch: dict) -> str:
     name = ch.get("name", ch.get("id", "?"))
     lines = [f"#{name}:"]
     for m in ch.get("messages", []):
-        user = m.get("user", "?")
+        user = m.get("user_name", m.get("user", "?"))
         text = m.get("text", "").strip()
         if text:
-            lines.append(f"  <@{user}>: {text}")
+            lines.append(f"  {user}: {text}")
     if not ch.get("messages"):
         lines.append(f"  ({ch.get('unread', 0)} new message(s))")
     return "\n".join(lines)
