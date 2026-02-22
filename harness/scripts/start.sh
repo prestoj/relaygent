@@ -13,10 +13,10 @@ if [ ! -d "$REPO_DIR/hub/node_modules" ]; then
     exit 1
 fi
 
-# Port checks — skip for platform-managed services (they own the port)
+# Port checks — auto-clear stale relaygent processes, fail on foreign processes
 port_ok=true
-is_platform_managed hub || check_port "$HUB_PORT" "Hub" || port_ok=false
-is_platform_managed notifications || check_port "$NOTIF_PORT" "Notifications" || port_ok=false
+is_platform_managed hub || clear_stale_port "$HUB_PORT" "Hub" || port_ok=false
+is_platform_managed notifications || clear_stale_port "$NOTIF_PORT" "Notifications" || port_ok=false
 if [ "$port_ok" = false ]; then
     echo -e "\n  ${RED}Fix port conflicts above, then try again.${NC}"; exit 1
 fi
@@ -54,7 +54,7 @@ elif [ "$(uname)" = "Linux" ]; then
         fi
     fi
     if [ -n "${DISPLAY:-}" ]; then
-        check_port "$HS_PORT" "Computer-use" || port_ok=false
+        clear_stale_port "$HS_PORT" "Computer-use" || port_ok=false
         if [ "$port_ok" = true ]; then
             start_service "Computer-use (port $HS_PORT)" "computer-use" \
                 env DISPLAY="${DISPLAY:-:0}" python3 "$REPO_DIR/computer-use/linux-server.py"
