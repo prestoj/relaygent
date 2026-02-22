@@ -68,7 +68,16 @@ export async function summarizeCurrent() {
 	const activity = parseSession(sessionFile, 100);
 	if (activity.length < 3) return null;
 	const compact = compactActivity(activity);
-	const prompt = `You are summarizing what an AI agent is currently working on. Based on its recent tool calls and thoughts, write a 2-3 sentence summary of what it's doing right now. Be specific and concrete. No preamble.\n\nRecent activity:\n${compact}`;
+	const prompt = `You are summarizing what an AI agent is currently working on. Based on its recent tool calls and thoughts, write a concise markdown summary. Use this format:
+
+**Currently:** One sentence about what the agent is doing right now.
+
+- Bullet point with a specific recent action or change
+- Another specific action (2-4 bullets total)
+
+Be specific and concrete. No preamble or extra commentary.
+
+Recent activity:\n${compact}`;
 	return callHaiku(prompt);
 }
 
@@ -83,7 +92,20 @@ export async function summarizeSession(sessionId, activity) {
 
 	if (!activity || activity.length < 3) return null;
 	const compact = compactActivity(activity, 80);
-	const prompt = `Summarize what this AI agent accomplished in this session in 3-5 sentences. Be specific about what was built, fixed, or changed. No preamble.\n\nSession activity:\n${compact}`;
+	const prompt = `Summarize what this AI agent accomplished in this session using markdown. Use this format:
+
+**Summary:** One sentence overview of the session.
+
+### Key accomplishments
+- Specific thing that was built, fixed, or changed
+- Another accomplishment (3-6 bullets total)
+
+### Details
+1-2 sentences of additional context if needed.
+
+Be specific and concrete. No preamble or extra commentary.
+
+Session activity:\n${compact}`;
 	const summary = await callHaiku(prompt);
 
 	try { fs.writeFileSync(cacheFile, summary); } catch { /* ignore */ }
