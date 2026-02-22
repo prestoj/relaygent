@@ -93,3 +93,9 @@ export function markAsRead(ids) {
 export function markAllRead() {
 	getDb().prepare("UPDATE messages SET read = 1 WHERE role = 'human' AND read = 0").run();
 }
+
+export function searchMessages(query, limit = 10) {
+	const rows = getDb().prepare('SELECT * FROM messages ORDER BY id DESC LIMIT 500').all().map(decryptRow);
+	const q = query.toLowerCase();
+	return rows.filter(r => r.content.toLowerCase().includes(q)).slice(0, limit);
+}
