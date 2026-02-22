@@ -4,6 +4,8 @@
 	let services = $state(data.services);
 	let restarting = $state(false);
 	let restartMsg = $state('');
+	let updating = $state(false);
+	let updateMsg = $state('');
 	let anyDown = $derived(services.some(s => !s.ok));
 	let pollTimer;
 
@@ -16,6 +18,17 @@
 			setTimeout(async () => { try { services = (await (await fetch('/api/services')).json()).services; } catch { /* wait for recovery */ } }, 3000);
 		} catch { restartMsg = 'Network error — hub may be restarting'; }
 		restarting = false;
+	}
+
+	async function runUpdate() {
+		updating = true; updateMsg = '';
+		try {
+			const r = await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update' }) });
+			const d = await r.json();
+			updateMsg = d.output || (r.ok ? 'Update complete' : 'Update failed');
+			setTimeout(async () => { try { services = (await (await fetch('/api/services')).json()).services; } catch { /* hub may be restarting */ } }, 5000);
+		} catch { updateMsg = 'Hub is restarting with new code...'; setTimeout(() => location.reload(), 8000); }
+		updating = false;
 	}
 
 	onMount(() => {
@@ -61,6 +74,10 @@
 		<div class="label">Memory</div><div class="value">{data.system.memUsed} / {data.system.memTotal}</div>
 		{#if data.system.disk}<div class="label">Disk</div><div class="value">{data.system.disk.used} / {data.system.disk.total} ({data.system.disk.pct}%)</div>{/if}
 		{#if data.version}<div class="label">Version</div><div class="value mono">{data.version}</div>{/if}
+	</div>
+	<div class="svc-footer">
+		<button class="update-btn" onclick={runUpdate} disabled={updating}>{updating ? 'Updating...' : 'Pull & Rebuild'}</button>
+		{#if updateMsg}<pre class="update-output">{updateMsg}</pre>{/if}
 	</div>
 </section>
 
@@ -139,6 +156,9 @@
 	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.check-label { font-weight: 600; min-width: 5em; }
 	.check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
+	.update-btn { padding: 0.3em 0.7em; border: 1px solid var(--link); border-radius: 6px; background: var(--bg); color: var(--link); font-size: 0.78em; cursor: pointer; font-weight: 600; }
+	.update-btn:hover:not(:disabled) { background: var(--link); color: #fff; }  .update-btn:disabled { opacity: 0.5; cursor: default; }
+	.update-output { font-size: 0.75em; color: var(--text-muted); background: var(--code-bg); padding: 0.5em 0.75em; border-radius: 4px; margin: 0.5em 0 0; white-space: pre-wrap; max-height: 12em; overflow-y: auto; }
 	@media (max-width: 600px) {
 		.grid { grid-template-columns: 7em 1fr; gap: 0.25em 0.5em; font-size: 0.85em; }
 	}
