@@ -4,6 +4,14 @@ import { parseSessionStats, flushStatsCache } from './relayStats.js';
 export { summarizeInput, extractResultText, summarizeResult } from './activityFormat.js';
 import { summarizeInput, extractResultText, summarizeResult } from './activityFormat.js';
 
+/** Format ISO timestamp to local time: "YYYY-MM-DD HH:MM" */
+export function fmtLocal(iso) {
+	const d = new Date(iso);
+	if (isNaN(d)) return iso;
+	const pad = n => String(n).padStart(2, '0');
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function getRunsPrefix() {
 	try {
 		const cfg = JSON.parse(fs.readFileSync(path.join(process.env.HOME, '.relaygent', 'config.json'), 'utf-8'));
@@ -135,7 +143,7 @@ export function listSessions() {
 				const uuid8 = f.slice(0, -6).slice(0, 8);
 				const id = `${runId}--${uuid8}`;
 				const st = parseSessionStats(fp) || {};
-				const displayTime = st.start ? st.start.replace('T', ' ').slice(0, 16) : `${m[1]} ${m[2]}:${m[3]}`;
+				const displayTime = st.start ? fmtLocal(st.start) : `${m[1]} ${m[2]}:${m[3]}`;
 				sessions.push({ id, displayTime, size: fst.size, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null });
 			}
 		}
