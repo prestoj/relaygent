@@ -46,6 +46,13 @@ if [ -d "$NOTIF_VENV" ] && [ -f "$REPO_DIR/notifications/requirements.txt" ]; th
     "$NOTIF_VENV/bin/pip" install -q -r "$REPO_DIR/notifications/requirements.txt" 2>/dev/null || true
 fi
 
+# Sync Hammerspoon config (macOS computer-use)
+if [ "$(uname)" = "Darwin" ] && [ -d "$HOME/.hammerspoon" ] && [ -d "$REPO_DIR/hammerspoon" ]; then
+    cp "$REPO_DIR"/hammerspoon/*.lua "$HOME/.hammerspoon/" 2>/dev/null || true
+    HS_PORT="${HAMMERSPOON_PORT:-8097}"
+    curl -sf "http://localhost:$HS_PORT/reload" -X POST >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}config reloaded${NC}" || true
+fi
+
 # Rebuild hub
 echo -e "  Rebuilding hub..."
 if (cd "$REPO_DIR/hub" && npx vite build >/dev/null 2>&1); then
