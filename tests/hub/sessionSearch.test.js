@@ -24,11 +24,11 @@ after(() => {
 const { searchSessions } = await import('../../hub/src/lib/sessionSearch.js');
 
 /** Create a fake session dir with a JSONL file (padded to >200 bytes) */
-function makeSession(id, lines) {
+function makeSession(id, lines, uuid = 'aabb1122') {
 	const dir = path.join(tmpHome, '.claude', 'projects', `proj-${id}`);
 	fs.mkdirSync(dir, { recursive: true });
 	const pad = JSON.stringify({ type: 'padding', data: 'x'.repeat(300) });
-	fs.writeFileSync(path.join(dir, 'aabb1122-test.jsonl'), [pad, ...lines].join('\n') + '\n', 'utf-8');
+	fs.writeFileSync(path.join(dir, `${uuid}.jsonl`), [pad, ...lines].join('\n') + '\n', 'utf-8');
 }
 
 const assistantMsg = (text) => JSON.stringify({
@@ -90,7 +90,7 @@ test('searchSessions: finds match in malformed JSONL line (fallback snippet path
 	fs.mkdirSync(dir, { recursive: true });
 	const pad = JSON.stringify({ type: 'padding', data: 'x'.repeat(300) });
 	const badLine = 'not-json but contains fallback_unique_tok_xyz here';
-	fs.writeFileSync(path.join(dir, 'aabb1122-test.jsonl'), [pad, badLine].join('\n') + '\n', 'utf-8');
+	fs.writeFileSync(path.join(dir, 'ccdd5566.jsonl'), [pad, badLine].join('\n') + '\n', 'utf-8');
 	const results = searchSessions('fallback_unique_tok_xyz');
 	assert.ok(results.length >= 1);
 	assert.ok(results[0].snippet.includes('fallback_unique_tok_xyz'));
