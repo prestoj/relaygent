@@ -7,6 +7,7 @@
 		return item.toolUseId || `${item.time}-${item.name || item.type}`;
 	}
 	let filter = $state('all');
+	let query = $state('');
 
 	const filters = [
 		{ key: 'all', label: 'All' }, { key: 'file', label: 'Files' },
@@ -48,13 +49,24 @@
 			}).join('\n');
 	}
 
-	let filtered = $derived(filter === 'all' ? activities : activities.filter(a =>
-		filter === 'text' ? a.type === 'text' : a.type === 'tool' && cat(a.name) === filter));
+	let filtered = $derived.by(() => {
+		let list = filter === 'all' ? activities : activities.filter(a =>
+			filter === 'text' ? a.type === 'text' : a.type === 'tool' && cat(a.name) === filter);
+		if (query.trim()) {
+			const q = query.toLowerCase();
+			list = list.filter(a => (a.name || '').toLowerCase().includes(q)
+				|| (a.input || '').toLowerCase().includes(q) || (a.text || '').toLowerCase().includes(q)
+				|| (a.result || '').toLowerCase().includes(q));
+		}
+		return list;
+	});
 </script>
 
 <section class="feed-section">
 	<div class="fbar">
 		{#each filters as f}<button class="fb" class:active={filter === f.key} onclick={() => filter = f.key}>{f.label}</button>{/each}
+		<input type="text" class="fsearch" bind:value={query} placeholder="Search..." />
+		{#if query}<button class="fclear" onclick={() => query = ''}>x</button>{/if}
 		<span class="cnt">{filtered.length}</span>
 	</div>
 	<div class="feed">
@@ -102,7 +114,11 @@
 	.fbar { display: flex; gap: 0.3em; align-items: center; margin-bottom: 0.5em; }
 	.fb { padding: 0.2em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.78em; }
 	.fb.active { background: var(--link); color: white; border-color: var(--link); }
-	.cnt { margin-left: auto; font-size: 0.78em; color: var(--text-muted); }
+	.fsearch { margin-left: auto; width: 8em; padding: 0.2em 0.5em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text); font-size: 0.78em; outline: none; }
+	.fsearch:focus { border-color: var(--link); width: 12em; }
+	.fclear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78em; padding: 0.1em 0.3em; }
+	.fclear:hover { color: var(--text); }
+	.cnt { font-size: 0.78em; color: var(--text-muted); }
 	.feed { display: flex; flex-direction: column; gap: 0.25em; }
 	.ai { display: grid; grid-template-columns: 2.5em 1fr; gap: 0.4em; font-size: 0.85em; padding: 0.35em 0.5em; background: var(--bg-surface); border-radius: 4px; border-left: 3px solid var(--border); cursor: pointer; transition: background 0.15s; }
 	.ai:hover { background: var(--code-bg); }
