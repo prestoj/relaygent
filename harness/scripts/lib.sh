@@ -35,7 +35,29 @@ port_pids() {
 
 check_port() {
     local pids; pids=$(port_pids "$1")
-    [ -n "$pids" ] && { echo -e "  ${RED}Port $1 ($2) in use (pid $pids).${NC} Kill: ${YELLOW}kill $pids${NC}"; return 1; }
+    if [ -n "$pids" ]; then
+        local cmd; cmd=$(ps -p "$(echo "$pids" | head -1)" -o args= 2>/dev/null | head -c 80)
+        echo -e "  ${RED}Port $1 ($2) in use by: ${cmd:-unknown}${NC}"
+        echo -e "    Kill: ${YELLOW}kill $pids${NC}"
+        return 1
+    fi
+}
+
+# Kill stale relaygent processes on a port. Returns 0 if port is now free.
+clear_stale_port() {
+    local port=$1 name=$2 pids cmd
+    pids=$(port_pids "$port"); [ -z "$pids" ] && return 0
+    cmd=$(ps -p "$(echo "$pids" | head -1)" -o args= 2>/dev/null || echo "")
+    if echo "$cmd" | grep -q "relaygent"; then
+        echo -e "  ${YELLOW}Clearing stale $name (pid $pids)${NC}"
+        kill -TERM $pids 2>/dev/null || true
+        local i; for i in 1 2 3; do sleep 0.5; pids=$(port_pids "$port"); [ -z "$pids" ] && return 0; done
+        kill -9 $pids 2>/dev/null || true; sleep 0.3
+        pids=$(port_pids "$port"); [ -z "$pids" ] && return 0
+        echo -e "  ${RED}Could not clear stale $name on port $port${NC}"; return 1
+    fi
+    echo -e "  ${RED}Port $port ($name) in use by non-relaygent process: ${cmd:-unknown}${NC}"
+    echo -e "    Kill manually: ${YELLOW}kill $pids${NC}"; return 1
 }
 
 ensure_venv() {
