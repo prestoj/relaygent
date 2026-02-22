@@ -151,20 +151,25 @@ function M.drag(params)
     local steps = params.steps or 10
     local duration = params.duration or 0.3
     local stepDelay = duration / steps
-    hs.eventtap.event.newMouseEvent(types.leftMouseDown, hs.geometry.point(sx, sy)):post()
-    for i = 1, steps do
-        local t = i / steps
-        local cx = sx + (ex - sx) * t
-        local cy = sy + (ey - sy) * t
-        hs.timer.doAfter(stepDelay * i, function()
+    hs.mouse.absolutePosition(hs.geometry.point(sx, sy))
+    hs.timer.doAfter(0.05, function()
+        hs.eventtap.event.newMouseEvent(types.leftMouseDown, hs.geometry.point(sx, sy)):post()
+        local function doStep(i)
+            local t = i / steps
+            local cx = sx + (ex - sx) * t
+            local cy = sy + (ey - sy) * t
+            hs.mouse.absolutePosition(hs.geometry.point(cx, cy))
             hs.eventtap.event.newMouseEvent(types.leftMouseDragged, hs.geometry.point(cx, cy)):post()
-            if i == steps then
+            if i < steps then
+                hs.timer.doAfter(stepDelay, function() doStep(i + 1) end)
+            else
                 hs.timer.doAfter(0.02, function()
                     hs.eventtap.event.newMouseEvent(types.leftMouseUp, hs.geometry.point(ex, ey)):post()
                 end)
             end
-        end)
-    end
+        end
+        hs.timer.doAfter(stepDelay, function() doStep(1) end)
+    end)
     return json.encode({dragged={from={x=sx,y=sy}, to={x=ex,y=ey}, steps=steps}}), 200
 end
 
