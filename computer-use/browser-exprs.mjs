@@ -57,7 +57,8 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
       `var prev=tn.previousSibling;while(prev&&prev.nodeType===3)prev=prev.previousSibling;` +
       `if(prev&&prev.tagName==='INPUT')matches.push(prev);else if(prev&&prev.tagName==='BR'){var b=prev.previousSibling;while(b&&b.nodeType===3)b=b.previousSibling;if(b&&b.tagName==='INPUT')matches.push(b);else matches.push(p);}else matches.push(p);break;}}` +
   `}` +
-  `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
+  `var el=matches[i];if(!el){var _ifc=ROOT.querySelectorAll('iframe').length,_cc=!!ROOT.querySelector('canvas');` +
+  `return JSON.stringify({error:'No match',count:matches.length,clickable:els.length,iframes:_ifc,canvas:_cc})}` +
   `el.scrollIntoView({block:'nearest'});` +
   `_clk(el);` +
   `${retCoords(frame, `,text:(el.innerText||el.value||'').trim().substring(0,50),count:matches.length`)}})()`;
