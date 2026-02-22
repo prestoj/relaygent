@@ -28,7 +28,7 @@ function makeSession(id, lines) {
 	const dir = path.join(tmpHome, '.claude', 'projects', `proj-${id}`);
 	fs.mkdirSync(dir, { recursive: true });
 	const pad = JSON.stringify({ type: 'padding', data: 'x'.repeat(300) });
-	fs.writeFileSync(path.join(dir, 'session.jsonl'), [pad, ...lines].join('\n') + '\n', 'utf-8');
+	fs.writeFileSync(path.join(dir, 'aabb1122-test.jsonl'), [pad, ...lines].join('\n') + '\n', 'utf-8');
 }
 
 const assistantMsg = (text) => JSON.stringify({
@@ -47,8 +47,8 @@ test('searchSessions: finds match in assistant text', () => {
 	makeSession('2026-02-01-10-00-00', [assistantMsg('Found the unique_tok_abc in the code.')]);
 	const results = searchSessions('unique_tok_abc');
 	assert.ok(results.length >= 1);
-	const match = results.find(r => r.id.endsWith('2026-02-01-10-00-00'));
-	assert.ok(match, 'should find session 2026-02-01-10-00-00');
+	const match = results.find(r => r.id === '2026-02-01-10-00-00--aabb1122');
+	assert.ok(match, 'should find session by new ID format');
 	assert.equal(match.type, 'session');
 	assert.ok(match.snippet.includes('unique_tok_abc'));
 });
@@ -63,14 +63,14 @@ test('searchSessions: one result per session even with multiple matches', () => 
 		assistantMsg('alpha_dedup appears once.'),
 		assistantMsg('alpha_dedup appears twice.'),
 	]);
-	const matches = searchSessions('alpha_dedup').filter(r => r.id.endsWith('2026-02-02-11-00-00'));
+	const matches = searchSessions('alpha_dedup').filter(r => r.id === '2026-02-02-11-00-00--aabb1122');
 	assert.equal(matches.length, 1);
 });
 
 test('searchSessions: result has correct displayTime', () => {
 	makeSession('2026-02-03-09-30-00', [assistantMsg('display_time_tok is here.')]);
 	const results = searchSessions('display_time_tok');
-	const match = results.find(r => r.id.endsWith('2026-02-03-09-30-00'));
+	const match = results.find(r => r.id === '2026-02-03-09-30-00--aabb1122');
 	assert.ok(match);
 	assert.equal(match.displayTime, '2026-02-03 09:30');
 });
@@ -86,11 +86,11 @@ test('searchSessions: respects maxResults limit', () => {
 
 test('searchSessions: finds match in malformed JSONL line (fallback snippet path)', () => {
 	// A line that is not valid JSON but contains the query — exercises extractSnippet fallback (lines 28-30)
-	const dir = path.join(tmpHome, '.claude', 'projects', '2026-02-05-12-00-00');
+	const dir = path.join(tmpHome, '.claude', 'projects', 'proj-2026-02-05-12-00-00');
 	fs.mkdirSync(dir, { recursive: true });
 	const pad = JSON.stringify({ type: 'padding', data: 'x'.repeat(300) });
 	const badLine = 'not-json but contains fallback_unique_tok_xyz here';
-	fs.writeFileSync(path.join(dir, 'session.jsonl'), [pad, badLine].join('\n') + '\n', 'utf-8');
+	fs.writeFileSync(path.join(dir, 'aabb1122-test.jsonl'), [pad, badLine].join('\n') + '\n', 'utf-8');
 	const results = searchSessions('fallback_unique_tok_xyz');
 	assert.ok(results.length >= 1);
 	assert.ok(results[0].snippet.includes('fallback_unique_tok_xyz'));
