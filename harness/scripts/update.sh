@@ -58,49 +58,43 @@ fi
 
 load_config
 
-# Stop running hub (pid file first, then port-based fallback)
-HUB_PID_FILE="$PID_DIR/hub.pid"
-if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
-    HUB_PID=$(cat "$HUB_PID_FILE")
-    pkill -TERM -P "$HUB_PID" 2>/dev/null || true
-    kill -TERM "$HUB_PID" 2>/dev/null || true
-    for _ in 1 2 3; do kill -0 "$HUB_PID" 2>/dev/null || break; sleep 1; done
-    kill -0 "$HUB_PID" 2>/dev/null && kill -9 "$HUB_PID" 2>/dev/null || true
-fi
-rm -f "$HUB_PID_FILE"
-# Fallback: kill any process still on the hub port (catches stale pid file case)
-PORT_PIDS=$(port_pids "$HUB_PORT" || true)
-if [ -n "$PORT_PIDS" ]; then
-    kill -TERM $PORT_PIDS 2>/dev/null || true
-    sleep 1
-    kill -9 $PORT_PIDS 2>/dev/null || true
+# Restart services — refresh platform service configs if managed by LaunchAgent/systemd
+LAUNCHAGENTS_REFRESHED=false
+if [ "$(uname)" = "Darwin" ] && ls "$HOME/Library/LaunchAgents/com.relaygent."*.plist &>/dev/null 2>&1; then
+    echo -e "  Refreshing LaunchAgents (picks up plist/env changes)..."
+    bash "$REPO_DIR/scripts/install-launchagents.sh"
+    LAUNCHAGENTS_REFRESHED=true
 fi
 
-# Start hub with new build
-# On macOS with LaunchAgent, KeepAlive auto-restarts the killed hub.
-# On Linux (or no LaunchAgent), manually start a new process.
-if [ "$(uname)" = "Darwin" ] && launchctl list com.relaygent.hub &>/dev/null; then
-    sleep 2  # Give LaunchAgent time to restart
-    echo -e "  Hub: ${GREEN}restarted via LaunchAgent on :$HUB_PORT${NC}"
-else
+if [ "$LAUNCHAGENTS_REFRESHED" = false ]; then
+    # Manual restart for setups without LaunchAgents (Linux, or macOS without install)
+    HUB_PID_FILE="$PID_DIR/hub.pid"
+    if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
+        HUB_PID=$(cat "$HUB_PID_FILE")
+        pkill -TERM -P "$HUB_PID" 2>/dev/null || true
+        kill -TERM "$HUB_PID" 2>/dev/null || true
+        for _ in 1 2 3; do kill -0 "$HUB_PID" 2>/dev/null || break; sleep 1; done
+        kill -0 "$HUB_PID" 2>/dev/null && kill -9 "$HUB_PID" 2>/dev/null || true
+    fi
+    rm -f "$HUB_PID_FILE"
+    PORT_PIDS=$(port_pids "$HUB_PORT" || true)
+    if [ -n "$PORT_PIDS" ]; then
+        kill -TERM $PORT_PIDS 2>/dev/null || true
+        sleep 1
+        kill -9 $PORT_PIDS 2>/dev/null || true
+    fi
     mkdir -p "$REPO_DIR/logs"
     PORT="$HUB_PORT" RELAY_STATUS_FILE="$DATA_DIR/relay-status.json" RELAYGENT_KB_DIR="$KB_DIR" \
         RELAYGENT_DATA_DIR="$DATA_DIR" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" \
         node "$REPO_DIR/hub/ws-server.mjs" >> "$REPO_DIR/logs/relaygent-hub.log" 2>&1 &
     echo $! > "$HUB_PID_FILE"
     echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
-fi
 
-# Restart background daemons so they pick up new code
-echo -e "  Restarting daemons..."
-for pat in "notifications/server.py" "slack-socket-listener" "email-poller" "notification-poller"; do
-    pkill -f "$pat" 2>/dev/null || true
-done
-sleep 2
-
-# On macOS, LaunchAgent KeepAlive auto-restarts killed processes.
-# On Linux (no LaunchAgents), manually restart.
-if [ "$(uname)" != "Darwin" ]; then
+    echo -e "  Restarting daemons..."
+    for pat in "notifications/server.py" "slack-socket-listener" "email-poller" "notification-poller"; do
+        pkill -f "$pat" 2>/dev/null || true
+    done
+    sleep 2
     if [ -d "$REPO_DIR/notifications/.venv" ]; then
         RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" "$REPO_DIR/notifications/.venv/bin/python3" \
             "$REPO_DIR/notifications/server.py" >> "$REPO_DIR/logs/relaygent-notifications.log" 2>&1 &
@@ -114,8 +108,8 @@ if [ "$(uname)" != "Darwin" ]; then
         HUB_PORT="$HUB_PORT" node "$REPO_DIR/email/email-poller.mjs" >> "$REPO_DIR/logs/relaygent-email-poller.log" 2>&1 &
         echo $! > "$PID_DIR/email-poller.pid"
     fi
+    echo -e "  Daemons: ${GREEN}restarted${NC}"
 fi
-echo -e "  Daemons: ${GREEN}restarted${NC}"
 
 # Check if MCP server source files changed (agents need to restart their session)
 MCP_CHANGED=false
