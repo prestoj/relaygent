@@ -13,10 +13,10 @@ if [ ! -d "$REPO_DIR/hub/node_modules" ]; then
     exit 1
 fi
 
-# Port checks
+# Port checks — skip for platform-managed services (they own the port)
 port_ok=true
-check_port "$HUB_PORT" "Hub" || port_ok=false
-check_port "$NOTIF_PORT" "Notifications" || port_ok=false
+is_platform_managed hub || check_port "$HUB_PORT" "Hub" || port_ok=false
+is_platform_managed notifications || check_port "$NOTIF_PORT" "Notifications" || port_ok=false
 if [ "$port_ok" = false ]; then
     echo -e "\n  ${RED}Fix port conflicts above, then try again.${NC}"; exit 1
 fi
@@ -73,32 +73,47 @@ if [ ! -d "$REPO_DIR/hub/build" ]; then
     echo "  Building hub..."
     (cd "$REPO_DIR/hub" && npm run build >/dev/null 2>&1)
 fi
-start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" \
-    RELAY_STATUS_FILE="$REPO_DIR/data/relay-status.json" \
-    RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$REPO_DIR/data" \
-    RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$REPO_DIR/hub/ws-server.mjs"
+if is_platform_managed hub; then
+    platform_start "Hub (port $HUB_PORT)" "hub"
+else
+    start_service "Hub (port $HUB_PORT)" "hub" env PORT="$HUB_PORT" \
+        RELAY_STATUS_FILE="$REPO_DIR/data/relay-status.json" \
+        RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$REPO_DIR/data" \
+        RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$REPO_DIR/hub/ws-server.mjs"
+fi
 verify_service "Hub" "http://localhost:$HUB_PORT/" 5 || true
 
 # Notifications
-ensure_venv "$REPO_DIR/notifications"
-start_service "Notifications (port $NOTIF_PORT)" "notifications" \
-    "$REPO_DIR/notifications/.venv/bin/python3" "$REPO_DIR/notifications/server.py"
+if is_platform_managed notifications; then
+    platform_start "Notifications (port $NOTIF_PORT)" "notifications"
+else
+    ensure_venv "$REPO_DIR/notifications"
+    start_service "Notifications (port $NOTIF_PORT)" "notifications" \
+        "$REPO_DIR/notifications/.venv/bin/python3" "$REPO_DIR/notifications/server.py"
+fi
 verify_service "Notifications" "http://localhost:$NOTIF_PORT/health" 3 || true
 
 # Optional services
-[ -f "$HOME/.relaygent/slack/app-token" ] && \
-    start_service "Slack socket" "slack-socket" node "$REPO_DIR/notifications/slack-socket-listener.mjs"
-[ -f "$HOME/.relaygent/gmail/credentials.json" ] && \
-    start_service "Email poller" "email-poller" env HUB_PORT="$HUB_PORT" node "$REPO_DIR/email/email-poller.mjs"
+if [ -f "$HOME/.relaygent/slack/app-token" ]; then
+    if is_platform_managed slack-socket; then
+        platform_start "Slack socket" "slack-socket"
+    else
+        start_service "Slack socket" "slack-socket" node "$REPO_DIR/notifications/slack-socket-listener.mjs"
+    fi
+fi
+if [ -f "$HOME/.relaygent/gmail/credentials.json" ]; then
+    if is_platform_managed email-poller; then
+        platform_start "Email poller" "email-poller"
+    else
+        start_service "Email poller" "email-poller" env HUB_PORT="$HUB_PORT" node "$REPO_DIR/email/email-poller.mjs"
+    fi
+fi
 
 # Relay — verify Claude auth before starting
 if ! claude -p 'hi' >/dev/null 2>&1; then
     echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
-elif [ "$(uname)" = "Linux" ] && systemctl --user is-enabled relaygent-relay &>/dev/null; then
-    systemctl --user start relaygent-relay 2>/dev/null
-    echo -e "  Relay: ${GREEN}managed by systemd${NC}"
-elif [ "$(uname)" = "Darwin" ] && launchctl list 2>/dev/null | grep -q com.relaygent.relay; then
-    echo -e "  Relay: ${GREEN}managed by LaunchAgent${NC}"
+elif is_platform_managed relay; then
+    platform_start "Relay" "relay"
 else
     start_service "Relay" "relay" python3 "$REPO_DIR/harness/relay.py"
 fi

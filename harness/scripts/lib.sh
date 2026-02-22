@@ -51,6 +51,29 @@ ensure_venv() {
     fi
 }
 
+is_platform_managed() {
+    local svc=$1
+    if [ "$(uname)" = "Darwin" ]; then
+        launchctl list "com.relaygent.${svc}" &>/dev/null && return 0
+    else
+        systemctl --user is-enabled "relaygent-${svc}.service" &>/dev/null && return 0
+    fi
+    return 1
+}
+
+platform_start() {
+    local name=$1 svc=$2
+    if [ "$(uname)" = "Darwin" ]; then
+        local plist="$HOME/Library/LaunchAgents/com.relaygent.${svc}.plist"
+        launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+        launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null
+        echo -e "  $name: ${GREEN}managed by LaunchAgent${NC}"
+    else
+        systemctl --user start "relaygent-${svc}.service" 2>/dev/null
+        echo -e "  $name: ${GREEN}managed by systemd${NC}"
+    fi
+}
+
 start_service() {
     local name=$1 pidfile="$PID_DIR/$2.pid" logfile="$REPO_DIR/logs/relaygent-$2.log"
     shift 2
