@@ -22,12 +22,9 @@ function _scheduleReconnect(delay = 1000) {
 	}, delay);
 }
 function _cancelReconnect() { if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; } }
-const cdpActivate = (tabId) => new Promise(resolve => {
-  const req = http.request({ hostname: "localhost", port: CDP_PORT, path: `/json/activate/${tabId}`, timeout: 2000 }, res => {
-    res.on("data", () => {}); res.on("end", () => resolve(res.statusCode === 200));
-  });
-  req.on("error", () => resolve(false)); req.end();
-});
+const cdpCmd = (p) => new Promise(r => { const q = http.request({ hostname: "localhost", port: CDP_PORT, path: p, timeout: 2000 }, s => { s.on("data", () => {}); s.on("end", () => r(s.statusCode === 200)); }); q.on("error", () => r(false)); q.end(); });
+const cdpActivate = (id) => cdpCmd(`/json/activate/${id}`);
+export const cdpCloseTab = (id) => cdpCmd(`/json/close/${id}`);
 const cdpHttp = (path) => new Promise(resolve => {
   const req = http.request({ hostname: "localhost", port: CDP_PORT, path, timeout: 3000 }, res => {
     const chunks = [];
@@ -158,10 +155,10 @@ export async function cdpNavigate(url) {
     return true;
   } catch (e) { log(`navigate error: ${e.message}`); return false; }
 }
-export function cdpDisconnect() {
-  _cancelReconnect();
-  if (_ws) { try { _ws.close(); } catch {} _ws = null; }
-  _saveTabId(null);
+export function cdpDisconnect() { _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(null); }
+export async function cdpSwitchTab(tabId) {
+  const ok = await cdpActivate(tabId); if (!ok) return false;
+  if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(tabId); return true;
 }
 export async function cdpSyncToVisibleTab(url) {
   cdpDisconnect();
