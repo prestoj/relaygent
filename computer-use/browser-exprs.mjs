@@ -52,7 +52,10 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
   `}` +
   `if(!matches.length){` +
     `var tw=document.createTreeWalker(ROOT,NodeFilter.SHOW_TEXT,null);var tn;` +
-    `while(tn=tw.nextNode()){if(norm(tn.textContent||'').trim().includes(t)){var p=tn.parentElement;if(p&&_iv(p)){matches.push(p);break;}}}` +
+    `while(tn=tw.nextNode()){if(norm(tn.textContent||'').trim().includes(t)){` +
+      `var p=tn.parentElement;if(!p||!_iv(p))continue;` +
+      `var prev=tn.previousSibling;while(prev&&prev.nodeType===3)prev=prev.previousSibling;` +
+      `if(prev&&prev.tagName==='INPUT')matches.push(prev);else if(prev&&prev.tagName==='BR'){var b=prev.previousSibling;while(b&&b.nodeType===3)b=b.previousSibling;if(b&&b.tagName==='INPUT')matches.push(b);else matches.push(p);}else matches.push(p);break;}}` +
   `}` +
   `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
   `el.scrollIntoView({block:'nearest'});` +
