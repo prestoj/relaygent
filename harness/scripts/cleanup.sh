@@ -5,15 +5,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$SCRIPT_DIR/harness/scripts/lib.sh"
 load_config_soft
-# Read DATA_DIR and REPO_DIR from config (load_config_soft doesn't extract these)
-eval "$(python3 -c "
-import json,shlex
-try:
- c=json.load(open('$CONFIG_FILE'));p=c['paths']
- print(f'DATA_DIR={shlex.quote(p.get(\"data\",\"\"))}')
- print(f'REPO_DIR={shlex.quote(p.get(\"repo\",\"\"))}')
-except: pass
-" 2>/dev/null)" || true
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RED='\033[0;31m'; DIM='\033[2m'; NC='\033[0m'
 
