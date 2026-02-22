@@ -59,14 +59,18 @@ fi
 load_config
 
 # Restart services — refresh platform service configs if managed by LaunchAgent/systemd
-LAUNCHAGENTS_REFRESHED=false
+SERVICES_REFRESHED=false
 if [ "$(uname)" = "Darwin" ] && ls "$HOME/Library/LaunchAgents/com.relaygent."*.plist &>/dev/null 2>&1; then
     echo -e "  Refreshing LaunchAgents (picks up plist/env changes)..."
     bash "$REPO_DIR/scripts/install-launchagents.sh"
-    LAUNCHAGENTS_REFRESHED=true
+    SERVICES_REFRESHED=true
+elif [ "$(uname)" = "Linux" ] && ls "$HOME/.config/systemd/user/relaygent-"*.service &>/dev/null 2>&1; then
+    echo -e "  Refreshing systemd services (picks up unit/env changes)..."
+    bash "$REPO_DIR/scripts/install-systemd-services.sh"
+    SERVICES_REFRESHED=true
 fi
 
-if [ "$LAUNCHAGENTS_REFRESHED" = false ]; then
+if [ "$SERVICES_REFRESHED" = false ]; then
     # Manual restart for setups without LaunchAgents (Linux, or macOS without install)
     HUB_PID_FILE="$PID_DIR/hub.pid"
     if [ -f "$HUB_PID_FILE" ] && kill -0 "$(cat "$HUB_PID_FILE")" 2>/dev/null; then
