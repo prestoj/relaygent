@@ -13,6 +13,7 @@ from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from handoff import validate_and_log
 from jsonl_checks import should_sleep, last_output_is_idle
+from jsonl_images import strip_all_images
 from harness_env import find_claude_binary
 from process import ClaudeProcess
 from relay_loop import Action, LoopState, handle_error
@@ -94,6 +95,9 @@ class RelayRunner:
             if self.timer.is_expired():
                 break
 
+            if result.bad_image and not result.context_too_large:
+                stripped = strip_all_images(self.claude.session_id, self.claude.workspace)
+                log(f"Stripped {stripped} images from JSONL for bad-image recovery")
             err = handle_error(result, state)
             if err is not None:
                 self._apply_error(err, state)

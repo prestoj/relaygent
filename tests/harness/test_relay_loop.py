@@ -1,11 +1,6 @@
 """Tests for relay_loop.py — pure decision logic, no mocking needed."""
 from __future__ import annotations
-
-import sys
 import uuid
-from pathlib import Path
-
-import pytest
 
 from config import INCOMPLETE_BASE_DELAY, MAX_INCOMPLETE_RETRIES, MAX_RETRIES
 from process import ClaudeResult
@@ -15,7 +10,7 @@ from relay_loop import Action, ErrorResult, LoopState, handle_error
 def _result(**kwargs) -> ClaudeResult:
     defaults = dict(exit_code=0, hung=False, timed_out=False,
                     no_output=False, incomplete=False, context_too_large=False,
-                    rate_limited=False, context_pct=0.0)
+                    bad_image=False, rate_limited=False, context_pct=0.0)
     return ClaudeResult(**{**defaults, **kwargs})
 
 
@@ -113,6 +108,23 @@ class TestHandleErrorNoOutput:
         err = handle_error(_result(no_output=True), state)
         expected_delay = min(INCOMPLETE_BASE_DELAY * (2 ** 2), 60)
         assert err.delay == expected_delay
+
+
+class TestHandleErrorBadImage:
+    def test_bad_image_resumes_not_fresh(self):
+        state = LoopState(session_id="old", session_established=True)
+        err = handle_error(_result(bad_image=True), state)
+        assert err.action == Action.CONTINUE
+        assert state.session_id == "old"  # NOT a new session
+        assert state.session_established is True
+        assert "stripped" in state.resume_reason.lower()
+
+    def test_bad_image_plus_context_large_starts_fresh(self):
+        """When both bad_image and context_too_large, prefer fresh session."""
+        state = LoopState(session_id="old")
+        err = handle_error(_result(bad_image=True, context_too_large=True), state)
+        assert state.session_id != "old"
+        assert state.session_established is False
 
 
 class TestHandleErrorContextTooLarge:

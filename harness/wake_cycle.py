@@ -7,6 +7,7 @@ import time
 from config import (
     CONTEXT_THRESHOLD, INCOMPLETE_BASE_DELAY, MAX_INCOMPLETE_RETRIES, log,
 )
+from jsonl_images import strip_all_images
 
 
 def run_wake_cycle(sleep_mgr, claude):
@@ -52,8 +53,17 @@ def run_wake_cycle(sleep_mgr, claude):
             claude_result = claude.monitor(log_start)
             if claude_result.timed_out:
                 return None
+        if claude_result.bad_image and not claude_result.context_too_large:
+            stripped = strip_all_images(claude.session_id, claude.workspace)
+            log(f"Bad image during wake — stripped {stripped} images, resuming...")
+            time.sleep(3)
+            try:
+                log_start = claude.resume("A screenshot was corrupted. All images stripped. Continue.")
+            except OSError as e:
+                log(f"Resume after image strip failed: {e}"); return claude_result
+            claude_result = claude.monitor(log_start)
         if claude_result.context_too_large:
-            log("Request too large or bad image — returning for fresh session")
+            log("Request too large — returning for fresh session")
             return claude_result
         if claude_result.exit_code != 0:
             log(f"Crashed during wake (exit={claude_result.exit_code}), resuming...")

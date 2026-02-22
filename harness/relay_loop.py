@@ -85,11 +85,18 @@ def handle_error(result, state: LoopState) -> ErrorResult | None:
                            log_msg=f"No output ({state.no_output_count}/{MAX_INCOMPLETE_RETRIES}), "
                                    f"retrying in {delay}s...")
 
+    if result.bad_image and not result.context_too_large:
+        state.session_established = True
+        state.resume_reason = ("A screenshot was corrupted and the API rejected it. "
+                               "All images have been stripped from your history. Continue where you left off.")
+        return ErrorResult(Action.CONTINUE, delay=5,
+                           log_msg="Bad image — stripped all images, resuming session")
+
     if result.context_too_large:
         state.new_session()
         state.incomplete_count = 0
         return ErrorResult(Action.CONTINUE, delay=5,
-                           log_msg="Request too large or bad image — starting fresh session (not resuming)")
+                           log_msg="Request too large — starting fresh session")
 
     if result.incomplete:
         state.incomplete_count += 1

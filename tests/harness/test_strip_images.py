@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 
-from jsonl_images import strip_old_images
+from jsonl_images import strip_all_images, strip_old_images
 
 
 def _img_entry(i):
@@ -115,4 +115,42 @@ class TestStripOldImages:
         sid, ws, write, read = session
         write([])
         stripped = strip_old_images(sid, ws, keep_last=5)
+        assert stripped == 0
+
+
+class TestStripAllImages:
+    def test_strips_every_image(self, session):
+        sid, ws, write, read = session
+        write([_img_entry(i) for i in range(5)])
+        stripped = strip_all_images(sid, ws)
+        assert stripped == 5
+        entries = read()
+        real_imgs = sum(
+            1 for e in entries
+            for item in e.get("message", {}).get("content", []) or []
+            if isinstance(item, dict) and item.get("type") == "tool_result"
+            for s in item.get("content", []) or []
+            if isinstance(s, dict) and s.get("type") == "image"
+        )
+        assert real_imgs == 0
+
+    def test_preserves_text_entries(self, session):
+        sid, ws, write, read = session
+        entries = [_img_entry(0), _text_entry(0), _img_entry(1), _text_entry(1)]
+        write(entries)
+        stripped = strip_all_images(sid, ws)
+        assert stripped == 2
+        result = read()
+        texts = [e["message"]["content"][0]["text"] for e in result if e.get("type") == "assistant"]
+        assert texts == ["Response 0", "Response 1"]
+
+    def test_no_images_returns_zero(self, session):
+        sid, ws, write, read = session
+        write([_text_entry(i) for i in range(3)])
+        stripped = strip_all_images(sid, ws)
+        assert stripped == 0
+
+    def test_missing_session_returns_zero(self, session):
+        sid, ws, write, read = session
+        stripped = strip_all_images("nonexistent-id", ws)
         assert stripped == 0
