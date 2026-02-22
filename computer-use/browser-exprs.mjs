@@ -10,7 +10,9 @@ const _simClick = `var _clk=function(e){var r=e.getBoundingClientRect(),cx=r.lef
   `e.dispatchEvent(new PointerEvent('pointerup',o));e.dispatchEvent(new MouseEvent('mouseup',o));` +
   `e.dispatchEvent(new MouseEvent('click',o))};`;
 const frameRoot = (frame) => frame != null ? `window.frames[${frame}].document` : `document`;
-const _vis = `var a=_dqa(S,ROOT);var el=a.find(function(e){return e.offsetParent!==null&&e.getBoundingClientRect().width>0});`;
+// offsetParent is null for position:fixed elements — include them explicitly
+const _isVis = `function _iv(e){return(e.offsetParent!==null||getComputedStyle(e).position==='fixed')&&e.getBoundingClientRect().width>0}`;
+const _vis = `${_isVis}var a=_dqa(S,ROOT);var el=a.find(function(e){return _iv(e)});`;
 const _frOff = (frame) => frame != null
   ? `var _fr=document.querySelectorAll('iframe')[${frame}],_fo=_fr?_fr.getBoundingClientRect():{left:0,top:0};`
   : ``;
@@ -35,9 +37,9 @@ const _norm = `var norm=s=>s.replace(/[\\u00a0]/g,' ').replace(/[\\u2018\\u2019]
 const _textSel = `'a,button,input[type=submit],input[type=button],summary,span,[role=button],[role=tab],` +
   `[role=menuitem],[role=option],[role=link],[role=switch],[role=checkbox],[aria-haspopup],[role=combobox],[tabindex="0"]'`;
 export const TEXT_CLICK_EXPR = (text, idx, frame) =>
-  `(function(){${_deep}${_simClick}${_norm};var ROOT=${frameRoot(frame)};var t=norm(${JSON.stringify(text)}),i=${idx};` +
+  `(function(){${_deep}${_isVis}${_simClick}${_norm};var ROOT=${frameRoot(frame)};var t=norm(${JSON.stringify(text)}),i=${idx};` +
   `var inVP=function(e){var r=e.getBoundingClientRect();return r.width>0&&r.bottom>0&&r.top<window.innerHeight&&r.right>0&&r.left<window.innerWidth};` +
-  `var els=_dqa(${_textSel},ROOT).filter(function(e){return e.offsetParent!==null});` +
+  `var els=_dqa(${_textSel},ROOT).filter(function(e){return _iv(e)});` +
   `var _txt=function(e){return norm(e.innerText||e.value||e.getAttribute('aria-label')||'')};` +
   `var exact=els.filter(function(e){return _txt(e).trim()===t});` +
   `var matches=exact.length?exact:t.length>3?els.filter(function(e){return _txt(e).includes(t)}):[];` +
@@ -45,12 +47,12 @@ export const TEXT_CLICK_EXPR = (text, idx, frame) =>
   `var modal=document.querySelector('dialog,[role=dialog],[role=alertdialog],.oo-ui-dialog');` +
   `if(modal&&matches.some(function(e){return modal.contains(e)})){matches=matches.filter(function(e){return modal.contains(e)})}` +
   `if(!matches.length){` +
-    `var allVis=[...ROOT.querySelectorAll('*')].filter(function(e){return e.offsetParent!==null&&norm(e.innerText||'').trim().includes(t)&&e.children.length===0});` +
+    `var allVis=[...ROOT.querySelectorAll('*')].filter(function(e){return _iv(e)&&norm(e.innerText||'').trim().includes(t)&&e.children.length===0});` +
     `allVis.forEach(function(leaf){var e=leaf;while(e&&e!==ROOT){var c=window.getComputedStyle(e).cursor;if(e.onclick||e.getAttribute('onclick')||c==='pointer'||e.getAttribute('role')||e.matches('[class*="-control"],[class*="__control"],[data-testid]')){matches.push(e);break;}e=e.parentElement;}});` +
   `}` +
   `if(!matches.length){` +
     `var tw=document.createTreeWalker(ROOT,NodeFilter.SHOW_TEXT,null);var tn;` +
-    `while(tn=tw.nextNode()){if(norm(tn.textContent||'').trim().includes(t)){var p=tn.parentElement;if(p&&p.offsetParent!==null){matches.push(p);break;}}}` +
+    `while(tn=tw.nextNode()){if(norm(tn.textContent||'').trim().includes(t)){var p=tn.parentElement;if(p&&_iv(p)){matches.push(p);break;}}}` +
   `}` +
   `var el=matches[i];if(!el)return JSON.stringify({error:'No match',count:matches.length});` +
   `el.scrollIntoView({block:'nearest'});` +
@@ -76,8 +78,8 @@ export const TYPE_SLOW_EXPR = (sel, text, submit, frame) =>
   `setTimeout(next,20)})()})})()`;
 
 export const WAIT_EXPR = (sel, timeoutMs) =>
-  `(function(){${_deep}return new Promise(function(res,rej){var t=Date.now(),limit=${timeoutMs};` +
-  `(function poll(){var el=_dq(${JSON.stringify(sel)});if(el&&el.offsetParent!==null)return res('found');` +
+  `(function(){${_deep}${_isVis}return new Promise(function(res,rej){var t=Date.now(),limit=${timeoutMs};` +
+  `(function poll(){var el=_dq(${JSON.stringify(sel)});if(el&&_iv(el))return res('found');` +
   `if(Date.now()-t>limit)return rej('timeout');setTimeout(poll,100)})()})})()`;
 
 export { _deep, _simClick, _simHover, frameRoot };
