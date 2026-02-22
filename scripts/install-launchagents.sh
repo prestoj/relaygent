@@ -88,7 +88,7 @@ do_install() {
         <key>RELAYGENT_DATA_DIR</key>
         <string>$DATA_DIR</string>
         <key>RELAY_STATUS_FILE</key>
-        <string>$REPO_DIR/data/relay-status.json</string>
+        <string>$DATA_DIR/relay-status.json</string>
         <key>RELAYGENT_NOTIFICATIONS_PORT</key>
         <string>$NOTIF_PORT</string>"
 
