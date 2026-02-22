@@ -132,7 +132,7 @@ export function listSessions() {
 				const fp = path.join(fullPath, f);
 				const fst = fs.statSync(fp);
 				if (fst.size < 200) continue;
-				const uuid8 = f.slice(0, 8);
+				const uuid8 = f.slice(0, -6).slice(0, 8);
 				const id = `${runId}--${uuid8}`;
 				const st = parseSessionStats(fp) || {};
 				const displayTime = st.start ? st.start.replace('T', ' ').slice(0, 16) : `${m[1]} ${m[2]}:${m[3]}`;

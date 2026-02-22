@@ -24,7 +24,7 @@ const fakeJsonl = [
 	JSON.stringify({ timestamp: '2026-02-20T12:00:00Z', type: 'assistant', message: { usage: { input_tokens: 1000, output_tokens: 200 }, content: [{ type: 'text', text: 'Starting work on the project' }] } }),
 	JSON.stringify({ timestamp: '2026-02-20T12:05:00Z', type: 'assistant', message: { usage: { input_tokens: 2000, output_tokens: 300 }, content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/tmp/test' } }] } }),
 ].join('\n');
-fs.writeFileSync(path.join(wsDir, 'session.jsonl'), fakeJsonl);
+fs.writeFileSync(path.join(wsDir, 'aabb1122-test.jsonl'), fakeJsonl);
 
 // Set RELAYGENT_RUNS_PREFIX so listSessions finds our workspace
 process.env.RELAYGENT_RUNS_PREFIX = '-fake-workspace';
@@ -50,7 +50,7 @@ test('sessions list: sessions is an array', () => {
 test('sessions list: finds our fake session', () => {
 	const data = listMod.load();
 	assert.ok(data.sessions.length >= 1, 'should find at least one session');
-	const sess = data.sessions.find(s => s.id === '2026-02-20-12-00-00');
+	const sess = data.sessions.find(s => s.id === '2026-02-20-12-00-00--aabb1122');
 	assert.ok(sess, 'should find session by ID');
 });
 
