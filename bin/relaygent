@@ -5,6 +5,35 @@ SCRIPT_DIR="$(cd "$(dirname "$_SELF")/.." && pwd)"
 
 CYAN='\033[0;36m'; NC='\033[0m'; RED='\033[0;31m'
 
+show_help() {
+    echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
+    printf "  %-19s %s\n" \
+        "setup" "Interactive first-time setup wizard" \
+        "start" "Launch agent, dashboard, and all services" \
+        "stop" "Stop everything" \
+        "restart" "Restart all services" \
+        "status" "Show what's running" \
+        "stats" "Session history, errors, and context usage" \
+        "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
+        "logs [service]" "View logs (-f follow, -n lines, --list)" \
+        "orient" "Quick system status snapshot" \
+        "check" "Diagnose configuration" \
+        "health" "Ping all services and report status" \
+        "update" "Pull latest, rebuild, restart" \
+        "digest" "Daily summary of PRs, commits, and status" \
+        "cleanup" "Free disk: old sessions, caches, logs (--dry-run)" \
+        "changelog" "Show recent merged PRs and commits (--days N)" \
+        "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
+        "install-services" "Set up auto-restart services (macOS/Linux)" \
+        "set-password" "Set/remove hub dashboard auth (--remove)" \
+        "mcp" "Manage MCP servers (list, add, remove)" \
+        "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
+        "chat <msg>" "Send a message to the agent (--read to view)" \
+        "open [page]" "Open hub dashboard in browser" \
+        "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
+        "version" "Show version info"
+}
+
 case "${1:-help}" in
     setup)   bash "$SCRIPT_DIR/setup.sh" ;;
     chat)    bash "$SCRIPT_DIR/harness/scripts/chat.sh" "${@:2}" ;;
@@ -77,32 +106,6 @@ print(s,t)
         DATE=$(git -C "$SCRIPT_DIR" log -1 --format=%cs 2>/dev/null || echo "unknown")
         echo "relaygent ($COMMIT, $DATE)"
         ;;
-    help|--help|-h|*)
-        echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
-        printf "  %-19s %s\n" \
-            "setup" "Interactive first-time setup wizard" \
-            "start" "Launch agent, dashboard, and all services" \
-            "stop" "Stop everything" \
-            "restart" "Restart all services" \
-            "status" "Show what's running" \
-            "stats" "Session history, errors, and context usage" \
-            "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
-            "logs [service]" "View logs (-f follow, -n lines, --list)" \
-            "orient" "Quick system status snapshot" \
-            "check" "Diagnose configuration" \
-            "health" "Ping all services and report status" \
-            "update" "Pull latest, rebuild, restart" \
-            "digest" "Daily summary of PRs, commits, and status" \
-            "cleanup" "Free disk: old sessions, caches, logs (--dry-run)" \
-            "changelog" "Show recent merged PRs and commits (--days N)" \
-            "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
-            "install-services" "Set up auto-restart services (macOS/Linux)" \
-            "set-password" "Set/remove hub dashboard auth (--remove)" \
-            "mcp" "Manage MCP servers (list, add, remove)" \
-            "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
-            "chat <msg>" "Send a message to the agent (--read to view)" \
-            "open [page]" "Open hub dashboard in browser" \
-            "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
-            "version" "Show version info"
-        ;;
+    help|--help|-h) show_help ;;
+    *) echo -e "${RED}Unknown command: $1${NC}" >&2; echo; show_help >&2; exit 1 ;;
 esac
