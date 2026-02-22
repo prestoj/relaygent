@@ -105,16 +105,17 @@ def check_and_rebuild_hub() -> None:
     )
     if result.returncode != 0:
         log(f"Hub rebuild failed: {result.stderr.decode(errors='replace').strip()[-500:]}")
-        # Restart hub even if build failed so it keeps serving old build
-        if uses_launchagent:
-            _launchctl("start", LAUNCHAGENT_LABEL)
-        return
+    else:
+        build_commit_file.parent.mkdir(parents=True, exist_ok=True)
+        build_commit_file.write_text(current)
+        log("Hub rebuilt successfully")
 
-    build_commit_file.parent.mkdir(parents=True, exist_ok=True)
-    build_commit_file.write_text(current)
-    log("Hub rebuilt successfully")
+    # Restart hub (even on build failure — serve old build rather than nothing)
+    _start_hub(uses_launchagent, hub_port, kb_dir, data_dir, notifications_port, pid_dir)
 
-    # Restart hub
+
+def _start_hub(uses_launchagent, hub_port, kb_dir, data_dir, notifications_port, pid_dir):
+    """Start (or restart) the hub process."""
     if uses_launchagent:
         log("Starting hub via launchctl...")
         _launchctl("start", LAUNCHAGENT_LABEL)
@@ -133,12 +134,17 @@ def check_and_rebuild_hub() -> None:
         })
         hub_pid_file = pid_dir / "hub.pid"
         log_file = open(log_dir / "relaygent-hub.log", "a")
-        proc = subprocess.Popen(
-            ["node", str(hub_dir / "ws-server.mjs")],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            env=env,
-        )
+        try:
+            proc = subprocess.Popen(
+                ["node", str(REPO_DIR / "hub" / "ws-server.mjs")],
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                env=env,
+            )
+        except OSError as e:
+            log(f"Failed to start hub: {e}")
+            log_file.close()
+            return
         log_file.close()  # Safe to close in parent after fork
         hub_pid_file.write_text(f"{proc.pid}\n")
         log(f"Hub restarted on :{hub_port} (PID {proc.pid})")

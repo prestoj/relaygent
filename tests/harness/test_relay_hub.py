@@ -191,9 +191,12 @@ class TestLinuxSIGTERM:
             check_and_rebuild_hub()  # Should not raise
         assert "1111" in (self.home / ".relaygent" / "hub.pid").read_text()
 
-    def test_no_popen_on_build_failure(self):
+    def test_restarts_hub_on_build_failure(self):
+        """Hub should restart even on build failure to serve old build."""
         r = MagicMock(); r.returncode = 1; r.stderr = b"err"
+        proc = MagicMock(); proc.pid = 2222
         with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), r]), \
-             patch("relay_hub.subprocess.Popen") as mock_popen:
+             patch("relay_hub.subprocess.Popen", return_value=proc) as mock_popen:
             check_and_rebuild_hub()
-        mock_popen.assert_not_called()
+        mock_popen.assert_called_once()
+        assert not (self.repo / "data" / "hub-build-commit").exists()
