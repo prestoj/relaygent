@@ -1,6 +1,7 @@
 // Native accessibility, dialog, and system tools for computer-use MCP
 import { z } from "zod";
-import { hsCall, takeScreenshot, scaleFactor, runOsascript, findElements, clickElement } from "./hammerspoon.mjs";
+import { hsCall, takeScreenshot, scaleFactor, runOsascript } from "./hammerspoon.mjs";
+import { findElements, clickElement } from "./a11y-client.mjs";
 
 const n = z.coerce.number();
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });

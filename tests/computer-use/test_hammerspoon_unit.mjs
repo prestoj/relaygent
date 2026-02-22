@@ -29,7 +29,7 @@ const { port } = server.address();
 
 // Must set env var BEFORE importing hammerspoon.mjs (it reads PORT at module load)
 process.env.HAMMERSPOON_PORT = String(port);
-const { findElements, clickElement } = await import('../../computer-use/hammerspoon.mjs');
+const { findElements, clickElement } = await import('../../computer-use/a11y-client.mjs');
 
 after(() => server.close());
 
