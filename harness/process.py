@@ -32,7 +32,8 @@ class ClaudeProcess:
         self._context_warning_sent = False
 
     def _get_log_lines(self) -> int:
-        try: return sum(1 for _ in open(LOG_FILE)) if LOG_FILE.exists() else 0
+        try:
+            with open(LOG_FILE) as f: return sum(1 for _ in f)
         except OSError: return 0
 
     def _check_for_hang(self, log_start: int) -> bool:
@@ -157,7 +158,7 @@ class ClaudeProcess:
         incomplete, _ = check_incomplete_exit(self.session_id, self.workspace)
         context_too_large = bad_image = rate_limited = False
         try:
-            lines = open(LOG_FILE).readlines()[log_start:]
+            with open(LOG_FILE) as f: lines = f.readlines()[log_start:]
             if any('Request too large' in l for l in lines):
                 context_too_large = True; log('Context too large — will start fresh')
             if any('Could not process image' in l for l in lines):

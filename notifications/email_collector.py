@@ -23,7 +23,7 @@ _ACK_FILE = os.path.join(os.path.expanduser("~"), ".relaygent", "gmail", ".email
 def _get_ack_ts() -> float:
     try:
         if os.path.exists(_ACK_FILE):
-            return float(open(_ACK_FILE).read().strip())
+            with open(_ACK_FILE) as f: return float(f.read().strip())
     except (OSError, ValueError):
         pass
     return 0.0
