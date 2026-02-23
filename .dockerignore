@@ -1,0 +1,27 @@
+# Dependencies (reinstalled during build)
+hub/node_modules
+notifications/node_modules
+notifications/.venv
+computer-use/node_modules
+email/node_modules
+slack/node_modules
+secrets/node_modules
+.test-venv
+
+# Build artifacts
+hub/build
+hub/.svelte-kit
+
+# Git
+.git
+
+# Runtime data (mounted as volumes)
+data
+logs
+knowledge
+
+# Harness runs
+harness/runs
+
+# OS
+.DS_Store
