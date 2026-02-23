@@ -8,7 +8,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { pathToFileURL } from 'url';
 
-const CONFIG_FILE = join(homedir(), '.relaygent', 'config.json');
+function configPath() { return join(homedir(), '.relaygent', 'config.json'); }
 
 export async function setupRemote(config, REPO_DIR, C, ask) {
 	console.log(`\n${C.cyan}Remote Access${C.reset}`);
@@ -34,7 +34,7 @@ export async function setupRemote(config, REPO_DIR, C, ask) {
 
 	// Save updated config
 	try {
-		writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+		writeFileSync(configPath(), JSON.stringify(config, null, 2));
 	} catch {}
 
 	// Print result

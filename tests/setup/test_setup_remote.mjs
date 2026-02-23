@@ -11,16 +11,22 @@ import { tmpdir } from 'os';
 const TEST_DIR = join(tmpdir(), `relaygent-setup-remote-test-${process.pid}`);
 const FAKE_HOME = join(TEST_DIR, 'home');
 const FAKE_REPO = join(TEST_DIR, 'repo');
+const REAL_HOME = process.env.HOME;
+
+// Set HOME before import so configPath() resolves to fake dir at call time
+process.env.HOME = FAKE_HOME;
 
 before(() => {
 	mkdirSync(join(FAKE_HOME, '.relaygent'), { recursive: true });
 	mkdirSync(join(FAKE_REPO, 'hub', 'src', 'lib'), { recursive: true });
-	// Create a minimal auth.js with hashPassword
 	writeFileSync(join(FAKE_REPO, 'hub', 'src', 'lib', 'auth.js'),
 		`import crypto from 'crypto';\nexport function hashPassword(p) { return 'hash:' + p; }\n`);
 });
 
-after(() => rmSync(TEST_DIR, { recursive: true, force: true }));
+after(() => {
+	process.env.HOME = REAL_HOME;
+	rmSync(TEST_DIR, { recursive: true, force: true });
+});
 
 const C = { reset: '', bold: '', dim: '', cyan: '', green: '', yellow: '', red: '' };
 
