@@ -14,7 +14,7 @@ let tail = Promise.resolve();
 const SCREENSHOT_PATH = "/tmp/claude-screenshot.png";
 const SCALED_PATH = "/tmp/claude-screenshot-scaled.png";
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB — well under Claude's 20MB base64 limit
-const SCALED_WIDTH = 1280; // Always downscale to this width for consistent vision coords
+const SCALED_WIDTH = 1024; // Downscale to Anthropic's recommended XGA width for best vision accuracy
 
 // Scale factor: native screen pixels / scaled image pixels.
 // Set after first screenshot — click coords are multiplied by this before execution.
