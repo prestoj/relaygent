@@ -16,6 +16,7 @@ usage() {
     printf "  %-18s %s\n" \
         "-f, --follow" "Follow log output (tail -f)" \
         "-n, --lines N" "Show last N lines (default: 50)" \
+        "--errors" "Scan all logs for errors (summary)" \
         "--list" "List available log files with sizes" \
         "--all" "Follow all relaygent logs combined"
     exit 0
@@ -78,11 +79,43 @@ list_logs() {
     done
 }
 
+# Scan all logs for errors
+errors_scan() {
+    echo -e "${CYAN}Error scan across all service logs${NC}\n"
+    local total=0 found_any=false
+    for f in "$LOG_DIR"/relaygent*.log; do
+        [ -f "$f" ] || continue
+        local name count
+        name=$(basename "$f")
+        count=$(grep -Ei 'error|exception|traceback|fatal|EADDRINUSE|ENOENT' "$f" 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$count" -gt 0 ]; then
+            found_any=true
+            echo -e "  ${RED}$name${NC}: $count error lines"
+            # Show top 5 unique patterns
+            grep -Ei 'error|exception|traceback|fatal|EADDRINUSE|ENOENT' "$f" 2>/dev/null \
+                | sed 's/\[[^]]*\]/[_]/g; s/[0-9a-f]\{8,\}/HASH/g' \
+                | sort | uniq -c | sort -rn | head -5 \
+                | while read -r cnt line; do
+                    printf "    %5d× %.80s\n" "$cnt" "$line"
+                done
+            echo ""
+            total=$((total + count))
+        fi
+    done
+    if [ "$found_any" = false ]; then
+        echo -e "  ${GREEN}No errors found across service logs${NC}"
+    else
+        echo -e "  ${YELLOW}Total: $total error lines across service logs${NC}"
+        echo -e "  Tip: ${CYAN}relaygent logs <service>${NC} to see full log"
+    fi
+}
+
 # Parse arguments
 FOLLOW=false
 LINES=50
 LIST=false
 ALL=false
+ERRORS=false
 SERVICE=""
 
 while [[ $# -gt 0 ]]; do
@@ -92,6 +125,7 @@ while [[ $# -gt 0 ]]; do
             if [[ -z "${2:-}" ]]; then echo -e "${RED}--lines requires a number${NC}"; exit 1; fi
             if ! [[ "$2" =~ ^[0-9]+$ ]]; then echo -e "${RED}--lines value must be a number${NC}"; exit 1; fi
             LINES="$2"; shift 2 ;;
+        --errors) ERRORS=true; shift ;;
         --list) LIST=true; shift ;;
         --all) ALL=true; FOLLOW=true; shift ;;
         -h|--help) usage ;;
@@ -99,6 +133,9 @@ while [[ $# -gt 0 ]]; do
         *) SERVICE="$1"; shift ;;
     esac
 done
+
+# Handle --errors
+if [ "$ERRORS" = true ]; then errors_scan; exit 0; fi
 
 # Handle --list
 if [ "$LIST" = true ]; then list_logs; exit 0; fi
