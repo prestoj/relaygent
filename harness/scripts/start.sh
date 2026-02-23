@@ -60,7 +60,7 @@ elif [ "$(uname)" = "Linux" ]; then
             start_service "Computer-use (port $HS_PORT)" "computer-use" \
                 env DISPLAY="${DISPLAY:-:0}" python3 "$REPO_DIR/computer-use/linux-server.py"
             sleep 0.5
-            if ! curl -sf "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
+            if ! curl -sf --max-time 2 "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
                 echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
             fi
         fi
