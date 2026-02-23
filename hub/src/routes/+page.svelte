@@ -11,6 +11,7 @@
 	import AttentionBanner from '$lib/components/AttentionBanner.svelte';
 	import ScreenPreview from '$lib/components/ScreenPreview.svelte';
 	import LiveStats from '$lib/components/LiveStats.svelte';
+	import FleetWidget from '$lib/components/FleetWidget.svelte';
 	let { data } = $props();
 	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
@@ -92,6 +93,7 @@
 <ContextBar pct={contextPct} />
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <LiveStats />
+<FleetWidget />
 <TodoWidget {activities} />
 <section class="screen-toggle">
 	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
