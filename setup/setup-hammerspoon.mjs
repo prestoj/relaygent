@@ -1,6 +1,6 @@
 // Hammerspoon setup for macOS computer-use
 import { spawnSync } from 'child_process';
-import { mkdirSync, copyFileSync } from 'fs';
+import { mkdirSync, copyFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 export async function setupHammerspoon(config, REPO_DIR, HOME, C, ask) {
@@ -12,10 +12,9 @@ export async function setupHammerspoon(config, REPO_DIR, HOME, C, ask) {
 	const hsDir = join(HOME, '.hammerspoon');
 	const srcDir = join(REPO_DIR, 'hammerspoon');
 	mkdirSync(hsDir, { recursive: true });
-	for (const f of ['init.lua', 'input_handlers.lua', 'ax_handler.lua', 'ax_press.lua', 'held_input.lua', 'window_manage.lua', 'dismiss_dialog.lua']) {
-		copyFileSync(join(srcDir, f), join(hsDir, f));
-	}
-	console.log(`  Hammerspoon: lua files installed to ${hsDir}`);
+	const luaFiles = readdirSync(srcDir).filter(f => f.endsWith('.lua'));
+	for (const f of luaFiles) copyFileSync(join(srcDir, f), join(hsDir, f));
+	console.log(`  Hammerspoon: ${luaFiles.length} lua files installed to ${hsDir}`);
 
 	const hs = spawnSync('open', ['-Ra', 'Hammerspoon'], { stdio: 'pipe' });
 	if (hs.status === 0) {
