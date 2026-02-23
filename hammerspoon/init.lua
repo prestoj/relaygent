@@ -17,6 +17,7 @@ local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
 local ax_press = dofile(hs.configdir .. "/ax_press.lua")
 local window_manage = dofile(hs.configdir .. "/window_manage.lua")
 local dismiss_dialog = dofile(hs.configdir .. "/dismiss_dialog.lua")
+local drag = dofile(hs.configdir .. "/drag_handler.lua")
 
 -- Get Hammerspoon RSS in MB (returns nil on error)
 local function getRSSMB()
@@ -95,7 +96,7 @@ local function handleRequest(method, path, headers, body)
         elseif key == "POST /type" then
             return input.type_input(params)
         elseif key == "POST /drag" then
-            return input.drag(params)
+            return drag.drag(params)
         elseif key == "POST /scroll" then
             return input.scroll(params)
         elseif key == "POST /key_down" then return held.key_down(params)

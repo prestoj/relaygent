@@ -12,7 +12,7 @@ let _lastDialog = null, _nextDialogConfig = null;
 export const getLastDialog = () => _lastDialog;
 export const setNextDialogConfig = (c) => { _nextDialogConfig = c; };
 let _currentTabId = (() => { try { return readFileSync(TAB_ID_FILE, "utf8").trim() || null; } catch { return null; } })();
-function _saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
+export function saveTabId(id) { _currentTabId = id; try { writeFileSync(TAB_ID_FILE, id || ""); } catch {} }
 function log(msg) { process.stderr.write(`[cdp] ${msg}\n`); }
 function _scheduleReconnect(delay = 1000) {
 	if (_reconnectTimer || _connectPromise) return;
@@ -24,7 +24,7 @@ function _scheduleReconnect(delay = 1000) {
 }
 function _cancelReconnect() { if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; } }
 const cdpCmd = (p) => new Promise(r => { const q = http.request({ hostname: "localhost", port: CDP_PORT, path: p, timeout: 2000 }, s => { s.on("data", () => {}); s.on("end", () => r(s.statusCode === 200)); }); q.on("error", () => r(false)); q.end(); });
-const cdpActivate = (id) => cdpCmd(`/json/activate/${id}`);
+export const cdpActivate = (id) => cdpCmd(`/json/activate/${id}`);
 export const cdpCloseTab = (id) => cdpCmd(`/json/close/${id}`);
 const cdpHttp = (path) => new Promise(resolve => {
   const req = http.request({ hostname: "localhost", port: CDP_PORT, path, timeout: 3000 }, res => {
@@ -86,7 +86,7 @@ async function _syncToActiveTab() {
   const active = pages[0];
   if (active && active.id !== _currentTabId) {
     log(`tab switched → ${active.url.substring(0, 60)}`);
-    try { _ws.close(); } catch {} _ws = null; _saveTabId(active.id);
+    try { _ws.close(); } catch {} _ws = null; saveTabId(active.id);
   }
 }
 async function _getConnectionImpl() {
@@ -113,7 +113,7 @@ async function _getConnectionImpl() {
     ?? pages.find(t => /^https?:/.test(t.url)) ?? pages[0];
   try {
     _ws = await connectTab(page.webSocketDebuggerUrl);
-    _saveTabId(page.id);
+    saveTabId(page.id);
     log(`connected to ${page.url.substring(0, 60)}`);
     await _denyPerms().catch(() => {});
     send("Page.enable").catch(() => {});
@@ -150,36 +150,8 @@ export async function cdpNavigate(url) {
     return true;
   } catch (e) { log(`navigate error: ${e.message}`); return false; }
 }
-export function cdpDisconnect() { _disconnecting = true; _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(null); }
-export async function cdpSwitchTab(tabId) {
-  const ok = await cdpActivate(tabId); if (!ok) return false;
-  if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(tabId);
-  await getConnection(); // Force reconnect to new tab's WebSocket
-  return true;
-}
-export async function cdpSyncToVisibleTab(url) {
-  cdpDisconnect();
-  // Wait for page to start loading — keyboard nav needs time for Chrome to update tab list
-  const urlBase = url.replace(/\/$/, "").replace(/^https?:\/\//, "");
-  for (let attempt = 0; attempt < 5; attempt++) {
-    await new Promise(r => setTimeout(r, 600));
-    const tabs = await cdpHttp("/json/list");
-    if (!tabs) continue;
-    const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
-    // Try exact match, then prefix match (handles trailing slashes, redirects)
-    const target = pages.find(t => t.url === url)
-      ?? pages.find(t => t.url.replace(/^https?:\/\//, "").startsWith(urlBase))
-      ?? (attempt >= 2 ? pages.find(t => /^https?:/.test(t.url) && t.url !== "about:blank") ?? pages[0] : null);
-    if (target) {
-      _saveTabId(target.id);
-      await cdpActivate(target.id);
-      await getConnection(); // Force reconnect to new tab's WebSocket
-      log(`synced to tab: ${target.url.substring(0, 60)}`);
-      return;
-    }
-  }
-  log(`sync failed: could not find tab for ${url.substring(0, 60)}`);
-}
+export function cdpDisconnect() { _disconnecting = true; _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } saveTabId(null); }
+export function resetWs() { if (_ws) { try { _ws.close(); } catch {} _ws = null; } }
 
 let _permsDenied = false;
 async function _denyPerms() {
