@@ -21,6 +21,7 @@ from relay_utils import (acquire_lock, clear_crash_context, cleanup_context_file
                          cleanup_pid_file, commit_kb, notify_crash,
                          notify_lifecycle, rotate_log, startup_init,
                          write_crash_context)
+from session_summary import save_summary
 from session import SleepManager
 from wake_cycle import run_wake_cycle
 
@@ -119,6 +120,7 @@ class RelayRunner:
 
             state.session_established = True
             state.reset_counters()
+            save_summary(self.claude.session_id, self.claude.workspace)
 
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
                 self._spawn_successor(workspace, state,
