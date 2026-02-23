@@ -128,10 +128,8 @@ local function handleRequest(method, path, headers, body)
         elseif key == "POST /launch" then
             if not params.app then return json.encode({error="app required"}), 400 end
             hs.application.launchOrFocus(params.app)
-            hs.timer.doAfter(0.3, function()
-                local a = hs.application.find(params.app)
-                if a then a:activate() end
-            end)
+            local function tryFocus() local a = hs.application.find(params.app); if a then a:activate(true) end end
+            hs.timer.doAfter(0.3, tryFocus); hs.timer.doAfter(1.0, tryFocus)
             return json.encode({launched=params.app}), 200
         elseif key == "POST /window_manage" then return window_manage(params)
         elseif key == "POST /type_from_file" then
