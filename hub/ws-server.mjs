@@ -30,6 +30,8 @@ if (!process.env.BODY_SIZE_LIMIT) process.env.BODY_SIZE_LIMIT = String(50 * 1024
 const { handler } = await import('./build/handler.js');
 function checkReqAuth(req) {
 	if (!isAuthEnabled()) return true;
+	const addr = req.socket?.remoteAddress || '';
+	if (addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1') return true;
 	const cookies = (req.headers.cookie || '').split(';').reduce((o, c) => {
 		const [k, ...v] = c.trim().split('='); o[k] = v.join('='); return o;
 	}, {});

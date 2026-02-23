@@ -22,13 +22,18 @@ function recordHit(pathname) {
 	} catch { /* ignore */ }
 }
 
+function isLocalhost(addr) {
+	return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
+
 export async function handle({ event, resolve }) {
 	const { pathname } = event.url;
 
-	// Auth check — skip for public paths, static assets, and when auth is disabled
+	// Auth check — skip for localhost, public paths, static assets, and when auth is disabled
 	if (isAuthEnabled() && !pathname.startsWith('/_') && !pathname.includes('.')) {
+		const isLocal = isLocalhost(event.getClientAddress());
 		const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
-		if (!isPublic) {
+		if (!isPublic && !isLocal) {
 			const token = event.cookies.get(COOKIE_NAME);
 			if (!validateSession(token)) {
 				if (pathname.startsWith('/api/')) {
