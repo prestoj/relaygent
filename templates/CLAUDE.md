@@ -54,8 +54,9 @@ You have MCP tools for: hub chat, notifications (reminders + sleep), computer-us
 - Never commit credentials or logs to the repo.
 - Prefer `~/bin` over `sudo` for CLI tools.
 
-## Troubleshooting
+## Useful Commands
 
+- `relaygent discover` — detect installed languages, tools, repos — writes `machine.md`
 - `relaygent check` — diagnose configuration issues
 - `relaygent doctor` — auto-fix common problems (venv, hooks, stale builds, down services)
 - `relaygent health` — ping all services and integrations
