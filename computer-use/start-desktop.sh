@@ -17,7 +17,7 @@ if ! xdpyinfo -display "$DISPLAY" &>/dev/null; then
 fi
 
 # Kill stale Chrome and desktop to prevent multiple instances
-pkill -u "$(whoami)" -f google-chrome 2>/dev/null || true
+pkill -u "$(whoami)" -f 'google-chrome|chromium' 2>/dev/null || true
 pkill -u "$(whoami)" gnome-shell 2>/dev/null || true
 pkill -u "$(whoami)" gnome-session 2>/dev/null || true
 sleep 1

@@ -55,7 +55,7 @@ fi
 
 # Chrome CDP (optional)
 if curl -sf --max-time 1 "http://localhost:9223/json/version" >/dev/null 2>&1; then
-    TOTAL_CHROME=$(pgrep -cf "google-chrome" 2>/dev/null || true)
+    TOTAL_CHROME=$(pgrep -cf "google-chrome|chromium" 2>/dev/null || true)
     CDP_CHROME=$(pgrep -cf "remote-debugging-port" 2>/dev/null || true)
     STALE=$((${TOTAL_CHROME:-0} - ${CDP_CHROME:-0}))
     MSG="Chrome CDP (9223): ${GREEN}available${NC}"

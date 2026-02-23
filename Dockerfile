@@ -34,10 +34,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*
 
-# Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update && apt-get install -y google-chrome-stable && rm -rf /var/lib/apt/lists/*
+# Browser: Chrome (amd64) or Chromium (arm64 — Chrome has no arm64 Linux build)
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+      wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google.gpg && \
+      echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
+        > /etc/apt/sources.list.d/google-chrome.list && \
+      apt-get update && apt-get install -y google-chrome-stable; \
+    else \
+      echo "deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" \
+        > /etc/apt/sources.list.d/jammy.list && \
+      apt-get update && apt-get install -y chromium-browser && \
+      rm /etc/apt/sources.list.d/jammy.list; \
+    fi && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
