@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { cdpSwitchTab, cdpCloseTab, cdpHttp } from "./cdp.mjs";
+import { cdpCloseTab, cdpHttp } from "./cdp.mjs";
+import { cdpSwitchTab } from "./cdp-tabs.mjs";
 import { takeScreenshot } from "./hammerspoon.mjs";
 
 const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
