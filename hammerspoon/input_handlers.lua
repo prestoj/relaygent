@@ -78,7 +78,8 @@ function M.click(params)
     end
     local function postWithFlags(ev, target)
         if next(flags) then ev:setFlags(flags) end
-        if target then ev:post(target) else ev:post() end
+        local app = target or hs.application.frontmostApplication()
+        if app then ev:post(app) else ev:post() end
     end
     if params.right then
         postWithFlags(hs.eventtap.event.newMouseEvent(types.rightMouseDown, pt))
