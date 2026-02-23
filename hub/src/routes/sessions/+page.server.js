@@ -15,7 +15,7 @@ export function load({ url } = {}) {
 	const showAll = url?.searchParams?.get('all') === '1';
 	const sessions = (showAll ? all : all.slice(0, PAGE_SIZE)).map(s => {
 		const st = loadStats(s.id);
-		return { ...s, gitCommits: st?.git_commits || 0, prsCreated: st?.prs_created?.length || 0, prsMerged: st?.prs_merged?.length || 0 };
+		return { ...s, gitCommits: st?.git_commits || s.git_commits || 0, prsCreated: st?.prs_created?.length || s.prs_created?.length || 0, prsMerged: st?.prs_merged?.length || s.prs_merged?.length || 0 };
 	});
 	const totalTokens = all.reduce((s, x) => s + (x.totalTokens || 0), 0);
 	const durations = all.map(x => x.durationMin).filter(d => d > 0);

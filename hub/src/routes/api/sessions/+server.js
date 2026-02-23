@@ -27,10 +27,10 @@ export async function GET({ url }) {
 				turns: stats.turns,
 				contextPct: stats.context_pct,
 				topTools: stats.tools,
-				gitCommits: stats.git_commits || 0,
-				prsCreated: stats.prs_created || [],
-				prsMerged: stats.prs_merged || [],
 			} : null,
+			gitCommits: stats?.git_commits || s.git_commits || 0,
+			prsCreated: stats?.prs_created || s.prs_created || [],
+			prsMerged: stats?.prs_merged || s.prs_merged || [],
 		};
 	});
 	return new Response(JSON.stringify({
