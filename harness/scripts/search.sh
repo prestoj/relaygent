@@ -31,7 +31,7 @@ QUERY="${QUERY## }"
 [ -z "$QUERY" ] && usage
 
 ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$QUERY")
-RESPONSE=$(curl -sf --max-time 5 "http://127.0.0.1:${HUB_PORT}/api/search?q=${ENCODED}&full=1" 2>/dev/null) || {
+RESPONSE=$(curl -sf $CURL_K --max-time 5 "${HUB_SCHEME:-http}://127.0.0.1:${HUB_PORT}/api/search?q=${ENCODED}&full=1" 2>/dev/null) || {
     echo -e "${RED}Hub not reachable at port ${HUB_PORT}${NC}" >&2; exit 1
 }
 
