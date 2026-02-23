@@ -76,7 +76,6 @@
 		<div class="ref-key"><code>relaygent cleanup</code></div><div>Free disk: old sessions, caches, logs (--dry-run)</div>
 		<div class="ref-key"><code>relaygent history</code></div><div>Recent sessions timeline (-n NUM, --json)</div>
 		<div class="ref-key"><code>relaygent session</code></div><div>Live session stats (--watch for auto-refresh)</div>
-		<div class="ref-key"><code>relaygent fleet</code></div><div>Status of all relaygent instances on the network</div>
 		<div class="ref-key"><code>relaygent search &lt;query&gt;</code></div><div>Full-text search across KB, sessions, and chat</div>
 		<div class="ref-key"><code>relaygent stats</code></div><div>Session history, token usage, and error stats</div>
 		<div class="ref-key"><code>relaygent mcp list</code></div><div>List configured MCP servers</div>
