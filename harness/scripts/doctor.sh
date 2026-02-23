@@ -144,7 +144,21 @@ _check_svc() {
 _check_svc "Hub" "$HUB_PORT" "hub" "/api/health"
 _check_svc "Notifications" "$NOTIF_PORT" "notifications"
 
-# --- 9. Updates ---
+# --- 9. macOS typing optimization ---
+if [[ "$(uname)" == "Darwin" ]]; then
+    echo -e "\n${CYAN}macOS typing:${NC}"
+    _TYPING_OK=1
+    for key in NSAutocorrect NSAutomaticSpellingCorrectionEnabled NSAutomaticCapitalizationEnabled NSAutomaticPeriodSubstitutionEnabled NSAutomaticTextCompletionEnabled; do
+        val=$(defaults read NSGlobalDomain "$key" 2>/dev/null || echo "")
+        if [[ "$val" != "0" ]]; then
+            do_fix "Disable $key" "defaults write NSGlobalDomain $key -bool false"
+            _TYPING_OK=0
+        fi
+    done
+    [[ "$_TYPING_OK" == 1 ]] && ok_msg "Autocorrect/autocapitalize disabled"
+fi
+
+# --- 10. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
 BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
