@@ -21,8 +21,8 @@ try:
  for k,v in[('HUB_PORT',c['hub']['port']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
   ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
-except Exception: sys.exit(1)
-")" || { echo -e "${RED}Failed to parse $CONFIG_FILE. Re-run ./setup.sh${NC}"; exit 1; }
+except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
+")" || { echo -e "${RED}Failed to parse $CONFIG_FILE — see error above. Re-run ./setup.sh${NC}"; exit 1; }
     eval "$config_vars"
     export RELAYGENT_DATA_DIR="$DATA_DIR" RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_HUB_PORT="$HUB_PORT"
     export HAMMERSPOON_PORT="$HS_PORT" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT"
@@ -185,7 +185,7 @@ try:
  for k,v in[('HUB_PORT',c['hub']['port']),('DATA_DIR',c['paths']['data']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
   ('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
-except Exception: sys.exit(1)
+except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
 ")" || return 1
     eval "$cv"
 }
