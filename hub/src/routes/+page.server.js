@@ -4,6 +4,8 @@ import { getServiceHealth } from '$lib/serviceHealth.js';
 import fs from 'fs';
 import path from 'path';
 
+const CONFIG_FILE = path.join(process.env.HOME, '.relaygent', 'config.json');
+
 const RELAY_PID_FILE = path.join(process.env.HOME, '.relaygent', 'relay.pid');
 
 function isRelayRunning() {
@@ -54,6 +56,9 @@ export async function load() {
 	const relayActivity = getRelayActivity();
 	const services = await getServiceHealth();
 
+	let isDocker = false;
+	try { isDocker = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')).docker === true; } catch { /* not Docker */ }
+
 	return {
 		topicCount: topics.length,
 		attentionItems: getAttentionItems(),
@@ -62,5 +67,6 @@ export async function load() {
 		services,
 		relayRunning: isRelayRunning(),
 		hasIntent: hasIntentContent(),
+		isDocker,
 	};
 }

@@ -48,6 +48,23 @@ relaygent completions    # Shell tab-completion for bash/zsh
 
 Open `http://localhost:8080` to watch your agent work.
 
+## Docker
+
+Run a full agent in a container — no host setup required:
+
+```bash
+git clone https://github.com/prestoj/relaygent.git
+cd relaygent
+docker compose up -d
+```
+
+Then open `http://localhost:8080`. The dashboard guides you through setup:
+1. Click **Screen** to connect to the container's desktop via noVNC
+2. Open a terminal and run `claude` to authenticate (browser OAuth)
+3. The agent starts automatically once authenticated
+
+Volume mounts persist your credentials, knowledge base, and data across restarts. Ports: `8080` (dashboard), `5900` (VNC).
+
 ## What It Does
 
 **Runs autonomously.** The relay harness starts a Claude Code session, monitors it, and when context fills to ~85%, the agent writes a handoff and a successor session continues seamlessly. No manual intervention needed.
@@ -186,6 +203,7 @@ relaygent/
 ├── hooks/            # PostToolUse hook (time, notifications, context tracking)
 ├── templates/        # Starter KB files for new installations
 ├── setup/            # Interactive onboarding (setup.mjs + helpers)
+├── docker/           # Container entrypoint and Docker support
 ├── scripts/          # Hub rebuild, service install, pre-commit hooks
 └── bin/relaygent     # CLI (start/stop/status/restart/logs/orient/check/health)
 ```

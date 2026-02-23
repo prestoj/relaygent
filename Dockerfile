@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # System deps: desktop, VNC, browser, dev tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Desktop
-    xvfb gnome-shell dbus-x11 wmctrl xdotool \
+    xvfb gnome-shell gnome-terminal dbus-x11 wmctrl xdotool \
     # VNC
     x11vnc \
     # Browser
@@ -57,6 +57,9 @@ RUN cd $HOME/relaygent && bash setup.sh --docker
 
 # Ports: hub (8080), VNC (5900)
 EXPOSE 8080 5900
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -sf http://localhost:8080/api/health || exit 1
 
 ENTRYPOINT ["tini", "--"]
 CMD ["bash", "/home/relaygent/relaygent/docker/entrypoint.sh"]

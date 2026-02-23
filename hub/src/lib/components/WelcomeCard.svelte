@@ -1,7 +1,59 @@
 <script>
-	let { hasIntent = false, onStart } = $props();
+	let { hasIntent = false, isDocker = false, onStart } = $props();
+	let claudeAuthed = $state(false);
+
+	async function checkAuth() {
+		try {
+			const r = await fetch('/api/health');
+			const d = await r.json();
+			claudeAuthed = d.claudeAuthed === true;
+		} catch { /* ignore */ }
+	}
+
+	if (isDocker) { checkAuth(); setInterval(checkAuth, 5000); }
 </script>
 
+{#if isDocker}
+<div class="waiting-icon">&#128640;</div>
+<div class="waiting-text">Relaygent Container</div>
+<div class="waiting-hint">Complete setup to start your agent:</div>
+
+<div class="steps">
+	<div class="step" class:done={claudeAuthed}>
+		<span class="step-num">{claudeAuthed ? '\u2713' : '1'}</span>
+		<div class="step-body">
+			<a href="/screen" class="step-label step-link">Connect to Desktop</a>
+			<span class="step-desc">Open the VNC screen to access the container's desktop</span>
+		</div>
+	</div>
+
+	<div class="step" class:done={claudeAuthed} class:waiting={false}>
+		<span class="step-num">{claudeAuthed ? '\u2713' : '2'}</span>
+		<div class="step-body">
+			{#if claudeAuthed}
+				<span class="step-label">Claude authenticated</span>
+			{:else}
+				<span class="step-label">Authenticate Claude</span>
+				<span class="step-desc">Open a terminal in the desktop and run <code>claude</code> — complete the browser login</span>
+			{/if}
+		</div>
+	</div>
+
+	<div class="step" class:waiting={!claudeAuthed}>
+		<span class="step-num">3</span>
+		<div class="step-body">
+			{#if claudeAuthed}
+				<button class="step-label step-btn" onclick={onStart}>Start the agent</button>
+				<span class="step-desc">Launch the relay — the agent begins working</span>
+			{:else}
+				<span class="step-label">Agent starts automatically</span>
+				<span class="step-desc">Once authenticated, the relay detects credentials and starts</span>
+			{/if}
+		</div>
+	</div>
+</div>
+
+{:else}
 <div class="waiting-icon">&#128075;</div>
 <div class="waiting-text">Welcome to Relaygent</div>
 <div class="waiting-hint">Get started in three steps:</div>
@@ -40,6 +92,7 @@
 		</div>
 	</div>
 </div>
+{/if}
 
 <div class="links">
 	<a href="/help">Help</a>
@@ -68,6 +121,7 @@
 	.step-btn { background: var(--link); color: white; border: none; padding: 0.25em 0.8em; border-radius: 5px; cursor: pointer; font: inherit; font-weight: 600; font-size: 0.88em; }
 	.step-btn:hover { opacity: 0.9; }
 	.step-desc { font-size: 0.75em; color: var(--text-muted); line-height: 1.4; }
+	.step-desc code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.95em; }
 	.links { font-size: 0.8em; color: var(--text-muted); }
 	.links a { color: var(--link); text-decoration: none; }
 	.links a:hover { text-decoration: underline; }
