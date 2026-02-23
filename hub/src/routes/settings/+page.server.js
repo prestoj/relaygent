@@ -30,8 +30,9 @@ function loadConfig() {
 			notificationsPort: raw.notifications?.port || 8083,
 			repoPath: raw.repoPath || '',
 			authEnabled: !!raw.hub?.passwordHash,
+			tls: raw.hub?.tls ? { hostname: raw.hub.tls.hostname } : null,
 		};
-	} catch { return { hubPort: 8080, notificationsPort: 8083, repoPath: '', authEnabled: false }; }
+	} catch { return { hubPort: 8080, notificationsPort: 8083, repoPath: '', authEnabled: false, tls: null }; }
 }
 
 function getSetupChecks(config) {
