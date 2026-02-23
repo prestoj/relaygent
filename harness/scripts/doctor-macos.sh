@@ -28,6 +28,26 @@ if [[ -d "$HOME/.hammerspoon" ]]; then
     [[ "$_HS_OK" == 1 ]] && ok_msg "All Lua files present"
 fi
 
+# --- VNC server (Remote Management) ---
+echo -e "\n${CYAN}VNC server:${NC}"
+_VNC_PORT=$(python3 -c "import json; c=json.load(open('$CONFIG_FILE')); print(c.get('vnc',{}).get('port',5900))" 2>/dev/null || echo 5900)
+_VNC_PW=$(python3 -c "import json; c=json.load(open('$CONFIG_FILE')); print(c.get('vnc',{}).get('password',''))" 2>/dev/null || echo "")
+if [[ -n "$_VNC_PW" ]]; then
+    if nc -z localhost "$_VNC_PORT" 2>/dev/null; then
+        ok_msg "VNC listening on :$_VNC_PORT"
+    else
+        _KS="/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart"
+        if [[ -x "$_KS" ]]; then
+            do_fix "Restart VNC (kickstart)" \
+                "sudo '$_KS' -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -restart -agent -privs -all -allowAccessFor -allUsers >/dev/null 2>&1 && sleep 2 && nc -z localhost $_VNC_PORT"
+        else
+            skip_msg "VNC not listening on :$_VNC_PORT and kickstart not found"
+        fi
+    fi
+else
+    ok_msg "VNC not configured (no vnc.password in config)"
+fi
+
 # --- macOS typing optimization ---
 echo -e "\n${CYAN}macOS typing:${NC}"
 _TYPING_OK=1
