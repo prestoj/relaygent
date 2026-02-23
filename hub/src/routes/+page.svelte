@@ -116,7 +116,7 @@
 		<div class="waiting-text">Agent is starting up...</div>
 		<div class="waiting-hint">The dashboard will update automatically when the agent begins working.</div>
 	{:else}
-		<WelcomeCard hasIntent={data.hasIntent} onStart={toggleRelay} />
+		<WelcomeCard hasIntent={data.hasIntent} isDocker={data.isDocker} onStart={toggleRelay} />
 	{/if}
 </section>
 {:else}
