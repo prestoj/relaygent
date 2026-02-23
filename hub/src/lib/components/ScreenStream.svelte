@@ -64,7 +64,6 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		e.preventDefault();
 		dragState = { bx: e.clientX, by: e.clientY, moved: false, t: Date.now() };
 	}
 
