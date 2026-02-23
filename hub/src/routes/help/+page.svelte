@@ -41,7 +41,6 @@
 		<div class="ref-key"><a href="/logs">Logs</a></div><div>Live system logs with search and syntax coloring</div>
 		<div class="ref-key"><a href="/files">Files</a></div><div>Upload, download, and preview shared files</div>
 		<div class="ref-key"><a href="/search">Search</a></div><div>Full-text search across KB topics and sessions</div>
-		<div class="ref-key"><a href="/notifications">Notifications</a></div><div>History of alerts from Slack, email, GitHub, Linear</div>
 		<div class="ref-key"><a href="/settings">Settings</a></div><div>System info, services, MCP servers, and setup status</div>
 	</div>
 </section>
@@ -65,11 +64,15 @@
 		<div class="ref-key"><code>relaygent chat "msg"</code></div><div>Send a chat message from the terminal</div>
 		<div class="ref-key"><code>relaygent chat --read</code></div><div>Read recent chat messages</div>
 		<div class="ref-key"><code>relaygent check</code></div><div>Run system health checks</div>
+		<div class="ref-key"><code>relaygent doctor</code></div><div>Auto-fix common issues (use --dry-run to preview)</div>
+		<div class="ref-key"><code>relaygent restart</code></div><div>Restart all services</div>
 		<div class="ref-key"><code>relaygent logs [service]</code></div><div>Tail service logs (fuzzy name matching)</div>
 		<div class="ref-key"><code>relaygent open [page]</code></div><div>Open hub page in browser</div>
 		<div class="ref-key"><code>relaygent setup</code></div><div>Run the initial setup wizard</div>
 		<div class="ref-key"><code>relaygent update</code></div><div>Pull latest changes and rebuild</div>
 		<div class="ref-key"><code>relaygent digest</code></div><div>Show daily activity summary</div>
+		<div class="ref-key"><code>relaygent cleanup</code></div><div>Free disk: old sessions, caches, logs (--dry-run)</div>
+		<div class="ref-key"><code>relaygent stats</code></div><div>Session history, token usage, and error stats</div>
 		<div class="ref-key"><code>relaygent test [suite]</code></div><div>Run test suites</div>
 		<div class="ref-key"><code>relaygent mcp list</code></div><div>List configured MCP servers</div>
 	</div>
@@ -91,7 +94,7 @@
 	<h2>Troubleshooting</h2>
 	<dl class="concepts">
 		<dt>Agent won't start</dt>
-		<dd>Run <code>relaygent check</code> to diagnose. Common causes: Claude Code not authenticated (<code>claude /login</code>), missing config (<code>relaygent setup</code>), or no Intent set.</dd>
+		<dd>Run <code>relaygent check</code> to diagnose, then <code>relaygent doctor</code> to auto-fix common issues. Common causes: Claude Code not authenticated (<code>claude /login</code>), missing config (<code>relaygent setup</code>), or no Intent set.</dd>
 		<dt>Services are down</dt>
 		<dd>Check <a href="/settings">Settings</a> for red dots. Use <code>relaygent restart</code> or the Restart button on the Settings page. Run <code>relaygent install-services</code> if auto-restart isn't set up.</dd>
 		<dt>Agent seems stuck or confused</dt>
