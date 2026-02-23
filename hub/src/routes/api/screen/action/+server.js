@@ -4,10 +4,11 @@ const HS_PORT = process.env.HAMMERSPOON_PORT || '8097';
 const BASE = `http://127.0.0.1:${HS_PORT}`;
 
 const VALID_ACTIONS = {
-	click:  ['x', 'y'],
-	type:   [],          // text or key required (validated below)
-	scroll: [],
-	drag:   ['startX', 'startY', 'endX', 'endY'],
+	click:      ['x', 'y'],
+	type:       [],          // text or key required (validated below)
+	scroll:     [],
+	drag:       ['startX', 'startY', 'endX', 'endY'],
+	mouse_move: ['x', 'y'],
 };
 
 export async function POST({ request }) {
