@@ -158,7 +158,7 @@
 								<button class="cb-relay-btn" onclick={() => toggleGroup(i)}>hide {g.msgs.length} system messages</button>
 							{/if}
 						{:else}
-							<button class="cb-relay-btn" onclick={() => toggleGroup(i)}>{g.msgs.length} system messages</button>
+							<button class="cb-relay-btn" onclick={() => toggleGroup(i)}>{g.msgs.length} system messages — {g.msgs[g.msgs.length-1].content.replace(/^\[relay\]\s*/, '').slice(0, 45)}</button>
 						{/if}
 					{:else}
 						<div class="cb-msg" class:human={g.msg.role==='human'} class:bot={g.msg.role==='assistant'}>
