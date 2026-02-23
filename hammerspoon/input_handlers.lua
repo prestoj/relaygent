@@ -53,6 +53,21 @@ local function typeWithKeycodes(text, targetApp)
     end
 end
 
+-- Multi-click helper: sends N clicks with incrementing clickState for double/triple-click
+local function multiClick(pt, postWithFlags, count)
+    local types = hs.eventtap.event.types
+    local function doClick(n)
+        local ev = hs.eventtap.event.newMouseEvent(types.leftMouseDown, pt)
+        if n > 1 then ev:setProperty(hs.eventtap.event.properties.mouseEventClickState, n) end
+        postWithFlags(ev)
+        hs.timer.doAfter(0.02, function()
+            postWithFlags(hs.eventtap.event.newMouseEvent(types.leftMouseUp, pt))
+            if n < count then hs.timer.doAfter(0.02, function() doClick(n+1) end) end
+        end)
+    end
+    doClick(1)
+end
+
 function M.click(params)
     if not params.x or not params.y then return json.encode({error="x,y required"}), 400 end
     local pt = hs.geometry.point(params.x, params.y)
@@ -70,19 +85,13 @@ function M.click(params)
         hs.timer.doAfter(0.02, function()
             postWithFlags(hs.eventtap.event.newMouseEvent(types.rightMouseUp, pt))
         end)
-    elseif params.double then
-        postWithFlags(hs.eventtap.event.newMouseEvent(types.leftMouseDown, pt))
+    elseif params.middle then
+        postWithFlags(hs.eventtap.event.newMouseEvent(types.otherMouseDown, pt))
         hs.timer.doAfter(0.02, function()
-            postWithFlags(hs.eventtap.event.newMouseEvent(types.leftMouseUp, pt))
-            hs.timer.doAfter(0.02, function()
-                local ev2 = hs.eventtap.event.newMouseEvent(types.leftMouseDown, pt)
-                ev2:setProperty(hs.eventtap.event.properties.mouseEventClickState, 2)
-                postWithFlags(ev2)
-                hs.timer.doAfter(0.02, function()
-                    postWithFlags(hs.eventtap.event.newMouseEvent(types.leftMouseUp, pt))
-                end)
-            end)
+            postWithFlags(hs.eventtap.event.newMouseEvent(types.otherMouseUp, pt))
         end)
+    elseif params.double then multiClick(pt, postWithFlags, 2)
+    elseif params.triple then multiClick(pt, postWithFlags, 3)
     else
         local targetApp = nil
         if params.pid then targetApp = hs.application.applicationForPID(params.pid) end

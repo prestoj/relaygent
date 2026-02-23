@@ -14,7 +14,7 @@ let tail = Promise.resolve();
 const SCREENSHOT_PATH = "/tmp/claude-screenshot.png";
 const SCALED_PATH = "/tmp/claude-screenshot-scaled.png";
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB — well under Claude's 20MB base64 limit
-const SCALED_WIDTH = 1280; // Always downscale to this width for consistent vision coords
+const SCALED_WIDTH = 1024; // Downscale to Anthropic's recommended XGA width for best vision accuracy
 
 // Scale factor: native screen pixels / scaled image pixels.
 // Set after first screenshot — click coords are multiplied by this before execution.
@@ -61,6 +61,13 @@ export function readScreenshot(logicalWidth, pixelWidth) {
 		process.stderr.write(`[computer-use] Screenshot read failed: ${e.message}\n`);
 		return null;
 	}
+}
+
+/** Read screenshot at native pixel resolution (no downscaling). For zoom/inspect use. */
+export function readRawScreenshot() {
+	const err = validatePng(SCREENSHOT_PATH);
+	if (err) { process.stderr.write(`[computer-use] Bad zoom screenshot: ${err}\n`); return null; }
+	return readFileSync(SCREENSHOT_PATH).toString("base64");
 }
 
 function hsCallOnce(method, path, body, timeoutMs) {
