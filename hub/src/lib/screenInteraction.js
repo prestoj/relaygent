@@ -5,10 +5,13 @@ export function toNativeCoords(e, imgEl, nativeWidth) {
 	const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
 	const effectiveW = nativeWidth || natW;
 	const effectiveH = natW > 0 ? effectiveW * natH / natW : natH;
-	// Account for object-fit:contain letterboxing — visible image may be smaller than element
-	const scale = Math.min(rect.width / natW, rect.height / natH);
-	const visW = natW * scale, visH = natH * scale;
-	const offX = (rect.width - visW) / 2, offY = (rect.height - visH) / 2;
+	const fit = getComputedStyle(imgEl).objectFit;
+	let offX = 0, offY = 0, visW = rect.width, visH = rect.height;
+	if (fit === 'contain' || fit === 'scale-down') {
+		const scale = Math.min(rect.width / natW, rect.height / natH);
+		visW = natW * scale; visH = natH * scale;
+		offX = (rect.width - visW) / 2; offY = (rect.height - visH) / 2;
+	}
 	const relX = e.clientX - rect.left - offX, relY = e.clientY - rect.top - offY;
 	const x = Math.round(relX * effectiveW / visW), y = Math.round(relY * effectiveH / visH);
 	return { x: Math.max(0, Math.min(x, effectiveW - 1)), y: Math.max(0, Math.min(y, effectiveH - 1)) };

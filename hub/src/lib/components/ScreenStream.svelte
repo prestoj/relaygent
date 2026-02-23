@@ -93,7 +93,9 @@
 		} else {
 			justDragged = true;
 			const { x, y } = coords(e);
-			doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
+			const r = imgEl.getBoundingClientRect();
+			doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) },
+				`click ${x},${y} (img:${r.width|0}x${r.height|0} nat:${imgEl.naturalWidth}x${imgEl.naturalHeight} nw:${nativeWidth})`);
 		}
 		setTimeout(() => { justDragged = false; }, 200);
 		dragState = null;
