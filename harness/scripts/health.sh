@@ -28,7 +28,7 @@ check_daemon() {
 }
 
 # Services with HTTP endpoints
-check_http "Hub (:$HUB_PORT)" "${HUB_SCHEME}://localhost:$HUB_PORT/"
+check_http "Hub (:$HUB_PORT)" "${HUB_SCHEME}://localhost:$HUB_PORT/api/health"
 check_http "Notifications (:$NOTIF_PORT)" "http://localhost:$NOTIF_PORT/health"
 if [ "$(uname)" = "Darwin" ]; then
     check_http "Hammerspoon (:$HS_PORT)" "http://localhost:$HS_PORT/health"
