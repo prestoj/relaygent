@@ -38,7 +38,7 @@
 
 <div class="app-wrapper" class:dark={darkMode}>
 <nav>
-	<a href="/" class="brand">Relaygent</a>
+	<a href="/" class="brand">Relaygent{#if data.hostname}<span class="hostname">{data.hostname}</span>{/if}</a>
 	<button class="hamburger" onclick={() => menuOpen = !menuOpen} aria-label="Toggle menu">
 		<span class="bar" class:open={menuOpen}></span>
 		<span class="bar" class:open={menuOpen}></span>
@@ -79,6 +79,7 @@
 		border-bottom: 1px solid var(--border); position: relative;
 	}
 	.brand { font-weight: 700; font-size: 1.1em; color: var(--text); }
+	.hostname { font-weight: 400; font-size: 0.7em; color: var(--text-muted); margin-left: 0.5em; font-family: monospace; opacity: 0.7; }
 	.links { display: flex; gap: 1.25em; align-items: center; }
 	.links a.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link); padding-bottom: 0.1em; text-decoration: none; }
 	.hamburger { display: none; }

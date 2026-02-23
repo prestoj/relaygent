@@ -1,11 +1,12 @@
 <script>
-	let { form } = $props();
+	let { form, data } = $props();
 </script>
 
-<svelte:head><title>Login — Relaygent</title></svelte:head>
+<svelte:head><title>Login — {data.hostname || 'Relaygent'}</title></svelte:head>
 
 <div class="card">
 	<h1>Relaygent</h1>
+	{#if data.hostname}<p class="hostname">{data.hostname}</p>{/if}
 	<p class="sub">Enter your password to continue.</p>
 	{#if form?.incorrect}<p class="error">Incorrect password.</p>{/if}
 	<form method="POST">
@@ -20,7 +21,8 @@
 		border-radius: 12px; padding: 2em 2.5em; width: 100%; max-width: 360px;
 		box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 	}
-	h1 { margin: 0 0 0.2em; font-size: 1.5em; text-align: center; }
+	h1 { margin: 0 0 0.1em; font-size: 1.5em; text-align: center; }
+	.hostname { margin: 0 0 0.8em; font-size: 0.78em; color: var(--text-muted); text-align: center; font-family: monospace; opacity: 0.7; }
 	.sub { margin: 0 0 1.2em; color: var(--text-muted); font-size: 0.9em; text-align: center; }
 	.error { color: var(--error); font-size: 0.85em; margin: 0 0 0.8em; text-align: center; }
 	form { display: flex; flex-direction: column; gap: 0.75em; }
