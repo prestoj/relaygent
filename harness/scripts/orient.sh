@@ -55,12 +55,18 @@ for l in d.get("last_log_lines", [])[-3:]:
 PYEOF
 fi
 
-# Unread chat messages
+# Unread chat messages (show content so agent can skip read_messages call)
 UNREAD=$(curl -s --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/chat?mode=unread" 2>/dev/null)
-UNREAD_COUNT=$(echo "$UNREAD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo 0)
-if [ "$UNREAD_COUNT" -gt 0 ] 2>/dev/null; then
-    echo -e "\n\033[1;33mChat:\033[0m $UNREAD_COUNT unread message(s) — check with read_messages"
-fi
+echo "$UNREAD" | python3 -c "
+import sys,json
+try:
+ d=json.load(sys.stdin); msgs=d.get('messages',[])
+ if msgs:
+  print(f'\n\033[1;33mChat:\033[0m {len(msgs)} unread')
+  for m in msgs[-5:]:
+   r='You' if m.get('role')=='assistant' else 'User'; print(f'  [{r}] {(m.get(\"content\") or \"\")[:80]}')
+except: pass
+" 2>/dev/null
 
 # Unread Slack messages (from socket cache)
 SLACK_CACHE="/tmp/relaygent-slack-socket-cache.json"
