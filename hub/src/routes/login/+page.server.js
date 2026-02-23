@@ -1,10 +1,11 @@
 import { redirect, fail } from '@sveltejs/kit';
+import os from 'os';
 import { checkPassword, createSession, validateSession, isAuthEnabled, COOKIE_NAME, SESSION_MAX_AGE } from '$lib/auth.js';
 
 export function load({ cookies }) {
 	if (!isAuthEnabled()) throw redirect(302, '/');
 	if (validateSession(cookies.get(COOKIE_NAME))) throw redirect(302, '/');
-	return {};
+	return { hostname: os.hostname() };
 }
 
 export const actions = {

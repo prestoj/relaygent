@@ -52,10 +52,10 @@ test('load: redirects to / when already authenticated', async () => {
 	}
 });
 
-test('load: returns empty object when auth enabled and not logged in', () => {
+test('load: returns hostname when auth enabled and not logged in', () => {
 	// Password was set in previous test
 	const result = load({ cookies: fakeCookies() });
-	assert.deepEqual(result, {});
+	assert.ok(result.hostname, 'should include hostname');
 });
 
 // --- Actions ---
