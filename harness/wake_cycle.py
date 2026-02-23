@@ -68,7 +68,10 @@ def run_wake_cycle(sleep_mgr, claude):
         if claude_result.exit_code != 0:
             log(f"Crashed during wake (exit={claude_result.exit_code}), resuming...")
             time.sleep(3)
-            log_start = claude.resume("You crashed and were resumed. Continue where you left off.")
+            try:
+                log_start = claude.resume("You crashed and were resumed. Continue where you left off.")
+            except OSError as e:
+                log(f"Resume after crash failed: {e}"); return claude_result
             claude_result = claude.monitor(log_start)
         if claude_result.context_pct >= CONTEXT_THRESHOLD:
             return claude_result
