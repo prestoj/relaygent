@@ -124,6 +124,10 @@
 		<div class="label">Hub port</div><div class="value">{data.config.hubPort}</div>
 		<div class="label">Notifications port</div><div class="value">{data.config.notificationsPort}</div>
 		<div class="label">Auth</div><div class="value">{data.config.authEnabled ? 'Enabled' : 'Disabled'}</div>
+		<div class="label">TLS</div><div class="value">{data.config.tls ? 'Enabled' : 'Disabled'}</div>
+		{#if data.config.tls}
+			<div class="label">Remote URL</div><div class="value mono">https://{data.config.tls.hostname}:{data.config.hubPort}/</div>
+		{/if}
 		{#if data.config.repoPath}
 			<div class="label">Repo</div><div class="value mono">{data.config.repoPath}</div>
 		{/if}
