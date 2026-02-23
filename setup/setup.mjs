@@ -9,6 +9,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, setupClaudeMd, envFromConfig, optimizeTyping } from './setup-helpers.mjs';
+import { setupVnc } from './setup-vnc.mjs';
 import { checkPortConflict, printSetupComplete, setupCliSymlink, checkPrerequisites, copyKbTemplates, initKbGit, installDeps } from './setup-utils.mjs';
 
 const REPO_DIR = process.argv[2] || resolve('.');
@@ -69,6 +70,7 @@ async function main() {
 	setupHooks(config, REPO_DIR, HOME, C);
 	setupCliSymlink(REPO_DIR, HOME, C);
 	optimizeTyping(C);
+	setupVnc(config, C);
 
 	// Offer auto-restart service installation
 	let servicesInstalled = false;
