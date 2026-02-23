@@ -164,7 +164,16 @@ fi
 if [ -f "$HANDOFF_FILE" ]; then
     HANDOFF_LINES=$(wc -l < "$HANDOFF_FILE" | tr -d ' ')
     HANDOFF_MODIFIED=$(date -r "$HANDOFF_FILE" "+%H:%M" 2>/dev/null || stat -c "%y" "$HANDOFF_FILE" 2>/dev/null | awk '{print substr($2,1,5)}')
-    echo -e "\n\033[0;34mHandoff:\033[0m $HANDOFF_LINES lines, last updated $HANDOFF_MODIFIED"
+    # Staleness check: warn if handoff is >6 hours old
+    HANDOFF_EPOCH=$(stat -f %m "$HANDOFF_FILE" 2>/dev/null || stat -c %Y "$HANDOFF_FILE" 2>/dev/null || echo 0)
+    HANDOFF_AGE_H=$(( ($(date +%s) - HANDOFF_EPOCH) / 3600 ))
+    STALE_TAG=""
+    if [ "$HANDOFF_AGE_H" -ge 12 ] 2>/dev/null; then
+        STALE_TAG=" \033[1;31m⚠ STALE (${HANDOFF_AGE_H}h old — info may be outdated)\033[0m"
+    elif [ "$HANDOFF_AGE_H" -ge 6 ] 2>/dev/null; then
+        STALE_TAG=" \033[1;33m⚠ ${HANDOFF_AGE_H}h old\033[0m"
+    fi
+    echo -e "\n\033[0;34mHandoff:\033[0m $HANDOFF_LINES lines, last updated ${HANDOFF_MODIFIED}${STALE_TAG}"
     # Show main goal
     GOAL=$(sed -n '/^#\{1,2\} MAIN GOAL/,/^#\{1,2\} [^M]/p' "$HANDOFF_FILE" | head -15)
     if [ -n "$GOAL" ]; then
