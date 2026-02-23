@@ -8,6 +8,7 @@
  * Usage: node hub/ws-server.mjs  (instead of node hub/build/index.js)
  */
 import { createServer } from 'http';
+import { createServer as createSecureServer } from 'https';
 import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
@@ -34,12 +35,24 @@ function checkReqAuth(req) {
 	}, {});
 	return validateSession(cookies[COOKIE_NAME]);
 }
-const server = createServer((req, res) => {
+// TLS support — reads cert/key from config or ~/.relaygent/certs/
+let tlsOpts = null;
+try {
+	const HOME = process.env.HOME || '/tmp';
+	const cfg = JSON.parse(fs.readFileSync(path.join(HOME, '.relaygent', 'config.json'), 'utf-8'));
+	const certPath = cfg.hub?.tls?.cert || path.join(HOME, '.relaygent', 'certs', 'cert.pem');
+	const keyPath = cfg.hub?.tls?.key || path.join(HOME, '.relaygent', 'certs', 'key.pem');
+	if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+		tlsOpts = { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
+	}
+} catch {}
+const requestHandler = (req, res) => {
 	if (req.method === 'POST' && req.url?.startsWith('/api/files/stream')) {
 		if (!checkReqAuth(req)) { res.writeHead(401); res.end('Unauthorized'); return; }
 		handleStreamUpload(req, res);
 	} else handler(req, res);
-});
+};
+const server = tlsOpts ? createSecureServer(tlsOpts, requestHandler) : createServer(requestHandler);
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
@@ -165,5 +178,6 @@ server.on('error', (err) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-	console.log(`Hub listening on :${PORT} (WebSocket /ws enabled)`);
+	const proto = tlsOpts ? 'HTTPS' : 'HTTP';
+	console.log(`Hub listening on :${PORT} ${proto} (WebSocket /ws enabled)`);
 });
