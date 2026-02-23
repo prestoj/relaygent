@@ -76,6 +76,19 @@ else
     echo "  Claude not authenticated yet."
     echo "  Connect via noVNC → open terminal → run 'claude' to log in."
     echo "  Watching for auth..."
+    # Open terminal with setup instructions so user sees them via VNC
+    gnome-terminal -- bash -c '
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  Welcome to Relaygent!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "  To get started, run:"
+        echo "    claude"
+        echo ""
+        echo "  Complete the browser login, then"
+        echo "  the agent will start automatically."
+        echo ""
+        exec bash' 2>/dev/null &
     (
         while [ ! -d "$HOME/.claude" ]; do sleep 5; done
         echo "  Claude auth detected — starting relay..."

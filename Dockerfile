@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # System deps: desktop, VNC, browser, dev tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Desktop
-    xvfb gnome-shell dbus-x11 wmctrl xdotool \
+    xvfb gnome-shell gnome-terminal dbus-x11 wmctrl xdotool \
     # VNC
     x11vnc \
     # Browser
