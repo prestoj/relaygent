@@ -5,22 +5,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 load_config
-INTENT_FILE="$KB_DIR/INTENT.md"
 HANDOFF_FILE="$KB_DIR/HANDOFF.md"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Relaygent Orientation"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# INTENT
-if [ -f "$INTENT_FILE" ]; then
-    echo -e "\033[0;34m┌─ INTENT ───────────────────────────────────────────────┐\033[0m"
-    # Strip YAML frontmatter and HTML comments, show content
-    sed -n '/^---$/,/^---$/!p' "$INTENT_FILE" | grep -v '^<!--' | while IFS= read -r line; do
-        echo -e "\033[0;34m│\033[0m $line"
-    done
-    echo -e "\033[0;34m└──────────────────────────────────────────────────────────┘\033[0m"
-fi
+# INTENT and HANDOFF content are now injected into the prompt via <intent>/<handoff> blocks.
+# Orient only shows operational status — no need to repeat KB file contents.
 
 # Time
 echo -e "\n\033[0;34mTime:\033[0m $(date '+%Y-%m-%d %H:%M %Z')"
@@ -151,15 +143,6 @@ if [ -f "$HANDOFF_FILE" ]; then
         STALE_TAG=" \033[1;33m⚠ ${HANDOFF_AGE_H}h old\033[0m"
     fi
     echo -e "\n\033[0;34mHandoff:\033[0m $HANDOFF_LINES lines, last updated ${HANDOFF_MODIFIED}${STALE_TAG}"
-    # Show main goal
-    GOAL=$(sed -n '/^#\{1,2\} MAIN GOAL/,/^#\{1,2\} [^M]/p' "$HANDOFF_FILE" | head -15)
-    if [ -n "$GOAL" ]; then
-        echo -e "\033[1;33m┌─ MAIN GOAL ─────────────────────────────────────────┐\033[0m"
-        echo "$GOAL" | while IFS= read -r line; do
-            echo -e "\033[1;33m│\033[0m $line"
-        done
-        echo -e "\033[1;33m└─────────────────────────────────────────────────────┘\033[0m"
-    fi
 fi
 
 echo -e "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
