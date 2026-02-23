@@ -10,7 +10,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-from relay_utils import acquire_lock, cleanup_context_file, commit_kb, kill_orphaned_claudes, notify_crash, pull_latest, rotate_log
+from relay_utils import (acquire_lock, cleanup_context_file, clear_crash_context,
+    commit_kb, kill_orphaned_claudes, notify_crash, pull_latest, rotate_log,
+    write_crash_context)
 
 
 class TestRotateLog:
@@ -188,3 +190,20 @@ class TestPullLatest:
         import subprocess
         monkeypatch.setattr("relay_utils.subprocess.run", MagicMock(side_effect=subprocess.TimeoutExpired("git", 30)))
         pull_latest()  # Should not raise
+
+
+class TestCrashContext:
+    def test_write_reads_log_and_clear_removes(self, tmp_path, monkeypatch):
+        cf = tmp_path / "crash.json"
+        monkeypatch.setattr("relay_utils.CRASH_CONTEXT_FILE", cf)
+        lf = tmp_path / "test.log"; lf.write_text("line1\nline2\n")
+        monkeypatch.setattr("relay_utils.LOG_FILE", lf)
+        write_crash_context(1, 2, "sess-123")
+        import json; d = json.loads(cf.read_text())
+        assert d["exit_code"] == 1 and d["crash_count"] == 2
+        assert d["last_log_lines"] == ["line1", "line2"]
+        clear_crash_context(); assert not cf.exists()
+
+    def test_clear_noop_when_missing(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("relay_utils.CRASH_CONTEXT_FILE", tmp_path / "no.json")
+        clear_crash_context()  # Should not raise
