@@ -35,13 +35,17 @@ function validatePng(path) {
 	return null;
 }
 
-/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64 or null if invalid. */
-export function readScreenshot(nativeWidth) {
+/** Read screenshot, always downscaling to SCALED_WIDTH for vision accuracy. Returns base64 or null if invalid.
+ * @param {number} logicalWidth - Logical/point screen width (used for click scaleFactor)
+ * @param {number} [pixelWidth] - Actual image pixel width (used to decide if downscaling needed)
+ */
+export function readScreenshot(logicalWidth, pixelWidth) {
 	const srcErr = validatePng(SCREENSHOT_PATH);
 	if (srcErr) { process.stderr.write(`[computer-use] Bad screenshot: ${srcErr}\n`); return null; }
+	const imageWidth = pixelWidth || logicalWidth;
 	try {
-		if (nativeWidth && nativeWidth > SCALED_WIDTH) {
-			_scaleFactor = nativeWidth / SCALED_WIDTH;
+		if (imageWidth && imageWidth > SCALED_WIDTH) {
+			_scaleFactor = logicalWidth / SCALED_WIDTH;
 			if (IS_LINUX) {
 				execFileSync("python3", ["-c", `from PIL import Image;i=Image.open("${SCREENSHOT_PATH}");i.resize((${SCALED_WIDTH},int(i.height*${SCALED_WIDTH}/i.width)),Image.LANCZOS).save("${SCALED_PATH}")`], { timeout: 5000 });
 			} else {
@@ -116,7 +120,7 @@ export async function takeScreenshot(delayMs = 300, indicator) {
 	const r = await hsCall("POST", "/screenshot", body);
 	if (r.error) return [{ type: "text", text: `(screenshot failed: ${r.error})` }];
 	try {
-		const img = readScreenshot(r.width);
+		const img = readScreenshot(r.width, r.pixelWidth);
 		if (!img) return [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }];
 		const sf = scaleFactor();
 		const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
