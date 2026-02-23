@@ -55,6 +55,7 @@ case "${1:-help}" in
         check_process "Email-poller" "email-poller"
         [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } \
             || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
+        nc -z localhost 5900 2>/dev/null && echo -e "  VNC: ${GREEN}listening :5900${NC}" || echo -e "  VNC: ${YELLOW}not listening${NC}"
         [[ -n "$TLS_HOSTNAME" ]] && echo -e "\n  Remote: ${CYAN}https://${TLS_HOSTNAME}:${HUB_PORT}/${NC}"
         # Agent state + context fill
         STATUS_FILE="${DATA_DIR:-$SCRIPT_DIR/data}/relay-status.json"
