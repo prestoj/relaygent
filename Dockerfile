@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*
 
-# Browser: Chrome (amd64) or Chromium (arm64 — Chrome has no arm64 Linux build)
+# Browser: Chrome (amd64) or Chromium via Debian bookworm (arm64 — no Chrome arm64 Linux)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
       wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google.gpg && \
@@ -42,18 +42,19 @@ RUN ARCH=$(dpkg --print-architecture) && \
         > /etc/apt/sources.list.d/google-chrome.list && \
       apt-get update && apt-get install -y google-chrome-stable; \
     else \
-      echo "deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" \
-        > /etc/apt/sources.list.d/jammy.list && \
-      apt-get update && apt-get install -y chromium-browser && \
-      rm /etc/apt/sources.list.d/jammy.list; \
+      echo "deb [trusted=yes arch=$ARCH] http://deb.debian.org/debian bookworm main" \
+        > /etc/apt/sources.list.d/bookworm.list && \
+      apt-get update && apt-get install -y --no-install-recommends chromium && \
+      rm /etc/apt/sources.list.d/bookworm.list; \
     fi && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create non-root user
+# Create non-root user (chown needed because earlier root RUNs may have created HOME)
 RUN useradd -m -s /bin/bash -d $HOME relaygent \
-    && echo "relaygent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/relaygent
+    && echo "relaygent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/relaygent \
+    && chown -R relaygent:relaygent $HOME
 
 USER relaygent
 WORKDIR $HOME
