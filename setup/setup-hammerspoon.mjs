@@ -12,7 +12,7 @@ export async function setupHammerspoon(config, REPO_DIR, HOME, C, ask) {
 	const hsDir = join(HOME, '.hammerspoon');
 	const srcDir = join(REPO_DIR, 'hammerspoon');
 	mkdirSync(hsDir, { recursive: true });
-	for (const f of ['init.lua', 'input_handlers.lua', 'ax_handler.lua', 'ax_press.lua']) {
+	for (const f of ['init.lua', 'input_handlers.lua', 'ax_handler.lua', 'ax_press.lua', 'held_input.lua', 'window_manage.lua']) {
 		copyFileSync(join(srcDir, f), join(hsDir, f));
 	}
 	console.log(`  Hammerspoon: lua files installed to ${hsDir}`);
