@@ -93,7 +93,9 @@ fi
 
 # --- 6. Service installation ---
 echo -e "\n${CYAN}Service installation:${NC}"
-if [[ "$(uname)" == "Darwin" ]]; then
+if is_docker 2>/dev/null; then
+    ok_msg "Docker mode — services managed by entrypoint"
+elif [[ "$(uname)" == "Darwin" ]]; then
     LA_DIR="$HOME/Library/LaunchAgents"
     if [[ ! -f "$LA_DIR/com.relaygent.hub.plist" ]]; then
         do_fix "Install LaunchAgents" "bash '$REPO_DIR/scripts/install-launchagents.sh'"
@@ -125,6 +127,8 @@ _check_svc() {
     local scheme="http"; [[ "$port" = "$HUB_PORT" ]] && scheme="${HUB_SCHEME:-http}"
     if curl -sf $CURL_K --max-time 2 "${scheme}://127.0.0.1:$port$path" >/dev/null 2>&1; then
         ok_msg "$name responding on :$port"
+    elif is_docker 2>/dev/null; then
+        skip_msg "$name not responding on :$port — restart container: docker restart <name>"
     elif [[ "$(uname)" == "Darwin" ]]; then
         local plist="com.relaygent.${svc_name}.plist"
         if [[ -f "$HOME/Library/LaunchAgents/$plist" ]]; then

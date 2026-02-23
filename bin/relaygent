@@ -99,6 +99,8 @@ print(s,t)
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
+        source "$SCRIPT_DIR/harness/scripts/lib.sh"
+        if is_docker 2>/dev/null; then echo "Docker mode — services managed by entrypoint, no init system needed."; exit 0; fi
         [ "$(uname)" = "Darwin" ] && bash "$SCRIPT_DIR/scripts/install-launchagents.sh" "${@:2}" \
             || bash "$SCRIPT_DIR/scripts/install-systemd-services.sh" "${@:2}" ;;
     open)
@@ -112,7 +114,8 @@ print(s,t)
     version)
         COMMIT=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
         DATE=$(git -C "$SCRIPT_DIR" log -1 --format=%cs 2>/dev/null || echo "unknown")
-        echo "relaygent ($COMMIT, $DATE)"
+        MODE=""; [[ -f /.dockerenv ]] && MODE=" docker"
+        echo "relaygent ($COMMIT, $DATE)$MODE"
         ;;
     help|--help|-h) show_help ;;
     *) echo -e "${RED}Unknown command: $1${NC}" >&2; echo; show_help >&2; exit 1 ;;
