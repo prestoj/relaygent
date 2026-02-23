@@ -60,7 +60,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
                 search) compadd -- --type --json ;;
-                chat) compadd -- --read ;;
+                chat) compadd -- --read --follow ;;
                 open) compadd -- intent kb tasks sessions logs files search notifications settings help ;;
             esac
         fi

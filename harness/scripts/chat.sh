@@ -32,9 +32,37 @@ for m in reversed(msgs):
     print(f'{color}{role}\033[0m \033[2m{ts}\033[0m {m.get(\"content\",\"\")[:200]}')
 " < <(curl -sf ${CURL_K:-} "$URL?limit=$LIMIT")
         ;;
+    --follow|-f)
+        echo -e "${DIM}Watching for messages (Ctrl+C to stop)...${NC}"
+        CHAT_URL="$URL" CHAT_CURL_K="${CURL_K:-}" python3 << 'PYEOF'
+import json, subprocess, time, os, datetime as dt
+url = os.environ["CHAT_URL"]
+curl_k = os.environ.get("CHAT_CURL_K", "")
+seen = set()
+while True:
+    try:
+        cmd = ["curl", "-sf", "--max-time", "5", f"{url}?limit=10"]
+        if curl_k: cmd.insert(2, curl_k)
+        out = subprocess.check_output(cmd, timeout=8)
+        for m in reversed(json.loads(out).get("messages", [])):
+            mid = m.get("id")
+            if mid in seen: continue
+            seen.add(mid)
+            role = "You" if m["role"] == "human" else "Agent"
+            ts = m.get("created_at", "")
+            if ts:
+                ts = dt.datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%H:%M")
+            c = "\033[0;32m" if role == "Agent" else "\033[0;36m"
+            print(f"{c}{role}\033[0m \033[2m{ts}\033[0m {m.get('content','')[:200]}", flush=True)
+    except Exception:
+        pass
+    time.sleep(3)
+PYEOF
+        ;;
     --help|-h)
         echo -e "${CYAN}Usage:${NC} relaygent chat <message>"
         echo "       relaygent chat --read [N]    Show last N messages (default 20)"
+        echo "       relaygent chat --follow      Watch for new messages in real-time"
         echo ""
         echo "Send messages to the agent via hub chat."
         ;;
