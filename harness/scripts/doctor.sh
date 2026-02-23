@@ -144,32 +144,8 @@ _check_svc() {
 _check_svc "Hub" "$HUB_PORT" "hub" "/api/health"
 _check_svc "Notifications" "$NOTIF_PORT" "notifications"
 
-# --- 9. Hammerspoon Lua files ---
-if [[ "$(uname)" == "Darwin" ]] && [[ -d "$HOME/.hammerspoon" ]]; then
-    echo -e "\n${CYAN}Hammerspoon config:${NC}"
-    _HS_OK=1
-    for f in "$REPO_DIR"/hammerspoon/*.lua; do f="$(basename "$f")"
-        if [[ ! -f "$HOME/.hammerspoon/$f" ]] && [[ -f "$REPO_DIR/hammerspoon/$f" ]]; then
-            do_fix "Copy $f to ~/.hammerspoon/" "cp '$REPO_DIR/hammerspoon/$f' '$HOME/.hammerspoon/$f'"
-            _HS_OK=0
-        fi
-    done
-    [[ "$_HS_OK" == 1 ]] && ok_msg "All Lua files present"
-fi
-
-# --- 10. macOS typing ---
-if [[ "$(uname)" == "Darwin" ]]; then
-    echo -e "\n${CYAN}macOS typing:${NC}"
-    _TYPING_OK=1
-    for key in NSAutocorrect NSAutomaticSpellingCorrectionEnabled NSAutomaticCapitalizationEnabled NSAutomaticPeriodSubstitutionEnabled NSAutomaticTextCompletionEnabled; do
-        val=$(defaults read NSGlobalDomain "$key" 2>/dev/null || echo "")
-        if [[ "$val" != "0" ]]; then
-            do_fix "Disable $key" "defaults write NSGlobalDomain $key -bool false"
-            _TYPING_OK=0
-        fi
-    done
-    [[ "$_TYPING_OK" == 1 ]] && ok_msg "Autocorrect/autocapitalize disabled"
-fi
+# --- 9+10. macOS-specific checks (Hammerspoon, typing) ---
+[[ "$(uname)" == "Darwin" ]] && source "$SCRIPT_DIR/doctor-macos.sh"
 
 # --- 11. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
