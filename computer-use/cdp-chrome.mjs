@@ -8,12 +8,19 @@ const CHROME_PREFS = `${CHROME_DATA}/Default/Preferences`;
 
 function log(msg) { process.stderr.write(`[cdp-chrome] ${msg}\n`); }
 
+export function findLinuxBrowser() {
+  for (const b of ["google-chrome", "chromium-browser", "chromium"]) {
+    try { execSync(`which ${b}`, { timeout: 1000 }); return b; } catch {}
+  }
+  return "google-chrome"; // fallback
+}
+
 let _chromeStarting = false;
 export async function ensureChrome() {
   if (_chromeStarting) return; _chromeStarting = true;
-  try { execSync("pkill -f google-chrome", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
+  try { execSync("pkill -f 'google-chrome|chromium'", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
   const isMac = existsSync("/Applications/Google Chrome.app");
-  const bin = isMac ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
+  const bin = isMac ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : findLinuxBrowser();
   const args = [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"];
   if (!isMac) args.push("--no-sandbox", "--disable-gpu");
   try { spawn(bin, args,
