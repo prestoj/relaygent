@@ -16,7 +16,7 @@ show_help() {
         "stats" "Session history, errors, and context usage" \
         "history" "Recent sessions timeline (-n NUM, --json)" \
         "session" "Live session stats (--json, --watch)" \
-        "fleet" "Status of all relaygent instances (--json)" \
+        "fleet" "Fleet status, add <name> <url>, remove <name>" \
         "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
         "logs [service]" "View logs (-f follow, -n lines, --list)" \
         "orient" "Quick system status snapshot" \

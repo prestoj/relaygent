@@ -61,3 +61,5 @@ You have MCP tools for: hub chat, notifications (reminders + sleep), computer-us
 - `relaygent health` — ping all services and integrations
 - `relaygent logs [service] -f` — tail service logs in real-time
 - `relaygent update` — pull latest code, rebuild hub, restart all services
+- `relaygent fleet` — show status of all machines (`add <name> <url>` / `remove <name>`)
+- `relaygent discover` — detect installed tools and generate machine context
