@@ -7,6 +7,7 @@ data/last-session-summary.json for orient.sh to display on next startup.
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,9 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
         return None
     tools = Counter()
     files_modified = set()
+    git_commits = 0
+    prs_created = []
+    prs_merged = []
     turns = 0
     total_tokens = 0
     context_pct = 0.0
@@ -60,6 +64,16 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
                     inp = item.get("input", {})
                     if name in ("Edit", "Write", "Read") and "file_path" in inp:
                         files_modified.add(inp["file_path"])
+                    if name == "Bash":
+                        cmd = inp.get("command", "")
+                        if "git commit" in cmd:
+                            git_commits += 1
+                        if "gh pr create" in cmd:
+                            m = re.search(r'--title\s+["\']([^"\']+)', cmd)
+                            prs_created.append(m.group(1)[:60] if m else "PR")
+                        if "gh pr merge" in cmd:
+                            m = re.search(r'merge\s+(\d+)', cmd)
+                            prs_merged.append(int(m.group(1)) if m else 0)
         if turns == 0:
             return None
         return {
@@ -68,6 +82,9 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
             "turns": turns,
             "tools": dict(tools.most_common(10)),
             "files_modified": sorted(files_modified)[:20],
+            "git_commits": git_commits,
+            "prs_created": prs_created,
+            "prs_merged": prs_merged,
             "context_pct": round(context_pct, 1),
             "total_tokens": total_tokens,
         }
