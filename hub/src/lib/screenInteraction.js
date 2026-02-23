@@ -22,6 +22,19 @@ export async function sendScreenAction(body) {
 	} catch { return { ok: false, error: 'Network error' }; }
 }
 
+export function mouseModifiers(e) {
+	const m = [];
+	if (e.metaKey) m.push('cmd');
+	if (e.ctrlKey) m.push('ctrl');
+	if (e.altKey) m.push('alt');
+	if (e.shiftKey) m.push('shift');
+	return m.length ? m : undefined;
+}
+
+export function scrollAmount(deltaY) {
+	return Math.max(1, Math.min(Math.ceil(Math.abs(deltaY) / 40), 10));
+}
+
 export function buildKeyAction(e) {
 	const modifiers = [];
 	if (e.metaKey) modifiers.push('cmd');

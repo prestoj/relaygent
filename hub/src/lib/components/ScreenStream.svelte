@@ -1,6 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import { toNativeCoords, sendScreenAction, buildKeyAction } from '$lib/screenInteraction.js';
+	import { toNativeCoords, sendScreenAction, buildKeyAction, mouseModifiers, scrollAmount } from '$lib/screenInteraction.js';
 
 	let { fps = 10 } = $props();
 	let imgEl = $state(null);
@@ -9,11 +9,23 @@
 	let everLoaded = $state(false);
 	let interactive = $state(false);
 	let lastAction = $state('');
+	let cursorPos = $state(null);
 	let interval = null;
 	let pending = false;
 	let dragState = null;
 	let justDragged = false;
 	let nativeWidth = 0;
+	let lastInteraction = 0;
+	let lastHoverSent = 0;
+	const HOVER_THROTTLE = 80;
+	const ACTIVE_FPS = 30;
+	const IDLE_FPS = 5;
+	const IDLE_AFTER = 2000;
+
+	function currentFps() {
+		if (!interactive) return fps;
+		return (Date.now() - lastInteraction < IDLE_AFTER) ? ACTIVE_FPS : IDLE_FPS;
+	}
 
 	function refresh() {
 		if (!imgEl || pending) return;
@@ -31,8 +43,16 @@
 			.catch(() => { online = false; pending = false; });
 	}
 
+	function tick() {
+		refresh();
+		interval = setTimeout(tick, 1000 / currentFps());
+	}
+	function startLoop() { stopLoop(); tick(); }
+	function stopLoop() { if (interval) { clearTimeout(interval); interval = null; } }
+
 	async function doAction(body, label) {
 		lastAction = label;
+		lastInteraction = Date.now();
 		const res = await sendScreenAction(body);
 		if (!res.ok) lastAction = `Error: ${res.error}`;
 		setTimeout(refresh, 150);
@@ -42,23 +62,33 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		const { x, y } = coords(e);
-		dragState = { startX: x, startY: y, moved: false };
+		dragState = { bx: e.clientX, by: e.clientY, moved: false };
 	}
 
 	function handleMouseMove(e) {
-		if (!dragState) return;
+		if (!interactive || !imgEl) return;
+		const rect = imgEl.getBoundingClientRect();
+		cursorPos = { left: e.clientX - rect.left, top: e.clientY - rect.top };
+		if (dragState) {
+			if (Math.abs(e.clientX - dragState.bx) > 8 || Math.abs(e.clientY - dragState.by) > 8) dragState.moved = true;
+			return;
+		}
+		const now = Date.now();
+		if (now - lastHoverSent < HOVER_THROTTLE) return;
+		lastHoverSent = now;
 		const { x, y } = coords(e);
-		if (Math.abs(x - dragState.startX) > 5 || Math.abs(y - dragState.startY) > 5) dragState.moved = true;
+		lastInteraction = now;
+		sendScreenAction({ action: 'mouse_move', x, y });
 	}
 
 	function handleMouseUp(e) {
 		if (!dragState) return;
 		if (dragState.moved) {
 			justDragged = true;
-			const { x, y } = coords(e);
-			doAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y },
-				`drag ${dragState.startX},${dragState.startY} → ${x},${y}`);
+			const start = toNativeCoords({ clientX: dragState.bx, clientY: dragState.by }, imgEl, nativeWidth);
+			const end = coords(e);
+			doAction({ action: 'drag', startX: start.x, startY: start.y, endX: end.x, endY: end.y },
+				`drag ${start.x},${start.y} → ${end.x},${end.y}`);
 			setTimeout(() => { justDragged = false; }, 100);
 		}
 		dragState = null;
@@ -68,14 +98,14 @@
 		if (!interactive || !imgEl || justDragged) return;
 		e.preventDefault();
 		const { x, y } = coords(e);
-		doAction({ action: 'click', x, y }, `click ${x},${y}`);
+		doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
 	}
 
 	function handleDblClick(e) {
 		if (!interactive || !imgEl) return;
 		e.preventDefault();
 		const { x, y } = coords(e);
-		doAction({ action: 'click', x, y, double: true }, `dblclick ${x},${y}`);
+		doAction({ action: 'click', x, y, double: true, modifiers: mouseModifiers(e) }, `dblclick ${x},${y}`);
 	}
 
 	function handleContextMenu(e) {
@@ -83,7 +113,14 @@
 		e.preventDefault();
 		if (!imgEl) return;
 		const { x, y } = coords(e);
-		doAction({ action: 'click', x, y, right: true }, `right-click ${x},${y}`);
+		doAction({ action: 'click', x, y, right: true, modifiers: mouseModifiers(e) }, `right-click ${x},${y}`);
+	}
+
+	function handleAuxClick(e) {
+		if (!interactive || !imgEl || e.button !== 1) return;
+		e.preventDefault();
+		const { x, y } = coords(e);
+		doAction({ action: 'click', x, y, middle: true }, `middle-click ${x},${y}`);
 	}
 
 	function handleKeyDown(e) {
@@ -98,7 +135,7 @@
 		e.preventDefault();
 		const { x, y } = coords(e);
 		const dir = e.deltaY > 0 ? 'down' : 'up';
-		doAction({ action: 'scroll', x, y, direction: dir, amount: 3 }, `scroll ${dir} at ${x},${y}`);
+		doAction({ action: 'scroll', x, y, direction: dir, amount: scrollAmount(e.deltaY) }, `scroll ${dir} at ${x},${y}`);
 	}
 
 	function handlePaste(e) {
@@ -108,8 +145,10 @@
 		if (text) doAction({ action: 'type', text }, `paste (${text.length} chars)`);
 	}
 
-	onMount(() => { refresh(); interval = setInterval(refresh, 1000 / fps); });
-	onDestroy(() => { if (interval) clearInterval(interval); });
+	function toggleFs() { document.fullscreenElement ? document.exitFullscreen() : frameEl?.requestFullscreen(); }
+
+	onMount(() => { refresh(); startLoop(); });
+	onDestroy(stopLoop);
 </script>
 
 <div class="stream">
@@ -120,16 +159,21 @@
 			onclick={() => { interactive = !interactive; if (interactive && frameEl) frameEl.focus(); }}>
 			{interactive ? 'Interactive' : 'View Only'}
 		</button>
+		<button class="ctrl-btn" onclick={toggleFs} title="Fullscreen">&#x26F6;</button>
 		{#if lastAction}<span class="last-action">{lastAction}</span>{/if}
 	</div>
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="frame" class:interactive bind:this={frameEl} tabindex={interactive ? 0 : -1}
 		onkeydown={handleKeyDown} onwheel={handleScroll} onpaste={handlePaste}
-		onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}>
+		onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}
+		onmouseleave={() => { cursorPos = null; }}>
 		{#if !everLoaded}<div class="placeholder">Connecting...</div>{/if}
 		<img bind:this={imgEl} alt="Screen" style="display:{everLoaded ? 'block' : 'none'}"
 			onclick={handleClick} ondblclick={handleDblClick} oncontextmenu={handleContextMenu}
-			draggable="false" />
+			onauxclick={handleAuxClick} draggable="false" />
+		{#if interactive && cursorPos}
+			<div class="crosshair" style="left:{cursorPos.left}px;top:{cursorPos.top}px"></div>
+		{/if}
 	</div>
 </div>
 
@@ -140,11 +184,14 @@
 	.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--error); flex-shrink: 0; }
 	.dot.ok { background: var(--success); }
 	.frame { position: relative; background: #111; overflow: hidden; outline: none; }
-	.frame.interactive { cursor: default; outline: 2px solid #3b82f6; outline-offset: -2px; }
+	.frame.interactive { cursor: none; outline: 2px solid #3b82f6; outline-offset: -2px; }
 	.frame img { width: 100%; height: auto; display: block; user-select: none; -webkit-user-drag: none; }
 	.placeholder { padding: 4em; text-align: center; color: #888; font-size: 0.85em; }
 	.ctrl-btn { margin-left: auto; font-size: 0.72em; padding: 0.15em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-weight: 600; }
 	.ctrl-btn:hover { border-color: var(--text-muted); color: var(--text); }
 	.ctrl-btn.active { background: #dbeafe; color: #2563eb; border-color: #93c5fd; }
+	.frame:fullscreen { display: flex; align-items: center; justify-content: center; background: #000; }
+	.frame:fullscreen img { width: auto; max-width: 100vw; max-height: 100vh; }
+	.crosshair { position: absolute; width: 12px; height: 12px; pointer-events: none; transform: translate(-50%, -50%); border: 1.5px solid rgba(255,50,50,0.9); border-radius: 50%; box-shadow: 0 0 4px rgba(255,50,50,0.5), 0 0 0 1px rgba(0,0,0,0.3); }
 	.last-action { font-size: 0.68em; color: var(--text-muted); font-family: monospace; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
