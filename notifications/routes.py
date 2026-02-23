@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import ssl
 import urllib.request
 from datetime import datetime, timedelta
 
@@ -17,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 HUB_HOST = os.environ.get("RELAYGENT_HUB_HOST", "127.0.0.1")
 HUB_PORT = os.environ.get("RELAYGENT_HUB_PORT", "8080")
+_HUB_PROTO = "http"
+try:
+    _cfg = json.loads(open(os.path.expanduser("~/.relaygent/config.json")).read())
+    if _cfg.get("hub", {}).get("tls", {}).get("cert"):
+        _HUB_PROTO = "https"
+except Exception:
+    pass
+_SSL_CTX = ssl.create_default_context() if _HUB_PROTO == "http" else ssl._create_unverified_context()
 
 
 @app.route("/notifications/pending", methods=["GET"])
@@ -109,9 +118,9 @@ def _collect_due_reminders(notifications):
 def _collect_chat_messages(notifications):
     """Check hub chat for unread messages."""
     try:
-        url = f"http://{HUB_HOST}:{HUB_PORT}/api/chat?mode=unread"
+        url = f"{_HUB_PROTO}://{HUB_HOST}:{HUB_PORT}/api/chat?mode=unread"
         req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=2) as resp:
+        with urllib.request.urlopen(req, timeout=2, context=_SSL_CTX) as resp:
             data = json.loads(resp.read().decode())
         if data.get("count", 0) > 0:
             messages = []

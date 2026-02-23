@@ -3,12 +3,22 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 from config import log
+
+_HUB_PROTO = "http"
+try:
+    _cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
+    if _cfg.get("hub", {}).get("tls", {}).get("cert"):
+        _HUB_PROTO = "https"
+except Exception:
+    pass
+_SSL_CTX = ssl.create_default_context() if _HUB_PROTO == "http" else ssl._create_unverified_context()
 
 
 def notify_crash(crash_count: int, exit_code: int) -> None:
@@ -29,11 +39,11 @@ def notify_lifecycle(event: str, detail: str = "") -> None:
 def send_chat_alert(message: str) -> None:
     """Best-effort alert to the user via hub chat."""
     hub_port = os.environ.get("RELAYGENT_HUB_PORT", "8080")
-    url = f"http://127.0.0.1:{hub_port}/api/chat"
+    url = f"{_HUB_PROTO}://127.0.0.1:{hub_port}/api/chat"
     try:
         data = json.dumps({"content": message, "role": "assistant"}).encode()
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=5)
+        urllib.request.urlopen(req, timeout=5, context=_SSL_CTX)
     except (urllib.error.URLError, OSError) as e:
         log(f"Chat alert failed (hub may be down): {e}")
 

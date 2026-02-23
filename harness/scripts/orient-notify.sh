@@ -3,7 +3,7 @@
 # Sourced by orient.sh (expects HUB_PORT, NOTIF_PORT, HOME from parent)
 
 # Unread chat messages (show content so agent can skip read_messages call)
-UNREAD=$(curl -s --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/chat?mode=unread" 2>/dev/null)
+UNREAD=$(curl -s $CURL_K --max-time 2 "${HUB_SCHEME:-http}://127.0.0.1:${HUB_PORT}/api/chat?mode=unread" 2>/dev/null)
 echo "$UNREAD" | python3 -c "
 import sys,json
 try:

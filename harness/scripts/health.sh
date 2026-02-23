@@ -10,7 +10,7 @@ echo -e "${CYAN}Relaygent Health Check${NC}"
 
 check_http() {
     local name=$1 url=$2 timeout=${3:-2}
-    if curl -sf --max-time "$timeout" "$url" >/dev/null 2>&1; then
+    if curl -sf $CURL_K --max-time "$timeout" "$url" >/dev/null 2>&1; then
         echo -e "  $name: ${GREEN}healthy${NC}"
     else
         echo -e "  $name: ${RED}unreachable${NC}"
@@ -28,7 +28,7 @@ check_daemon() {
 }
 
 # Services with HTTP endpoints
-check_http "Hub (:$HUB_PORT)" "http://localhost:$HUB_PORT/"
+check_http "Hub (:$HUB_PORT)" "${HUB_SCHEME}://localhost:$HUB_PORT/"
 check_http "Notifications (:$NOTIF_PORT)" "http://localhost:$NOTIF_PORT/health"
 if [ "$(uname)" = "Darwin" ]; then
     check_http "Hammerspoon (:$HS_PORT)" "http://localhost:$HS_PORT/health"
