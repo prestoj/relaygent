@@ -18,11 +18,11 @@ import { summarizeInput, summarizeResult, extractResultText, findLatestSession }
 import { createSessionParser } from './src/lib/sessionParser.js';
 import { handleStreamUpload } from './src/lib/streamUpload.js';
 import { isAuthEnabled, validateSession, COOKIE_NAME } from './src/lib/auth.js';
+import { watchChatTrigger } from './chat-trigger.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Expose repo root for SvelteKit routes (their __dirname is wrong in built chunks)
 process.env.RELAYGENT_REPO_DIR = process.env.RELAYGENT_REPO_DIR || path.resolve(__dirname, '..');
-const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
 const HOOK_OUTPUT = '/tmp/relaygent-hook-output.json';
 
 // Raise SvelteKit adapter-node body limit from default 512KB to 50MB (for file uploads)
@@ -131,30 +131,7 @@ setInterval(() => {
 }, 3000);
 
 // --- Chat: watch trigger file and broadcast new messages ---
-let lastTrigger = '';
-function watchTrigger() {
-	try {
-		fs.watch(path.dirname(TRIGGER_FILE), (event, filename) => {
-			if (filename !== path.basename(TRIGGER_FILE)) return;
-			try {
-				const raw = fs.readFileSync(TRIGGER_FILE, 'utf-8');
-				if (raw === lastTrigger) return;
-				lastTrigger = raw;
-				broadcast({ type: 'message', data: JSON.parse(raw) });
-			} catch { /* mid-write or missing */ }
-		});
-	} catch {
-		setInterval(() => {
-			try {
-				const raw = fs.readFileSync(TRIGGER_FILE, 'utf-8');
-				if (raw === lastTrigger) return;
-				lastTrigger = raw;
-				broadcast({ type: 'message', data: JSON.parse(raw) });
-			} catch { /* ignore */ }
-		}, 500);
-	}
-}
-watchTrigger();
+watchChatTrigger(broadcast);
 
 // Graceful shutdown — clean up watchers, intervals, and connections on SIGTERM/SIGINT
 function shutdown() {
