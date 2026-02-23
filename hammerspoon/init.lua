@@ -16,6 +16,7 @@ local held = dofile(hs.configdir .. "/held_input.lua")
 local ax_handler = dofile(hs.configdir .. "/ax_handler.lua")
 local ax_press = dofile(hs.configdir .. "/ax_press.lua")
 local window_manage = dofile(hs.configdir .. "/window_manage.lua")
+local dismiss_dialog = dofile(hs.configdir .. "/dismiss_dialog.lua")
 
 -- Get Hammerspoon RSS in MB (returns nil on error)
 local function getRSSMB()
@@ -154,33 +155,7 @@ local function handleRequest(method, path, headers, body)
             if not params.text then return json.encode({error="text required"}), 400 end
             hs.pasteboard.setContents(params.text)
             return json.encode({ok=true, length=#params.text}), 200
-        elseif key == "POST /dismiss_dialog" then
-            local target = params.button or "Don't Allow"
-            local dialogs = {"UserNotificationCenter","SecurityAgent","System Preferences","System Settings","Google Chrome"}
-            for _, appName in ipairs(dialogs) do
-                local app = hs.application.find(appName)
-                if app then
-                    local elem = hs.axuielement.applicationElement(app)
-                    local function findBtn(el, depth)
-                        if not el or depth > 6 then return false end
-                        for _, c in ipairs(el:attributeValue("AXChildren") or {}) do
-                            local role = c:attributeValue("AXRole") or ""
-                            local title = c:attributeValue("AXTitle") or ""
-                            if role == "AXButton" and title == target then
-                                c:performAction("AXPress"); return true
-                            end
-                            if findBtn(c, depth+1) then return true end
-                        end
-                        return false
-                    end
-                    for _, w in ipairs(elem:attributeValue("AXChildren") or {}) do
-                        if w:attributeValue("AXRole") == "AXWindow" and findBtn(w, 0) then
-                            return json.encode({dismissed=true, app=appName, button=target}), 200
-                        end
-                    end
-                end
-            end
-            return json.encode({dismissed=false, error="no dialog found"}), 404
+        elseif key == "POST /dismiss_dialog" then return dismiss_dialog(params)
         end
         return json.encode({error="not found", path=path}), 404
     end)

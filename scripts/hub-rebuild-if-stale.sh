@@ -42,7 +42,11 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuilding hub (was: ${BUILT:0:8}, now: ${H
 HUB_PLIST="$HOME/Library/LaunchAgents/com.relaygent.hub.plist"
 GUID="gui/$(id -u)"
 launchctl bootout "$GUID" "$HUB_PLIST" 2>/dev/null || true
-sleep 1  # Give the process time to exit cleanly
+# Wait for port to be free (hub has 3s shutdown timeout)
+for i in 1 2 3 4 5; do
+    lsof -ti:${PORT:-8080} >/dev/null 2>&1 || break
+    sleep 1
+done
 
 if npm run build --prefix "$REPO_DIR/hub" >> "$LOG" 2>&1; then
     echo "$HEAD" > "$BUILD_COMMIT"

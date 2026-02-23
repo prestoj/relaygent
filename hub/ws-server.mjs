@@ -148,6 +148,21 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 3000;
+let retryCount = 0;
+
+server.on('error', (err) => {
+	if (err.code === 'EADDRINUSE' && retryCount < MAX_RETRIES) {
+		retryCount++;
+		console.log(`Port ${PORT} in use, retry ${retryCount}/${MAX_RETRIES} in ${RETRY_DELAY_MS / 1000}s...`);
+		setTimeout(() => server.listen(PORT, '0.0.0.0'), RETRY_DELAY_MS);
+	} else {
+		console.error(`Fatal server error: ${err.message}`);
+		process.exit(1);
+	}
+});
+
 server.listen(PORT, '0.0.0.0', () => {
 	console.log(`Hub listening on :${PORT} (WebSocket /ws enabled)`);
 });

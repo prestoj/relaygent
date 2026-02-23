@@ -38,7 +38,7 @@ GUID="gui/$(id -u)"
 write_plist() {
     local label=$1 program=$2 args=$3 env_extra=$4
     local plist="$AGENTS_DIR/${label}.plist"
-    local logfile="$REPO_DIR/logs/relaygent-$(echo "$label" | sed 's/com\.relaygent\.//')\.log"
+    local logfile="$REPO_DIR/logs/relaygent-$(echo "$label" | sed 's/com\.relaygent\.//').log"
     mkdir -p "$AGENTS_DIR" "$REPO_DIR/logs"
     cat > "$plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
