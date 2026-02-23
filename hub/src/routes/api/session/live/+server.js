@@ -31,7 +31,7 @@ function parseLiveStats(jsonlPath) {
 			turns++;
 			const usage = entry.message?.usage;
 			if (usage) {
-				// input_tokens is the full context size at this turn (not incremental)
+				// Total input context = non-cached + cache_creation + cache_read
 				lastInputTokens = (usage.input_tokens || 0)
 					+ (usage.cache_creation_input_tokens || 0)
 					+ (usage.cache_read_input_tokens || 0);
