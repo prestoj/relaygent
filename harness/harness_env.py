@@ -53,17 +53,26 @@ def _run_orient() -> str:
         return ""
 
 
+def _read_kb_file(kb: Path, filename: str) -> str:
+    """Read a KB file, returning stripped content or empty string."""
+    try:
+        return (kb / filename).read_text().strip()
+    except OSError:
+        return ""
+
+
 def build_prompt() -> bytes:
-    """Return PROMPT.md bytes with config substitutions, orient, and MEMORY.md appended."""
+    """Return PROMPT.md bytes with config substitutions and injected KB files."""
     prompt = PROMPT_FILE.read_bytes()
     try:
         cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
         kb = Path(cfg["paths"]["kb"])
         prompt = prompt.replace(b"{KB_DIR}", str(kb).encode())
         prompt = prompt.replace(b"{HUB_PORT}", str(cfg.get("hub", {}).get("port", 8080)).encode())
-        mem = (kb / "MEMORY.md").read_text().strip()
-        if mem:
-            prompt += b"\n\n<memory>\n" + mem.encode() + b"\n</memory>\n"
+        for tag, filename in [("handoff", "HANDOFF.md"), ("intent", "INTENT.md"), ("memory", "MEMORY.md")]:
+            content = _read_kb_file(kb, filename)
+            if content:
+                prompt += f"\n\n<{tag}>\n".encode() + content.encode() + f"\n</{tag}>\n".encode()
     except (OSError, json.JSONDecodeError, KeyError):
         pass
     orient_output = _run_orient()
