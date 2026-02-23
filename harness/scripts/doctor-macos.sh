@@ -2,9 +2,22 @@
 # macOS-specific doctor checks (sourced by doctor.sh)
 # Requires: REPO_DIR, DRY_RUN, do_fix, ok_msg from doctor.sh
 
+# --- Hammerspoon app ---
+echo -e "\n${CYAN}Hammerspoon:${NC}"
+if [[ -d "/Applications/Hammerspoon.app" ]] || [[ -d "$HOME/Applications/Hammerspoon.app" ]]; then
+    if ! pgrep -q Hammerspoon; then
+        do_fix "Launch Hammerspoon" "open -a Hammerspoon"
+    elif ! curl -sf --max-time 2 "http://127.0.0.1:${HS_PORT:-8097}/health" >/dev/null 2>&1; then
+        skip_msg "Hammerspoon running but server not responding on :${HS_PORT:-8097} — check config"
+    else
+        ok_msg "Hammerspoon running and responding"
+    fi
+else
+    skip_msg "Hammerspoon not installed — brew install --cask hammerspoon"
+fi
+
 # --- Hammerspoon Lua files ---
 if [[ -d "$HOME/.hammerspoon" ]]; then
-    echo -e "\n${CYAN}Hammerspoon config:${NC}"
     _HS_OK=1
     for f in "$REPO_DIR"/hammerspoon/*.lua; do f="$(basename "$f")"
         if [[ ! -f "$HOME/.hammerspoon/$f" ]] && [[ -f "$REPO_DIR/hammerspoon/$f" ]]; then
