@@ -164,37 +164,22 @@ verify_service() {
     return 1
 }
 
-# --- Check helpers (for check.sh and similar diagnostic scripts) ---
-_CK_PASS=0; _CK_FAIL=0; _CK_WARN=0
-ck_ok()   { echo -e "  ✓ $1: ${GREEN}$2${NC}";   _CK_PASS=$((_CK_PASS+1)); }
-ck_warn() { echo -e "  ⚠ $1: ${YELLOW}$2${NC}"; _CK_WARN=$((_CK_WARN+1)); }
-ck_fail() { echo -e "  ✗ $1: ${RED}$2${NC}";    _CK_FAIL=$((_CK_FAIL+1)); }
-
-ck_summary() {
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    if [ "$_CK_FAIL" -gt 0 ]; then
-        echo -e "  ${RED}$_CK_FAIL failed, $_CK_WARN warnings, $_CK_PASS passed.${NC}"
-        echo -e "  ${RED}Try: relaygent doctor (auto-fix) or fix manually, then: relaygent start${NC}"
-        return 1
-    elif [ "$_CK_WARN" -gt 0 ]; then
-        echo -e "  ${YELLOW}$_CK_WARN warnings, $_CK_PASS passed. Try: relaygent doctor${NC}"
-    else
-        echo -e "  ${GREEN}All $_CK_PASS checks passed.${NC}"
-    fi
-}
-
 load_config_soft() {
     HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""; DATA_DIR="$REPO_DIR/data"
+    HUB_SCHEME=http; TLS_HOSTNAME=""; CURL_K=""
     [ ! -f "$CONFIG_FILE" ] && return 1
     local cv
     cv="$(python3 -c "
 import json,shlex,sys
 try:
  c=json.load(open('$CONFIG_FILE'));s=c['services']
+ tls='https' if c.get('hub',{}).get('tls',{}).get('cert') else 'http'
+ tls_host=c.get('hub',{}).get('tls',{}).get('hostname','')
  for k,v in[('HUB_PORT',c['hub']['port']),('DATA_DIR',c['paths']['data']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
-  ('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
+  ('KB_DIR',c['paths']['kb']),('HUB_SCHEME',tls),('TLS_HOSTNAME',tls_host)]:print(f'{k}={shlex.quote(str(v))}')
 except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
 ")" || return 1
     eval "$cv"
+    [[ "${HUB_SCHEME:-http}" == "https" ]] && CURL_K="-k" || CURL_K=""
 }
