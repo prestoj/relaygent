@@ -90,7 +90,7 @@ function startWatching() {
 
 wss.on('connection', ws => {
 	startWatching();
-	ws.send(JSON.stringify({ type: 'session', status: findLatestSession() ? 'found' : 'waiting' }));
+	ws.send(JSON.stringify({ type: 'session', status: watchedFile ? 'found' : 'waiting', file: watchedFile || undefined }));
 	try { ws.send(JSON.stringify({ type: 'hook', data: JSON.parse(fs.readFileSync(HOOK_OUTPUT, 'utf-8')) })); } catch { /* no hook output */ }
 });
 
@@ -103,8 +103,9 @@ setInterval(() => {
 }, 1000);
 
 setInterval(() => {
-	const current = findLatestSession();
-	if (current && current !== watchedFile) { startWatching(); broadcast({ type: 'session', status: 'found', file: current }); }
+	const prev = watchedFile;
+	startWatching();
+	if (watchedFile && watchedFile !== prev) broadcast({ type: 'session', status: 'found', file: watchedFile });
 }, 3000);
 
 // --- Chat: watch trigger file and broadcast new messages ---
