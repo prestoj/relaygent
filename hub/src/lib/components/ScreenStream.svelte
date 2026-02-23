@@ -62,8 +62,7 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		const { x, y } = coords(e);
-		dragState = { startX: x, startY: y, moved: false };
+		dragState = { bx: e.clientX, by: e.clientY, moved: false };
 	}
 
 	function handleMouseMove(e) {
@@ -71,8 +70,7 @@
 		const rect = imgEl.getBoundingClientRect();
 		cursorPos = { left: e.clientX - rect.left, top: e.clientY - rect.top };
 		if (dragState) {
-			const { x, y } = coords(e);
-			if (Math.abs(x - dragState.startX) > 15 || Math.abs(y - dragState.startY) > 15) dragState.moved = true;
+			if (Math.abs(e.clientX - dragState.bx) > 8 || Math.abs(e.clientY - dragState.by) > 8) dragState.moved = true;
 			return;
 		}
 		const now = Date.now();
@@ -87,9 +85,10 @@
 		if (!dragState) return;
 		if (dragState.moved) {
 			justDragged = true;
-			const { x, y } = coords(e);
-			doAction({ action: 'drag', startX: dragState.startX, startY: dragState.startY, endX: x, endY: y },
-				`drag ${dragState.startX},${dragState.startY} → ${x},${y}`);
+			const start = toNativeCoords({ clientX: dragState.bx, clientY: dragState.by }, imgEl, nativeWidth);
+			const end = coords(e);
+			doAction({ action: 'drag', startX: start.x, startY: start.y, endX: end.x, endY: end.y },
+				`drag ${start.x},${start.y} → ${end.x},${end.y}`);
 			setTimeout(() => { justDragged = false; }, 100);
 		}
 		dragState = null;
