@@ -94,6 +94,9 @@
 						<span class="meta">
 							{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{isFirst ? ' · current' : ''}
 						</span>
+						{#if s.gitCommits > 0}<span class="badge commit">{s.gitCommits} commit{s.gitCommits > 1 ? 's' : ''}</span>{/if}
+						{#if s.prsCreated > 0}<span class="badge pr-created">{s.prsCreated} PR{s.prsCreated > 1 ? 's' : ''}</span>{/if}
+						{#if s.prsMerged > 0}<span class="badge pr-merged">{s.prsMerged} merged</span>{/if}
 					</div>
 					{#if s.summary}<p class="sum">{s.summary}</p>{/if}
 				</li>
@@ -136,4 +139,8 @@
 	.filter-btn { padding: 0.3em 0.6em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); color: var(--text-muted); font-size: 0.78em; cursor: pointer; white-space: nowrap; }
 	.filter-btn:hover { border-color: var(--text-muted); color: var(--text); }
 	.filter-btn.active { border-color: var(--link); color: var(--link); background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); }
+	.badge { font-size: 0.68em; padding: 0.15em 0.45em; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+	.badge.commit { background: color-mix(in srgb, var(--link) 12%, transparent); color: var(--link); }
+	.badge.pr-created { background: color-mix(in srgb, var(--success, #22c55e) 12%, transparent); color: var(--success, #22c55e); }
+	.badge.pr-merged { background: color-mix(in srgb, #a855f7 12%, transparent); color: #a855f7; }
 </style>
