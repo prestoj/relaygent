@@ -55,7 +55,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 logs) compadd -- --list -f -n ;;
                 history) compadd -- -n --json ;;
                 session) compadd -- --json --watch ;;
-                fleet) compadd -- --json ;;
+                fleet) compadd -- --json add remove ;;
                 doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
@@ -87,7 +87,7 @@ else
             session)
                 COMPREPLY=($(compgen -W "--json --watch" -- "$cur")) ;;
             fleet)
-                COMPREPLY=($(compgen -W "--json" -- "$cur")) ;;
+                COMPREPLY=($(compgen -W "--json add remove" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             cleanup|clean-logs)

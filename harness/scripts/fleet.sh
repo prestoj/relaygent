@@ -7,8 +7,54 @@ load_config
 
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; DIM='\033[2m'; NC='\033[0m'; BOLD='\033[1m'
 
-usage() { echo -e "${CYAN}Usage:${NC} relaygent fleet [--json]"; echo "  Show status of all configured relaygent instances."; exit 0; }
+usage() {
+    echo -e "${CYAN}Usage:${NC} relaygent fleet [--json]"
+    echo -e "       relaygent fleet add <name> <url>"
+    echo -e "       relaygent fleet remove <name>"
+    echo "  Show or manage configured relaygent fleet peers."
+    exit 0
+}
 [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+
+CONFIG_FILE="$HOME/.relaygent/config.json"
+
+if [[ "${1:-}" == "add" ]]; then
+    [[ -z "${2:-}" || -z "${3:-}" ]] && { echo -e "${RED}Usage: relaygent fleet add <name> <url>${NC}"; exit 1; }
+    python3 -c "
+import json, sys
+name, url = sys.argv[1], sys.argv[2]
+try: cfg = json.load(open('$CONFIG_FILE'))
+except: cfg = {}
+fleet = cfg.get('fleet', [])
+if any(p.get('name') == name for p in fleet):
+    print(f'\033[1;33m{name} already exists — updating URL\033[0m')
+    fleet = [p if p.get('name') != name else {**p, 'url': url} for p in fleet]
+else:
+    fleet.append({'name': name, 'url': url})
+cfg['fleet'] = fleet
+json.dump(cfg, open('$CONFIG_FILE', 'w'), indent=2)
+print(f'\033[0;32mAdded {name} ({url})\033[0m')
+" "$2" "$3"
+    exit 0
+fi
+
+if [[ "${1:-}" == "remove" ]]; then
+    [[ -z "${2:-}" ]] && { echo -e "${RED}Usage: relaygent fleet remove <name>${NC}"; exit 1; }
+    python3 -c "
+import json, sys
+name = sys.argv[1]
+try: cfg = json.load(open('$CONFIG_FILE'))
+except: print('\033[0;31mNo config found\033[0m'); sys.exit(1)
+fleet = cfg.get('fleet', [])
+before = len(fleet)
+cfg['fleet'] = [p for p in fleet if p.get('name') != name]
+if len(cfg['fleet']) == before:
+    print(f'\033[1;33m{name} not found in fleet\033[0m'); sys.exit(1)
+json.dump(cfg, open('$CONFIG_FILE', 'w'), indent=2)
+print(f'\033[0;32mRemoved {name}\033[0m')
+" "$2"
+    exit 0
+fi
 
 # Build fleet list: local + configured peers
 LOCAL_URL="${HUB_SCHEME:-http}://127.0.0.1:${HUB_PORT:-8080}"
