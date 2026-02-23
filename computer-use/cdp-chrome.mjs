@@ -12,9 +12,11 @@ let _chromeStarting = false;
 export async function ensureChrome() {
   if (_chromeStarting) return; _chromeStarting = true;
   try { execSync("pkill -f google-chrome", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
-  const bin = existsSync("/Applications/Google Chrome.app")
-    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
-  try { spawn(bin, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"],
+  const isMac = existsSync("/Applications/Google Chrome.app");
+  const bin = isMac ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome";
+  const args = [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"];
+  if (!isMac) args.push("--no-sandbox", "--disable-gpu");
+  try { spawn(bin, args,
     { detached: true, stdio: "ignore" }).unref();
     log("auto-launched Chrome with CDP"); await new Promise(r => setTimeout(r, 4000));
   } catch (e) { log(`Chrome launch failed: ${e.message}`); } finally { _chromeStarting = false; }
