@@ -10,6 +10,7 @@ import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, setupClaudeMd, envFromConfig, optimizeTyping } from './setup-helpers.mjs';
 import { setupVnc } from './setup-vnc.mjs';
+import { setupRemote } from './setup-remote.mjs';
 import { checkPortConflict, printSetupComplete, setupCliSymlink, checkPrerequisites, copyKbTemplates, initKbGit, installDeps } from './setup-utils.mjs';
 
 const REPO_DIR = process.argv[2] || resolve('.');
@@ -71,6 +72,7 @@ async function main() {
 	setupCliSymlink(REPO_DIR, HOME, C);
 	optimizeTyping(C);
 	setupVnc(config, C);
+	await setupRemote(config, REPO_DIR, C, ask);
 
 	// Offer auto-restart service installation
 	let servicesInstalled = false;
@@ -80,7 +82,7 @@ async function main() {
 	const serviceLabel = process.platform === 'darwin' ? 'LaunchAgents' : 'systemd services';
 	const svc = (await ask(`\n${C.cyan}Install auto-restart services (${serviceLabel})? [Y/n]:${C.reset} `)).trim().toLowerCase();
 	if (svc !== 'n') { spawnSync('bash', [serviceScript], { stdio: 'inherit' }); servicesInstalled = true; }
-	printSetupComplete(hubPort, C);
+	printSetupComplete(hubPort, C, config);
 	if (!servicesInstalled) {
 		const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
 		if (launch !== 'n') {
@@ -93,7 +95,8 @@ async function main() {
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'doctor.sh')], { stdio: 'inherit' });
 	console.log(`\n${C.cyan}Verifying installation...${C.reset}\n`);
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'check.sh')], { stdio: 'inherit' });
-	const hubUrl = `http://localhost:${hubPort}/`;
+	const scheme = config.hub?.tls ? 'https' : 'http';
+	const hubUrl = `${scheme}://localhost:${hubPort}/`;
 	console.log(`\nOpening hub: ${hubUrl}`); openBrowser(hubUrl);
 	rl.close();
 }

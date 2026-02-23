@@ -17,10 +17,14 @@ export async function checkPortConflict(port, C) {
 	}
 }
 
-export function printSetupComplete(hubPort, C) {
-	const url = `http://localhost:${hubPort}/`;
+export function printSetupComplete(hubPort, C, config = {}) {
+	const scheme = config.hub?.tls ? 'https' : 'http';
+	const url = `${scheme}://localhost:${hubPort}/`;
 	console.log(`\n${C.green}┌─ Setup complete! ──────────────────────────────────────────┐${C.reset}`);
 	console.log(`${C.green}│${C.reset}  Dashboard:  ${C.bold}${url}${C.reset}`);
+	if (config.hub?.tls?.hostname) {
+		console.log(`${C.green}│${C.reset}  Remote:     ${C.bold}https://${config.hub.tls.hostname}:${hubPort}/${C.reset}`);
+	}
 	console.log(`${C.green}│${C.reset}  Commands:   ${C.bold}relaygent start / stop / status / restart${C.reset}`);
 	console.log(`${C.green}│${C.reset}  Doctor:     ${C.bold}relaygent doctor${C.reset}  (auto-fix common issues)`);
 	console.log(`${C.green}│${C.reset}  Orient:     ${C.bold}relaygent orient${C.reset}  (quick status snapshot)`);
