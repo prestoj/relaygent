@@ -53,7 +53,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 test) compadd -- harness hub notifications email slack setup secrets computer-use ;;
                 logs) compadd -- --list -f -n ;;
                 history) compadd -- -n --json ;;
-                session) compadd -- --json ;;
+                session) compadd -- --json --watch ;;
                 doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
@@ -83,7 +83,7 @@ else
             history)
                 COMPREPLY=($(compgen -W "-n --json" -- "$cur")) ;;
             session)
-                COMPREPLY=($(compgen -W "--json" -- "$cur")) ;;
+                COMPREPLY=($(compgen -W "--json --watch" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             cleanup|clean-logs)

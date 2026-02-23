@@ -31,7 +31,7 @@ show_help() {
         "set-password" "Set/remove hub dashboard auth (--remove)" \
         "mcp" "Manage MCP servers (list, add, remove)" \
         "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
-        "session" "Live session stats (--json)" \
+        "session" "Live session stats (--json, --watch)" \
         "search <query>" "Search KB, sessions, and chat" \
         "chat <msg>" "Send a message to the agent (--read to view)" \
         "open [page]" "Open hub dashboard in browser" \
