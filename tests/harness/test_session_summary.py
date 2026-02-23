@@ -104,6 +104,58 @@ class TestGenerateSummary:
         assert len(result["tools"]) <= 10
 
 
+class TestGitTracking:
+    def test_counts_git_commits(self, tmp_jsonl):
+        sid, ws, _, write = tmp_jsonl
+        write([
+            _assistant_entry([("Bash", {"command": "git commit -m 'fix bug'"})]),
+            _assistant_entry([("Bash", {"command": "git add . && git commit -m 'add feature'"})]),
+            _assistant_entry([("Read", {"file_path": "/tmp/foo"})]),
+        ])
+        result = generate_summary(sid, ws)
+        assert result["git_commits"] == 2
+
+    def test_extracts_pr_titles(self, tmp_jsonl):
+        sid, ws, _, write = tmp_jsonl
+        write([
+            _assistant_entry([("Bash", {"command": "gh pr create --title 'fix: screenshot' --body 'x'"})]),
+            _assistant_entry([("Bash", {"command": 'gh pr create --title "feat: zoom" --body "y"'})]),
+        ])
+        result = generate_summary(sid, ws)
+        assert result["prs_created"] == ["fix: screenshot", "feat: zoom"]
+
+    def test_extracts_pr_merges(self, tmp_jsonl):
+        sid, ws, _, write = tmp_jsonl
+        write([
+            _assistant_entry([("Bash", {"command": "gh pr merge 518 --squash --delete-branch"})]),
+            _assistant_entry([("Bash", {"command": "gh pr merge 519 --squash"})]),
+        ])
+        result = generate_summary(sid, ws)
+        assert result["prs_merged"] == [518, 519]
+
+    def test_no_git_activity(self, tmp_jsonl):
+        sid, ws, _, write = tmp_jsonl
+        write([_assistant_entry([("Read", {"file_path": "/tmp/foo"})])])
+        result = generate_summary(sid, ws)
+        assert result["git_commits"] == 0
+        assert result["prs_created"] == []
+        assert result["prs_merged"] == []
+
+    def test_mixed_activity(self, tmp_jsonl):
+        sid, ws, _, write = tmp_jsonl
+        write([
+            _assistant_entry([("Bash", {"command": "git commit -m 'initial'"})]),
+            _assistant_entry([("Bash", {"command": "gh pr create --title 'my PR' --body 'x'"})]),
+            _assistant_entry([("Bash", {"command": "gh pr merge 42 --squash"})]),
+            _assistant_entry([("Read", {"file_path": "/tmp/file"})]),
+        ])
+        result = generate_summary(sid, ws)
+        assert result["git_commits"] == 1
+        assert result["prs_created"] == ["my PR"]
+        assert result["prs_merged"] == [42]
+        assert result["turns"] == 4
+
+
 class TestSaveSummary:
     def test_saves_to_file(self, tmp_jsonl, tmp_path):
         sid, ws, _, write = tmp_jsonl
