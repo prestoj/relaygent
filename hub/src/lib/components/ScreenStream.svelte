@@ -191,9 +191,8 @@
 	.ctrl-btn { margin-left: auto; font-size: 0.72em; padding: 0.15em 0.5em; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-weight: 600; }
 	.ctrl-btn:hover { border-color: var(--text-muted); color: var(--text); }
 	.ctrl-btn.active { background: #dbeafe; color: #2563eb; border-color: #93c5fd; }
-	.crosshair { position: absolute; width: 20px; height: 20px; pointer-events: none; transform: translate(-50%, -50%); border: 1.5px solid rgba(255,50,50,0.8); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
-	.crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255,50,50,0.6); }
-	.crosshair::before { width: 1px; height: 100%; left: 50%; transform: translateX(-50%); }
-	.crosshair::after { height: 1px; width: 100%; top: 50%; transform: translateY(-50%); }
+	.frame:fullscreen { display: flex; align-items: center; justify-content: center; background: #000; }
+	.frame:fullscreen img { width: auto; max-width: 100vw; max-height: 100vh; }
+	.crosshair { position: absolute; width: 12px; height: 12px; pointer-events: none; transform: translate(-50%, -50%); border: 1.5px solid rgba(255,50,50,0.9); border-radius: 50%; box-shadow: 0 0 4px rgba(255,50,50,0.5), 0 0 0 1px rgba(0,0,0,0.3); }
 	.last-action { font-size: 0.68em; color: var(--text-muted); font-family: monospace; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
