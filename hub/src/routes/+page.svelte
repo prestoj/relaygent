@@ -3,7 +3,6 @@
 	import { browser } from '$app/environment';
 	import ContextBar from '$lib/components/ContextBar.svelte';
 	import ActivityFeed from '$lib/components/ActivityFeed.svelte';
-	import ScreenStream from '$lib/components/ScreenStream.svelte';
 	import SessionTimer from '$lib/components/SessionTimer.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import TodoWidget from '$lib/components/TodoWidget.svelte';
@@ -11,7 +10,6 @@
 	import SummaryButton from '$lib/components/SummaryButton.svelte';
 	import AttentionBanner from '$lib/components/AttentionBanner.svelte';
 	let { data } = $props();
-	let screenOpen = $state(false);
 	let activities = $state(data.relayActivity || []);
 	let connected = $state(false);
 	let contextPct = $state(data.contextPct);
@@ -91,15 +89,6 @@
 <ContextBar pct={contextPct} />
 <SessionTimer sessionId={services?.find(s => s.name === 'Relay')?.sessionId} />
 <TodoWidget {activities} />
-<section class="screen-toggle">
-	<button class="toggle-btn" onclick={() => screenOpen = !screenOpen}>
-		<span class="toggle-arrow">{screenOpen ? '\u25BC' : '\u25B6'}</span>
-		Screen
-	</button>
-	{#if screenOpen}
-		<div class="screen-wrap"><ScreenStream fps={4} /></div>
-	{/if}
-</section>
 
 {#if sessionStatus === 'found'}
 <SummaryButton />
@@ -127,8 +116,7 @@
 	.handoff-goal { display: flex; align-items: baseline; gap: 0.75em; padding: 0.5em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }
 	.hg-label { font-weight: 700; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap; }  .hg-text { color: var(--text); font-size: 0.88em; line-height: 1.4; }
 	.waiting { text-align: center; padding: 3em 1em; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1em; }  .waiting-icon { font-size: 2em; margin-bottom: 0.5em; }
-	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }  .screen-toggle { margin-bottom: 1em; }
-	.toggle-btn { display: flex; align-items: center; gap: 0.4em; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3em 0.7em; font-size: 0.82em; font-weight: 600; color: var(--text-muted); cursor: pointer; }  .toggle-btn:hover { color: var(--text); border-color: var(--text-muted); }  .toggle-arrow { font-size: 0.7em; }  .screen-wrap { margin-top: 0.5em; }
+	.waiting-text { font-size: 1.1em; font-weight: 600; color: var(--text); margin-bottom: 0.3em; }  .waiting-hint { font-size: 0.85em; color: var(--text-muted); }
 @media (max-width: 768px) {
 		.handoff-goal, .goal { flex-direction: column; gap: 0.25em; }
 	}
