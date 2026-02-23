@@ -11,12 +11,21 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 const NOTIF_CACHE = "/tmp/relaygent-notifications-cache.json";
 
 const HUB_PORT = process.env.HUB_PORT || "8080";
-const API = `http://127.0.0.1:${HUB_PORT}/api/chat`;
+const HUB_PROTO = process.env.HUB_PROTO || "auto";
+let _proto = HUB_PROTO === "auto" ? null : HUB_PROTO;
 
 async function api(path, method = "GET", body = null) {
 	const opts = { method, headers: { "Content-Type": "application/json" } };
 	if (body) opts.body = JSON.stringify(body);
-	const res = await fetch(`${API}${path}`, opts);
+	if (!_proto) {
+		for (const p of ["https", "http"]) {
+			try {
+				const r = await fetch(`${p}://127.0.0.1:${HUB_PORT}/api/chat${path}`, { ...opts, signal: AbortSignal.timeout(2000) });
+				_proto = p; if (!r.ok) throw new Error(`${r.status}`); return r.json();
+			} catch (e) { if (p === "https" && !_proto) continue; throw e; }
+		}
+	}
+	const res = await fetch(`${_proto}://127.0.0.1:${HUB_PORT}/api/chat${path}`, opts);
 	if (!res.ok) throw new Error(`Hub API ${method} ${path}: ${res.status} ${res.statusText}`);
 	return res.json();
 }
