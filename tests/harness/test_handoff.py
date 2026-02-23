@@ -121,7 +121,7 @@ class TestValidateHandoff:
         f = tmp_path / "HANDOFF.md"
         f.write_text("## MAIN GOAL FOR NEXT CLAUDE\n\n**Do things.**\n")
         warnings, goal = validate_handoff(f)
-        assert any("Current State" in w for w in warnings)
+        assert any("User State" in w for w in warnings)
         assert any("What Was Done" in w for w in warnings)
         assert goal is not None
 

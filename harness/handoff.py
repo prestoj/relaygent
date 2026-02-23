@@ -7,10 +7,11 @@ from config import REPO_DIR, log
 
 HANDOFF_PATH = REPO_DIR / "knowledge" / "topics" / "HANDOFF.md"
 
+# Each entry: (label, keywords) — section matches if ANY keyword appears in the heading
 REQUIRED_SECTIONS = [
-    "MAIN GOAL",
-    "Current State",
-    "What Was Done",
+    ("MAIN GOAL", ["main goal"]),
+    ("User State", ["user", "state"]),
+    ("What Was Done", ["did", "done", "session"]),
 ]
 
 
@@ -91,10 +92,13 @@ def validate_handoff(path: Path | None = None) -> tuple[list[str], str | None]:
     sections = _extract_sections(body)
     section_names = list(sections.keys())
 
-    for required in REQUIRED_SECTIONS:
-        found = any(required.lower() in name.lower() for name in section_names)
+    for label, keywords in REQUIRED_SECTIONS:
+        found = any(
+            any(kw in name.lower() for kw in keywords)
+            for name in section_names
+        )
         if not found:
-            warnings.append(f"Missing section: {required}")
+            warnings.append(f"Missing section: {label}")
 
     goal = extract_goal(text)
     if goal is None:
