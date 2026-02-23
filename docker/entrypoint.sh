@@ -84,10 +84,45 @@ else
     ) &
 fi
 
+# 9. Watchdog — restart crashed services every 30s
+watchdog() {
+    sleep 30
+    while true; do
+        # Hub
+        if ! curl -sf --max-time 2 http://127.0.0.1:8080/api/health >/dev/null 2>&1; then
+            if ! pgrep -f "ws-server.mjs" >/dev/null 2>&1; then
+                echo "[watchdog] Restarting hub..."
+                PORT=8080 RELAY_STATUS_FILE="$DATA/relay-status.json" RELAYGENT_KB_DIR="$KB" \
+                    RELAYGENT_DATA_DIR="$DATA" RELAYGENT_NOTIFICATIONS_PORT=8083 \
+                    node "$REPO/hub/ws-server.mjs" >> "$LOGS/hub.log" 2>&1 &
+            fi
+        fi
+        # Notifications
+        if ! curl -sf --max-time 2 http://127.0.0.1:8083/health >/dev/null 2>&1; then
+            if ! pgrep -f "notifications/server.py" >/dev/null 2>&1; then
+                echo "[watchdog] Restarting notifications..."
+                "$REPO/notifications/.venv/bin/python3" "$REPO/notifications/server.py" \
+                    >> "$LOGS/notifications.log" 2>&1 &
+            fi
+        fi
+        # x11vnc
+        if ! pgrep -f "x11vnc" >/dev/null 2>&1; then
+            echo "[watchdog] Restarting x11vnc..."
+            x11vnc $VNC_OPTS >> "$LOGS/x11vnc.log" 2>&1 &
+        fi
+        # Computer-use
+        if ! pgrep -f "linux-server.py" >/dev/null 2>&1; then
+            echo "[watchdog] Restarting computer-use..."
+            DISPLAY=:99 python3 "$REPO/computer-use/linux-server.py" \
+                >> "$LOGS/computer-use.log" 2>&1 &
+        fi
+        sleep 30
+    done
+}
+
 echo ""
 echo "=== Relaygent Ready ==="
 
-# Keep container running (wait for any background process)
-wait -n || true
-# If a process exits, keep others alive
-exec sleep infinity
+# Run watchdog, keep container alive
+watchdog &
+wait
