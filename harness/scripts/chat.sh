@@ -7,11 +7,12 @@ source "$SCRIPT_DIR/lib.sh"
 load_config_soft
 
 PORT="${HUB_PORT:-8080}"
-URL="http://localhost:$PORT/api/chat"
+SCHEME="${HUB_SCHEME:-http}"
+URL="${SCHEME}://localhost:$PORT/api/chat"
 CYAN='\033[0;36m'; DIM='\033[2m'; NC='\033[0m'; GREEN='\033[0;32m'
 
 # Check hub is reachable
-if ! curl -sf -o /dev/null "$URL?limit=1" 2>/dev/null; then
+if ! curl -sf ${CURL_K:-} -o /dev/null "$URL?limit=1" 2>/dev/null; then
     echo -e "Error: Hub not reachable at localhost:$PORT\n  Run: ${CYAN}relaygent start${NC}" >&2; exit 1
 fi
 
@@ -29,7 +30,7 @@ for m in reversed(msgs):
         ts = t.strftime('%H:%M')
     color = '\033[0;32m' if role == 'Agent' else '\033[0;36m'
     print(f'{color}{role}\033[0m \033[2m{ts}\033[0m {m.get(\"content\",\"\")[:200]}')
-" < <(curl -sf "$URL?limit=$LIMIT")
+" < <(curl -sf ${CURL_K:-} "$URL?limit=$LIMIT")
         ;;
     --help|-h)
         echo -e "${CYAN}Usage:${NC} relaygent chat <message>"
@@ -40,7 +41,7 @@ for m in reversed(msgs):
     *)
         MSG="$*"
         python3 -c "import json,sys; sys.stdout.write(json.dumps({'content':' '.join(sys.argv[1:]),'role':'human'}))" "$@" \
-            | curl -sf -X POST "$URL" -H 'Content-Type: application/json' -d @- > /dev/null
+            | curl -sf ${CURL_K:-} -X POST "$URL" -H 'Content-Type: application/json' -d @- > /dev/null
         echo -e "${GREEN}Message sent.${NC}"
         ;;
 esac
