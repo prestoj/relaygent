@@ -1,6 +1,7 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 
+	let { onfail = null } = $props();
 	let container = $state(null);
 	let rfb = null;
 	let status = $state('Connecting...');
@@ -25,8 +26,9 @@
 			rfb.addEventListener('connect', () => { status = 'Connected'; connected = true; });
 			rfb.addEventListener('disconnect', (e) => {
 				connected = false;
-				status = e.detail.clean ? 'Disconnected' : 'Connection lost — is VNC running on this machine?';
+				status = e.detail.clean ? 'Disconnected' : 'Connection lost';
 				rfb = null;
+				if (!e.detail.clean && onfail) onfail();
 			});
 			rfb.addEventListener('credentialsrequired', () => {
 				if (configPw) { rfb.sendCredentials({ password: configPw }); status = 'Authenticating...'; return; }
@@ -36,6 +38,7 @@
 			window._rfb = rfb;
 		} catch (e) {
 			status = `Error: ${e.message}`;
+			if (onfail) onfail();
 		}
 	});
 
