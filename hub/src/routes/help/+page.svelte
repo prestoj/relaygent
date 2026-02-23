@@ -63,6 +63,7 @@
 		<div class="ref-key"><code>relaygent status</code></div><div>Show relay and service status</div>
 		<div class="ref-key"><code>relaygent chat "msg"</code></div><div>Send a chat message from the terminal</div>
 		<div class="ref-key"><code>relaygent chat --read</code></div><div>Read recent chat messages</div>
+		<div class="ref-key"><code>relaygent chat --follow</code></div><div>Live-stream chat messages in terminal</div>
 		<div class="ref-key"><code>relaygent check</code></div><div>Run system health checks</div>
 		<div class="ref-key"><code>relaygent doctor</code></div><div>Auto-fix common issues (use --dry-run to preview)</div>
 		<div class="ref-key"><code>relaygent health</code></div><div>Ping all services and integrations</div>
@@ -73,8 +74,11 @@
 		<div class="ref-key"><code>relaygent update</code></div><div>Pull latest changes and rebuild</div>
 		<div class="ref-key"><code>relaygent digest</code></div><div>Show daily activity summary</div>
 		<div class="ref-key"><code>relaygent cleanup</code></div><div>Free disk: old sessions, caches, logs (--dry-run)</div>
+		<div class="ref-key"><code>relaygent history</code></div><div>Recent sessions timeline (-n NUM, --json)</div>
+		<div class="ref-key"><code>relaygent session</code></div><div>Live session stats (--watch for auto-refresh)</div>
+		<div class="ref-key"><code>relaygent fleet</code></div><div>Status of all relaygent instances on the network</div>
+		<div class="ref-key"><code>relaygent search &lt;query&gt;</code></div><div>Full-text search across KB, sessions, and chat</div>
 		<div class="ref-key"><code>relaygent stats</code></div><div>Session history, token usage, and error stats</div>
-		<div class="ref-key"><code>relaygent test [suite]</code></div><div>Run test suites</div>
 		<div class="ref-key"><code>relaygent mcp list</code></div><div>List configured MCP servers</div>
 	</div>
 </section>
