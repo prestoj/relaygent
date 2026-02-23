@@ -66,6 +66,52 @@ test('fleet: skips peers with missing name or url', async () => {
 	assert.ok(!names.includes(''));
 });
 
+test('fleet POST: adds a new peer', async () => {
+	writeConfig({});
+	const { POST } = await import('../../hub/src/routes/api/fleet/+server.js');
+	const req = { json: async () => ({ name: 'new-peer', url: 'https://10.0.0.1:8080/' }) };
+	const res = await POST({ request: req });
+	const data = await res.json();
+	assert.equal(data.ok, true);
+	assert.equal(data.fleet.length, 1);
+	assert.equal(data.fleet[0].name, 'new-peer');
+	assert.equal(data.fleet[0].url, 'https://10.0.0.1:8080');  // trailing slash stripped
+});
+
+test('fleet POST: rejects duplicate peer', async () => {
+	writeConfig({ fleet: [{ name: 'dup', url: 'http://1.1.1.1:8080' }] });
+	const { POST } = await import('../../hub/src/routes/api/fleet/+server.js');
+	const req = { json: async () => ({ name: 'dup', url: 'http://2.2.2.2:8080' }) };
+	const res = await POST({ request: req });
+	assert.equal(res.status, 409);
+});
+
+test('fleet POST: rejects missing fields', async () => {
+	const { POST } = await import('../../hub/src/routes/api/fleet/+server.js');
+	const req = { json: async () => ({ name: 'x' }) };
+	const res = await POST({ request: req });
+	assert.equal(res.status, 400);
+});
+
+test('fleet DELETE: removes a peer', async () => {
+	writeConfig({ fleet: [{ name: 'bye', url: 'http://1.1.1.1:8080' }, { name: 'keep', url: 'http://2.2.2.2:8080' }] });
+	const { DELETE } = await import('../../hub/src/routes/api/fleet/+server.js');
+	const req = { json: async () => ({ name: 'bye' }) };
+	const res = await DELETE({ request: req });
+	const data = await res.json();
+	assert.equal(data.ok, true);
+	assert.equal(data.fleet.length, 1);
+	assert.equal(data.fleet[0].name, 'keep');
+});
+
+test('fleet DELETE: 404 for unknown peer', async () => {
+	writeConfig({ fleet: [{ name: 'a', url: 'http://1.1.1.1:8080' }] });
+	const { DELETE } = await import('../../hub/src/routes/api/fleet/+server.js');
+	const req = { json: async () => ({ name: 'nope' }) };
+	const res = await DELETE({ request: req });
+	assert.equal(res.status, 404);
+});
+
 test('fleet: TLS config uses https scheme for local', async () => {
 	writeConfig({ hub: { tls: { cert: '/tmp/cert.pem' } } });
 	const { GET } = await import('../../hub/src/routes/api/fleet/+server.js');
