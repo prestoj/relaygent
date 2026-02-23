@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history session test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats history session fleet test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -35,7 +35,8 @@ if [ -n "$ZSH_VERSION" ]; then
             'install-services:Set up auto-restart services'
             'set-password:Set/remove hub auth (--remove)'
             'mcp:Manage MCP servers (list, add, remove, test)'
-            'session:Live session stats (--json)'
+            'session:Live session stats (--json, --watch)'
+            'fleet:Status of all relaygent instances (--json)'
             'search:Search KB, sessions, and chat'
             'chat:Send a message to the agent (--read to view)'
             'open:Open hub dashboard in browser'
@@ -54,6 +55,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 logs) compadd -- --list -f -n ;;
                 history) compadd -- -n --json ;;
                 session) compadd -- --json --watch ;;
+                fleet) compadd -- --json ;;
                 doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
@@ -84,6 +86,8 @@ else
                 COMPREPLY=($(compgen -W "-n --json" -- "$cur")) ;;
             session)
                 COMPREPLY=($(compgen -W "--json --watch" -- "$cur")) ;;
+            fleet)
+                COMPREPLY=($(compgen -W "--json" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             cleanup|clean-logs)
