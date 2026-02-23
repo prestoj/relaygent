@@ -21,7 +21,7 @@ def _hub_port():
     cfg = Path(os.environ.get("RELAYGENT_CONFIG", str(REPO_DIR / "config.json")))
     try:
         return json.loads(cfg.read_text())["hub"]["port"]
-    except Exception:
+    except (OSError, json.JSONDecodeError, KeyError):
         return 8080
 
 
@@ -31,7 +31,7 @@ def _fetch_stats():
     try:
         with urllib.request.urlopen(url, timeout=5) as r:
             return json.loads(r.read())
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
         return None
 
 
@@ -102,7 +102,7 @@ def print_stats():
             d = json.loads(STATUS_FILE.read_text())
             status = d.get("status", "unknown")
             goal = d.get("goal")
-        except Exception:
+        except (OSError, json.JSONDecodeError, KeyError):
             goal = None
         color = C["green"] if status == "working" else C["yellow"] if status == "sleeping" else nc
         print(f"  Status: {color}{status}{nc}")
