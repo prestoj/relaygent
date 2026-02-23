@@ -30,7 +30,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',fleet:'Fleet',settings:'Settings',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
 
 </script>
 
@@ -55,6 +55,7 @@
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
+		<a href="/fleet" class:active={isActive('/fleet')} onclick={closeMenu}>Fleet</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
