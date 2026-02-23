@@ -18,6 +18,7 @@ show_help() {
         "logs [service]" "View logs (-f follow, -n lines, --list)" \
         "orient" "Quick system status snapshot" \
         "check" "Diagnose configuration" \
+        "doctor" "Auto-fix common issues (--dry-run)" \
         "health" "Ping all services and report status" \
         "update" "Pull latest, rebuild, restart" \
         "digest" "Daily summary of PRs, commits, and status" \
@@ -87,7 +88,7 @@ print(s,t)
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
-    mcp|orient|check|update|health|clean-logs|cleanup|changelog|digest) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
