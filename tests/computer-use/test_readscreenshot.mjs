@@ -64,22 +64,22 @@ describe('readScreenshot validation', () => {
 
 	it('returns null when screenshot file does not exist', () => {
 		cleanup();
-		assert.equal(readScreenshot(1280), null);
+		assert.equal(readScreenshot(1024), null);
 	});
 
 	it('returns null for empty file', () => {
 		writeFileSync(SCREENSHOT_PATH, Buffer.alloc(0));
-		assert.equal(readScreenshot(1280), null);
+		assert.equal(readScreenshot(1024), null);
 	});
 
 	it('returns null for non-PNG file', () => {
 		writeFileSync(SCREENSHOT_PATH, 'not a png file at all');
-		assert.equal(readScreenshot(1280), null);
+		assert.equal(readScreenshot(1024), null);
 	});
 
 	it('returns null for truncated PNG header', () => {
 		writeFileSync(SCREENSHOT_PATH, Buffer.from([0x89, 0x50, 0x4E]));
-		assert.equal(readScreenshot(1280), null);
+		assert.equal(readScreenshot(1024), null);
 	});
 });
 
@@ -90,7 +90,7 @@ describe('readScreenshot no scaling', () => {
 
 	it('returns base64 when logicalWidth <= SCALED_WIDTH', () => {
 		writeFileSync(SCREENSHOT_PATH, smallPng);
-		const result = readScreenshot(1280);
+		const result = readScreenshot(1024);
 		assert.ok(result, 'should return base64 string');
 		assert.equal(typeof result, 'string');
 		// Verify it is valid base64 of our PNG
@@ -100,13 +100,13 @@ describe('readScreenshot no scaling', () => {
 
 	it('sets scaleFactor to 1 when no scaling needed', () => {
 		writeFileSync(SCREENSHOT_PATH, smallPng);
-		readScreenshot(1280);
+		readScreenshot(1024);
 		assert.equal(scaleFactor(), 1);
 	});
 
 	it('returns base64 when pixelWidth equals SCALED_WIDTH', () => {
 		writeFileSync(SCREENSHOT_PATH, smallPng);
-		const result = readScreenshot(1280, 1280);
+		const result = readScreenshot(1024, 1024);
 		assert.ok(result);
 		assert.equal(scaleFactor(), 1);
 	});
@@ -119,30 +119,30 @@ describe('readScreenshot Retina scaling', () => {
 
 	it('downscales when pixelWidth > SCALED_WIDTH', () => {
 		writeFileSync(SCREENSHOT_PATH, widePng);
-		const result = readScreenshot(1280, 2560);
+		const result = readScreenshot(1024, 2560);
 		assert.ok(result, 'should return downscaled base64');
 		// Verify scaled file was created and is valid PNG
 		const decoded = Buffer.from(result, 'base64');
 		assert.ok(decoded.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47])));
 	});
 
-	it('sets scaleFactor = logicalWidth / 1280 when scaling', () => {
+	it('sets scaleFactor = logicalWidth / 1024 when scaling', () => {
 		writeFileSync(SCREENSHOT_PATH, widePng);
-		readScreenshot(1280, 2560);
-		assert.equal(scaleFactor(), 1); // 1280 / 1280 = 1
+		readScreenshot(1024, 2560);
+		assert.equal(scaleFactor(), 1); // 1024 / 1024 = 1
 	});
 
-	it('sets scaleFactor = 2 when logicalWidth is 2560', () => {
+	it('sets scaleFactor = 2.5 when logicalWidth is 2560', () => {
 		writeFileSync(SCREENSHOT_PATH, widePng);
 		readScreenshot(2560, 5120);
-		assert.equal(scaleFactor(), 2); // 2560 / 1280 = 2
+		assert.equal(scaleFactor(), 2.5); // 2560 / 1024 = 2.5
 	});
 
 	it('downscales when logicalWidth > SCALED_WIDTH (no pixelWidth)', () => {
 		writeFileSync(SCREENSHOT_PATH, widePng);
 		const result = readScreenshot(2560);
 		assert.ok(result, 'should downscale using logicalWidth as imageWidth');
-		assert.equal(scaleFactor(), 2); // 2560 / 1280 = 2
+		assert.equal(scaleFactor(), 2.5); // 2560 / 1024 = 2.5
 	});
 });
 
@@ -151,21 +151,21 @@ describe('readScreenshot Retina scaling', () => {
 describe('Retina bug regression (PR #506)', () => {
 	after(cleanup);
 
-	it('pre-fix scenario: logicalWidth=1280, no pixelWidth => no scaling', () => {
+	it('pre-fix scenario: logicalWidth=1024, no pixelWidth => no scaling', () => {
 		// Before PR #506, Hammerspoon did not return pixelWidth.
-		// readScreenshot(1280) would not scale even if the actual image was huge.
+		// readScreenshot(1024) would not scale even if the actual image was huge.
 		writeFileSync(SCREENSHOT_PATH, smallPng);
-		const result = readScreenshot(1280);
+		const result = readScreenshot(1024);
 		assert.ok(result);
-		assert.equal(scaleFactor(), 1, 'without pixelWidth, 1280 <= 1280 so no scaling');
+		assert.equal(scaleFactor(), 1, 'without pixelWidth, 1024 <= 1024 so no scaling');
 	});
 
-	it('post-fix scenario: logicalWidth=1280, pixelWidth=2560 => scaling triggers', () => {
+	it('post-fix scenario: logicalWidth=1024, pixelWidth=2560 => scaling triggers', () => {
 		// After PR #506, Hammerspoon returns pixelWidth from img:size().
-		// readScreenshot(1280, 2560) sees 2560 > 1280 and scales.
+		// readScreenshot(1024, 2560) sees 2560 > 1024 and scales.
 		writeFileSync(SCREENSHOT_PATH, widePng);
-		const result = readScreenshot(1280, 2560);
-		assert.ok(result, 'pixelWidth=2560 > 1280 triggers scaling');
-		assert.equal(scaleFactor(), 1, 'scaleFactor = 1280/1280 = 1 for Retina');
+		const result = readScreenshot(1024, 2560);
+		assert.ok(result, 'pixelWidth=2560 > 1024 triggers scaling');
+		assert.equal(scaleFactor(), 1, 'scaleFactor = 1024/1024 = 1 for Retina');
 	});
 });

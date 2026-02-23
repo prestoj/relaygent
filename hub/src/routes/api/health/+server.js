@@ -5,8 +5,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_DIR = path.resolve(__dirname, '..', '..', '..', '..', '..', '..');
+const REPO_DIR = process.env.RELAYGENT_REPO_DIR || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..', '..');
 const DATA_DIR = process.env.RELAYGENT_DATA_DIR || path.join(REPO_DIR, 'data');
 const STATUS_FILE = process.env.RELAY_STATUS_FILE || path.join(DATA_DIR, 'relay-status.json');
 

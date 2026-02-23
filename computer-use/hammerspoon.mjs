@@ -23,12 +23,12 @@ export function scaleFactor() { return _scaleFactor; }
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-/** Validate a PNG file: check magic bytes, non-empty, within size limit. Returns null if OK, error string if bad. */
-function validatePng(path) {
+/** Validate a PNG file: check magic bytes, non-empty. Size check optional (skip for raw pre-scale screenshots). */
+function validatePng(path, checkSize = true) {
 	try {
 		const stat = statSync(path);
 		if (stat.size === 0) return "empty file";
-		if (stat.size > MAX_BYTES) return `too large (${(stat.size / 1024 / 1024).toFixed(1)}MB > ${MAX_BYTES / 1024 / 1024}MB)`;
+		if (checkSize && stat.size > MAX_BYTES) return `too large (${(stat.size / 1024 / 1024).toFixed(1)}MB > ${MAX_BYTES / 1024 / 1024}MB)`;
 		const fd = readFileSync(path, { start: 0, end: 7 });
 		if (fd.length < 8 || !fd.subarray(0, 8).equals(PNG_MAGIC)) return "not a valid PNG";
 	} catch (e) { return `read error: ${e.message}`; }
@@ -40,7 +40,8 @@ function validatePng(path) {
  * @param {number} [pixelWidth] - Actual image pixel width (used to decide if downscaling needed)
  */
 export function readScreenshot(logicalWidth, pixelWidth) {
-	const srcErr = validatePng(SCREENSHOT_PATH);
+	// Skip size check on raw source — Retina displays produce large PNGs that get downscaled
+	const srcErr = validatePng(SCREENSHOT_PATH, false);
 	if (srcErr) { process.stderr.write(`[computer-use] Bad screenshot: ${srcErr}\n`); return null; }
 	const imageWidth = pixelWidth || logicalWidth;
 	try {

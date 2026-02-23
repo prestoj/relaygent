@@ -144,7 +144,20 @@ _check_svc() {
 _check_svc "Hub" "$HUB_PORT" "hub" "/api/health"
 _check_svc "Notifications" "$NOTIF_PORT" "notifications"
 
-# --- 9. macOS typing optimization ---
+# --- 9. Hammerspoon Lua files ---
+if [[ "$(uname)" == "Darwin" ]] && [[ -d "$HOME/.hammerspoon" ]]; then
+    echo -e "\n${CYAN}Hammerspoon config:${NC}"
+    _HS_OK=1
+    for f in init.lua input_handlers.lua ax_handler.lua ax_press.lua held_input.lua window_manage.lua; do
+        if [[ ! -f "$HOME/.hammerspoon/$f" ]] && [[ -f "$REPO_DIR/hammerspoon/$f" ]]; then
+            do_fix "Copy $f to ~/.hammerspoon/" "cp '$REPO_DIR/hammerspoon/$f' '$HOME/.hammerspoon/$f'"
+            _HS_OK=0
+        fi
+    done
+    [[ "$_HS_OK" == 1 ]] && ok_msg "All Lua files present"
+fi
+
+# --- 10. macOS typing ---
 if [[ "$(uname)" == "Darwin" ]]; then
     echo -e "\n${CYAN}macOS typing:${NC}"
     _TYPING_OK=1
@@ -158,7 +171,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
     [[ "$_TYPING_OK" == 1 ]] && ok_msg "Autocorrect/autocapitalize disabled"
 fi
 
-# --- 10. Updates ---
+# --- 11. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
 BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
