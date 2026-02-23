@@ -84,8 +84,10 @@ local function handleRequest(method, path, headers, body)
             if img and ix and iy then img = annotateWithIndicator(img, ix, iy) end
             if img then img:saveToFile(p) end
             local sf = scr:fullFrame()
+            local sz = img and img:size() or sf
             img = nil; collectgarbage("collect")
-            return json.encode({path=p, width=sf.w, height=sf.h}), 200
+            return json.encode({path=p, width=sf.w, height=sf.h,
+                pixelWidth=sz.w, pixelHeight=sz.h}), 200
         elseif key == "POST /click" then
             return input.click(params)
         elseif key == "POST /type" then
