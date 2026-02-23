@@ -109,6 +109,16 @@ fi
 DISK_USED=$(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')
 echo -e "\033[0;34mDisk:\033[0m ${DISK_USED:-unknown}"
 
+# Last session summary
+if [ -f "$DATA_DIR/last-session-summary.json" ]; then
+    python3 - "$DATA_DIR/last-session-summary.json" <<'PYEOF' 2>/dev/null
+import json, sys
+d = json.load(open(sys.argv[1])); t = d.get('tools', {})
+top = '  '.join(f'{k}({v})' for k, v in list(t.items())[:5])
+print(f'\033[0;34mLast Session:\033[0m {d["turns"]} turns, {d["context_pct"]:.0f}% ctx | {top}')
+PYEOF
+fi
+
 # KB stats
 if [ -d "$KB_DIR" ]; then
     TOPIC_COUNT=$(find "$KB_DIR" -name "*.md" -not -path "*/contacts/*" 2>/dev/null | wc -l | tr -d ' ')
