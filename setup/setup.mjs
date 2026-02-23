@@ -87,6 +87,8 @@ async function main() {
 				{ stdio: 'inherit', env: { ...process.env, ...envFromConfig(config) } });
 		}
 	}
+	console.log(`\n${C.cyan}Auto-fixing common issues...${C.reset}\n`);
+	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'doctor.sh')], { stdio: 'inherit' });
 	console.log(`\n${C.cyan}Verifying installation...${C.reset}\n`);
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'check.sh')], { stdio: 'inherit' });
 	const hubUrl = `http://localhost:${hubPort}/`;
