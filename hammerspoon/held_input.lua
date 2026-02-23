@@ -44,7 +44,7 @@ function M.mouse_move(params)
         local evt = hs.eventtap.event.newMouseEvent(types.mouseMoved, pos)
         evt:setProperty(props.mouseEventDeltaX, x)
         evt:setProperty(props.mouseEventDeltaY, y)
-        evt:post()
+        evt:post(hs.application.frontmostApplication())
         return json.encode({moved_relative={dx=x, dy=y}}), 200
     end
     local pt = hs.geometry.point(x, y)

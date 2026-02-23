@@ -105,11 +105,21 @@ server.tool("drag", "Drag from one point to another. Auto-returns screenshot.",
 	}
 );
 
+// Type text char-by-char with delays (for games/autocomplete that drop fast keystrokes)
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function slowType(text, delayMs = 30) {
+	for (const c of text) { await hsCall("POST", "/type", { text: c }); await sleep(delayMs); }
+}
+
 server.tool("type_text", "Type text or press keys. Auto-returns screenshot.",
 	{ text: z.string().optional().describe("Text to type"),
 		key: z.string().optional().describe("Key name (return, tab, escape, etc)"),
-		modifiers: z.array(z.string()).optional().describe("Modifier keys") },
-	async (p) => { const r = await hsCall("POST", "/type", p); return actionRes(JSON.stringify(r), 300); }
+		modifiers: z.array(z.string()).optional().describe("Modifier keys"),
+		slow: z.boolean().optional().describe("Type char-by-char with key events (for autocomplete/typeahead inputs)") },
+	async (p) => {
+		if (p.slow && p.text) { await slowType(p.text); return actionRes(JSON.stringify({ typed: p.text.length, slow: true }), 300); }
+		const r = await hsCall("POST", "/type", p); return actionRes(JSON.stringify(r), 300);
+	}
 );
 
 server.tool("type_sequence", "Multiple type/key actions in one call. Auto-returns screenshot.",
@@ -117,11 +127,13 @@ server.tool("type_sequence", "Multiple type/key actions in one call. Auto-return
 		text: z.string().optional(), key: z.string().optional(),
 		modifiers: z.array(z.string()).optional(),
 		delay: n.optional().describe("Delay after action ms (default: 50)"),
+		slow: z.boolean().optional().describe("Type char-by-char with delays (for games)"),
 	})).describe("Array of type actions") },
 	async ({ actions }) => {
 		for (const a of actions) {
-			await hsCall("POST", "/type", { text: a.text, key: a.key, modifiers: a.modifiers });
-			await new Promise(r => setTimeout(r, a.delay ?? 50));
+			if (a.slow && a.text) await slowType(a.text);
+			else await hsCall("POST", "/type", { text: a.text, key: a.key, modifiers: a.modifiers });
+			await sleep(a.delay ?? 50);
 		}
 		return actionRes(`Executed ${actions.length} type actions`, 300);
 	}
