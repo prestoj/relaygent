@@ -35,8 +35,12 @@ export function registerHeldInputTools(server) {
 	);
 
 	server.tool("mouse_move", "Move mouse cursor to coordinates without clicking. For camera control in 3D games.",
-		{ x: n.describe("X"), y: n.describe("Y") },
-		async (p) => { const r = await hsCall("POST", "/mouse_move", { x: sx(p.x), y: sx(p.y) }); return actionRes(JSON.stringify(r), 100); }
+		{ x: n.describe("X"), y: n.describe("Y"),
+			relative: z.boolean().optional().describe("Relative movement (dx/dy deltas) for game camera control. x/y become delta pixels, not screen coords.") },
+		async (p) => {
+			const params = p.relative ? { x: p.x, y: p.y, relative: true } : { x: sx(p.x), y: sx(p.y) };
+			const r = await hsCall("POST", "/mouse_move", params); return actionRes(JSON.stringify(r), 100);
+		}
 	);
 
 	server.tool("release_all", "Release ALL held keys and mouse buttons. Safety valve for gaming.",
@@ -52,10 +56,11 @@ export function registerHeldInputTools(server) {
 			x: n.optional().describe("X coordinate (for mouse actions)"),
 			y: n.optional().describe("Y coordinate (for mouse actions)"),
 			button: n.optional().describe("Mouse button: 1=left, 2=right"),
+			relative: z.boolean().optional().describe("Relative mouse movement for game camera"),
 			delay: n.optional().describe("Delay in ms from start of sequence (0 = immediate)"),
 		})).describe("Array of timed input actions") },
 		async ({ actions }) => {
-			const scaled = actions.map(a => ({ ...a, x: a.x != null ? sx(a.x) : a.x, y: a.y != null ? sx(a.y) : a.y }));
+			const scaled = actions.map(a => ({ ...a, x: a.x != null && !a.relative ? sx(a.x) : a.x, y: a.y != null && !a.relative ? sx(a.y) : a.y }));
 			const r = await hsCall("POST", "/input_sequence", { actions: scaled });
 			const maxDelay = Math.max(...actions.map(a => a.delay || 0));
 			return actionRes(JSON.stringify(r), maxDelay + 200);
