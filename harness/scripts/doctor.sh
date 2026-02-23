@@ -122,7 +122,8 @@ echo -e "\n${CYAN}Service health:${NC}"
 _check_svc() {
     local name=$1 port=$2 svc_name=$3
     local path=${4:-/health}
-    if curl -sf --max-time 2 "http://127.0.0.1:$port$path" >/dev/null 2>&1; then
+    local scheme="http"; [[ "$port" = "$HUB_PORT" ]] && scheme="${HUB_SCHEME:-http}"
+    if curl -sf $CURL_K --max-time 2 "${scheme}://127.0.0.1:$port$path" >/dev/null 2>&1; then
         ok_msg "$name responding on :$port"
     elif [[ "$(uname)" == "Darwin" ]]; then
         local plist="com.relaygent.${svc_name}.plist"

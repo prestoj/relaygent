@@ -155,7 +155,8 @@ sleep 3
 UPDATE_HEALTHY=true
 for svc_check in "Hub:$HUB_PORT:/api/health" "Notifications:$NOTIF_PORT:/health"; do
     IFS=: read -r svc_name svc_port svc_path <<< "$svc_check"
-    if curl -sf --max-time 3 "http://127.0.0.1:${svc_port}${svc_path}" >/dev/null 2>&1; then
+    local_scheme="http"; [[ "$svc_port" = "$HUB_PORT" ]] && local_scheme="${HUB_SCHEME:-http}"
+    if curl -sf $CURL_K --max-time 3 "${local_scheme}://127.0.0.1:${svc_port}${svc_path}" >/dev/null 2>&1; then
         echo -e "  $svc_name: ${GREEN}healthy${NC}"
     else
         echo -e "  $svc_name: ${RED}not responding — run: relaygent health${NC}"
