@@ -58,5 +58,8 @@ RUN cd $HOME/relaygent && bash setup.sh --docker
 # Ports: hub (8080), VNC (5900)
 EXPOSE 8080 5900
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -sf http://localhost:8080/api/health || exit 1
+
 ENTRYPOINT ["tini", "--"]
 CMD ["bash", "/home/relaygent/relaygent/docker/entrypoint.sh"]
