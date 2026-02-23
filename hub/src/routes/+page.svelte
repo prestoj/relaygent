@@ -17,7 +17,7 @@
 	let contextPct = $state(data.contextPct);
 	let attentionItems = data.attentionItems || [];
 	let sessionStatus = $state(data.relayActivity?.length > 0 ? 'found' : 'waiting');
-	let ws = null, svcInterval;
+	let ws = null, svcInterval, currentSessionFile = '';
 	let loading = $state(false), hasMore = $state(true);
 	let hookCtx = $state('');
 	let services = $state(data.services || []);
@@ -52,7 +52,7 @@
 			else if (msg.type === 'hook') { hookCtx = msg.data?.context || ''; }
 			else if (msg.type === 'session') {
 				sessionStatus = msg.status;
-				if (msg.status === 'found') reloadPageData();
+				if (msg.status === 'found' && msg.file && msg.file !== currentSessionFile) { currentSessionFile = msg.file; reloadPageData(); }
 			}
 		};
 	}
