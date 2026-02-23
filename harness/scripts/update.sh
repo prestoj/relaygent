@@ -6,34 +6,36 @@ source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 echo -e "${CYAN}Updating Relaygent...${NC}"
 
-# Stash tracked changes to avoid losing work (skip if only untracked files)
-STASHED=false
-if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
-    : # No tracked modifications — skip stash (untracked files like .coverage are fine)
-elif [ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]; then
-    git -C "$REPO_DIR" stash push -m "relaygent-update-$(date +%s)" -q 2>/dev/null && STASHED=true
-    [ "$STASHED" = true ] && echo -e "  ${YELLOW}Stashed uncommitted changes${NC}"
-fi
-# Switch to main if on a different branch
-ORIG_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || echo "")
-if [ -n "$ORIG_BRANCH" ] && [ "$ORIG_BRANCH" != "main" ]; then
-    echo -e "  ${YELLOW}Switching from $ORIG_BRANCH to main${NC}"
-    git -C "$REPO_DIR" checkout main -q 2>/dev/null || true
-fi
-# Pull latest — ff-only preferred, fall back to fetch+reset if diverged
-BEFORE=$(git -C "$REPO_DIR" rev-parse HEAD)
-if ! git -C "$REPO_DIR" pull --ff-only 2>/dev/null; then
-    echo -e "  ${YELLOW}Local diverged from origin/main — resetting${NC}"
-    git -C "$REPO_DIR" fetch origin main
-    git -C "$REPO_DIR" reset --hard origin/main
-fi
-AFTER=$(git -C "$REPO_DIR" rev-parse HEAD)
-
-if [ "$BEFORE" = "$AFTER" ]; then
-    echo -e "  ${YELLOW}Already up to date (rebuilding hub anyway)${NC}"
+# In Docker, .git is excluded — skip git operations, just rebuild + restart
+STASHED=false; BEFORE=""; AFTER=""
+if is_docker 2>/dev/null || [ ! -d "$REPO_DIR/.git" ]; then
+    echo -e "  ${YELLOW}Docker/no-git mode — skipping pull, rebuilding hub${NC}"
 else
-    echo -e "  ${GREEN}Updated:${NC}"
-    git -C "$REPO_DIR" log --oneline "${BEFORE}..${AFTER}" | while IFS= read -r line; do echo "    $line"; done
+    # Stash tracked changes to avoid losing work
+    if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
+        : # No tracked modifications
+    elif [ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]; then
+        git -C "$REPO_DIR" stash push -m "relaygent-update-$(date +%s)" -q 2>/dev/null && STASHED=true
+        [ "$STASHED" = true ] && echo -e "  ${YELLOW}Stashed uncommitted changes${NC}"
+    fi
+    ORIG_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || echo "")
+    if [ -n "$ORIG_BRANCH" ] && [ "$ORIG_BRANCH" != "main" ]; then
+        echo -e "  ${YELLOW}Switching from $ORIG_BRANCH to main${NC}"
+        git -C "$REPO_DIR" checkout main -q 2>/dev/null || true
+    fi
+    BEFORE=$(git -C "$REPO_DIR" rev-parse HEAD)
+    if ! git -C "$REPO_DIR" pull --ff-only 2>/dev/null; then
+        echo -e "  ${YELLOW}Local diverged from origin/main — resetting${NC}"
+        git -C "$REPO_DIR" fetch origin main
+        git -C "$REPO_DIR" reset --hard origin/main
+    fi
+    AFTER=$(git -C "$REPO_DIR" rev-parse HEAD)
+    if [ "$BEFORE" = "$AFTER" ]; then
+        echo -e "  ${YELLOW}Already up to date (rebuilding hub anyway)${NC}"
+    else
+        echo -e "  ${GREEN}Updated:${NC}"
+        git -C "$REPO_DIR" log --oneline "${BEFORE}..${AFTER}" | while IFS= read -r line; do echo "    $line"; done
+    fi
 fi
 
 # Install deps for all services (fast no-op when already up to date)
@@ -65,9 +67,11 @@ fi
 
 load_config
 
-# Restart services — refresh platform service configs if managed by LaunchAgent/systemd
+# Restart services — skip platform refresh in Docker
 LAUNCHAGENTS_REFRESHED=false
-if [ "$(uname)" = "Darwin" ] && ls "$HOME/Library/LaunchAgents/com.relaygent."*.plist &>/dev/null 2>&1; then
+if is_docker 2>/dev/null; then
+    : # Docker — fall through to manual restart path below
+elif [ "$(uname)" = "Darwin" ] && ls "$HOME/Library/LaunchAgents/com.relaygent."*.plist &>/dev/null 2>&1; then
     echo -e "  Refreshing LaunchAgents (picks up plist/env changes)..."
     bash "$REPO_DIR/scripts/install-launchagents.sh"
     LAUNCHAGENTS_REFRESHED=true
@@ -124,7 +128,7 @@ fi
 
 # Check if MCP server source files changed (agents need to restart their session)
 MCP_CHANGED=false
-if [ "$BEFORE" != "$AFTER" ]; then
+if [ -n "$BEFORE" ] && [ -n "$AFTER" ] && [ "$BEFORE" != "$AFTER" ]; then
     if git -C "$REPO_DIR" diff --name-only "${BEFORE}..${AFTER}" | grep -qE '(mcp-server|browser-tools|browser-exprs|cdp|hammerspoon)\.mjs$'; then
         MCP_CHANGED=true
     fi
