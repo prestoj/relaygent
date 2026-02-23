@@ -24,17 +24,21 @@
 				rfb = null;
 			});
 			rfb.addEventListener('credentialsrequired', () => {
+				const qp = new URLSearchParams(location.search).get('pw');
+				if (qp) { rfb.sendCredentials({ password: qp }); status = 'Authenticating...'; return; }
 				passwordNeeded = true;
 				status = 'VNC password required';
 			});
+			window._rfb = rfb;
 		} catch (e) {
 			status = `Error: ${e.message}`;
 		}
 	});
 
 	function submitPassword() {
-		if (rfb && password) {
-			rfb.sendCredentials({ password });
+		const pw = password || document.querySelector('.pw-prompt input')?.value;
+		if (rfb && pw) {
+			rfb.sendCredentials({ password: pw });
 			passwordNeeded = false;
 			status = 'Authenticating...';
 		}
