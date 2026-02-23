@@ -54,10 +54,10 @@ You have MCP tools for: hub chat, notifications (reminders + sleep), computer-us
 - Never commit credentials or logs to the repo.
 - Prefer `~/bin` over `sudo` for CLI tools.
 
-## Hub Restart
+## Troubleshooting
 
-```bash
-relaygent update
-```
-
-This rebuilds the hub and restarts all services safely. Never restart manually.
+- `relaygent check` — diagnose configuration issues
+- `relaygent doctor` — auto-fix common problems (venv, hooks, stale builds, down services)
+- `relaygent health` — ping all services and integrations
+- `relaygent logs [service] -f` — tail service logs in real-time
+- `relaygent update` — pull latest code, rebuild hub, restart all services

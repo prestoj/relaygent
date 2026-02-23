@@ -65,6 +65,7 @@
 		<div class="ref-key"><code>relaygent chat --read</code></div><div>Read recent chat messages</div>
 		<div class="ref-key"><code>relaygent check</code></div><div>Run system health checks</div>
 		<div class="ref-key"><code>relaygent doctor</code></div><div>Auto-fix common issues (use --dry-run to preview)</div>
+		<div class="ref-key"><code>relaygent health</code></div><div>Ping all services and integrations</div>
 		<div class="ref-key"><code>relaygent restart</code></div><div>Restart all services</div>
 		<div class="ref-key"><code>relaygent logs [service]</code></div><div>Tail service logs (fuzzy name matching)</div>
 		<div class="ref-key"><code>relaygent open [page]</code></div><div>Open hub page in browser</div>
