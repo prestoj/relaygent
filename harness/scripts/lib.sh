@@ -165,10 +165,10 @@ ck_summary() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if [ "$_CK_FAIL" -gt 0 ]; then
         echo -e "  ${RED}$_CK_FAIL failed, $_CK_WARN warnings, $_CK_PASS passed.${NC}"
-        echo -e "  ${RED}Fix failures above before running: relaygent start${NC}"
+        echo -e "  ${RED}Try: relaygent doctor (auto-fix) or fix manually, then: relaygent start${NC}"
         return 1
     elif [ "$_CK_WARN" -gt 0 ]; then
-        echo -e "  ${YELLOW}$_CK_WARN warnings, $_CK_PASS passed. System usable but review warnings.${NC}"
+        echo -e "  ${YELLOW}$_CK_WARN warnings, $_CK_PASS passed. Try: relaygent doctor${NC}"
     else
         echo -e "  ${GREEN}All $_CK_PASS checks passed.${NC}"
     fi
