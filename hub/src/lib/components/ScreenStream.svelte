@@ -62,7 +62,7 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		dragState = { bx: e.clientX, by: e.clientY, moved: false };
+		dragState = { bx: e.clientX, by: e.clientY, moved: false, t: Date.now() };
 	}
 
 	function handleMouseMove(e) {
@@ -70,7 +70,7 @@
 		const rect = imgEl.getBoundingClientRect();
 		cursorPos = { left: e.clientX - rect.left, top: e.clientY - rect.top };
 		if (dragState) {
-			if (Math.abs(e.clientX - dragState.bx) > 8 || Math.abs(e.clientY - dragState.by) > 8) dragState.moved = true;
+			if (Math.abs(e.clientX - dragState.bx) > 15 || Math.abs(e.clientY - dragState.by) > 15) dragState.moved = true;
 			return;
 		}
 		const now = Date.now();
@@ -83,7 +83,8 @@
 
 	function handleMouseUp(e) {
 		if (!dragState) return;
-		if (dragState.moved) {
+		const isDrag = dragState.moved && (Date.now() - dragState.t) > 300;
+		if (isDrag) {
 			justDragged = true;
 			const start = toNativeCoords({ clientX: dragState.bx, clientY: dragState.by }, imgEl, nativeWidth);
 			const end = coords(e);
