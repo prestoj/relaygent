@@ -153,20 +153,32 @@ export async function cdpNavigate(url) {
 export function cdpDisconnect() { _disconnecting = true; _cancelReconnect(); if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(null); }
 export async function cdpSwitchTab(tabId) {
   const ok = await cdpActivate(tabId); if (!ok) return false;
-  if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(tabId); return true;
+  if (_ws) { try { _ws.close(); } catch {} _ws = null; } _saveTabId(tabId);
+  await getConnection(); // Force reconnect to new tab's WebSocket
+  return true;
 }
 export async function cdpSyncToVisibleTab(url) {
   cdpDisconnect();
-  await new Promise(r => setTimeout(r, 800));
-  const tabs = await cdpHttp("/json/list");
-  if (!tabs) return;
-  const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
-  const target = pages.find(t => t.url === url || t.url.startsWith(url.replace(/\/$/, "")))
-    ?? pages.find(t => /^https?:/.test(t.url)) ?? pages[0];
-  if (!target) return;
-  _saveTabId(target.id);
-  await cdpActivate(target.id);
-  log(`synced to tab: ${target.url.substring(0, 60)}`);
+  // Wait for page to start loading — keyboard nav needs time for Chrome to update tab list
+  const urlBase = url.replace(/\/$/, "").replace(/^https?:\/\//, "");
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await new Promise(r => setTimeout(r, 600));
+    const tabs = await cdpHttp("/json/list");
+    if (!tabs) continue;
+    const pages = tabs.filter(t => t.type === "page" && t.webSocketDebuggerUrl);
+    // Try exact match, then prefix match (handles trailing slashes, redirects)
+    const target = pages.find(t => t.url === url)
+      ?? pages.find(t => t.url.replace(/^https?:\/\//, "").startsWith(urlBase))
+      ?? (attempt >= 2 ? pages.find(t => /^https?:/.test(t.url) && t.url !== "about:blank") ?? pages[0] : null);
+    if (target) {
+      _saveTabId(target.id);
+      await cdpActivate(target.id);
+      await getConnection(); // Force reconnect to new tab's WebSocket
+      log(`synced to tab: ${target.url.substring(0, 60)}`);
+      return;
+    }
+  }
+  log(`sync failed: could not find tab for ${url.substring(0, 60)}`);
 }
 
 let _permsDenied = false;

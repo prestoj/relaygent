@@ -46,7 +46,7 @@ elif [ "$(uname)" = "Linux" ]; then
     elif [ -z "${DISPLAY:-}" ]; then
         if command -v Xvfb &>/dev/null; then
             export DISPLAY=:99
-            Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp >> "$REPO_DIR/logs/relaygent-xvfb.log" 2>&1 &
+            Xvfb :99 -screen 0 1024x768x24 -nolisten tcp >> "$REPO_DIR/logs/relaygent-xvfb.log" 2>&1 &
             echo $! > "$PID_DIR/xvfb.pid"
             sleep 0.5
             echo -e "  Xvfb: ${GREEN}started${NC} (DISPLAY=:99)"

@@ -117,10 +117,16 @@ export async function takeScreenshot(delayMs = 300, indicator) {
 	await new Promise(r => setTimeout(r, delayMs));
 	const body = { path: SCREENSHOT_PATH };
 	if (indicator) { body.indicator_x = indicator.x; body.indicator_y = indicator.y; }
-	const r = await hsCall("POST", "/screenshot", body);
+	let r = await hsCall("POST", "/screenshot", body);
 	if (r.error) return [{ type: "text", text: `(screenshot failed: ${r.error})` }];
 	try {
-		const img = readScreenshot(r.width, r.pixelWidth);
+		let img = readScreenshot(r.width, r.pixelWidth);
+		// Retry once on invalid screenshot (timing issue — scrot can capture during window transition)
+		if (!img) {
+			await new Promise(res => setTimeout(res, 500));
+			r = await hsCall("POST", "/screenshot", body);
+			if (!r.error) img = readScreenshot(r.width, r.pixelWidth);
+		}
 		if (!img) return [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }];
 		const sf = scaleFactor();
 		const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
