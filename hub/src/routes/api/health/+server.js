@@ -23,11 +23,13 @@ function getRelay() {
 
 /** GET /api/health — health check with system info for monitoring/CLI */
 export function GET() {
+	const claudeAuthed = fs.existsSync(path.join(process.env.HOME, '.claude'));
 	return json({
 		status: 'ok',
 		version: getVersion(),
 		hostname: os.hostname(),
 		uptime: Math.round(process.uptime()),
 		relay: getRelay(),
+		claudeAuthed,
 	});
 }

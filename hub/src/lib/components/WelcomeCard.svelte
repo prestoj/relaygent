@@ -6,7 +6,7 @@
 		try {
 			const r = await fetch('/api/health');
 			const d = await r.json();
-			claudeAuthed = d.relay?.status !== 'off';
+			claudeAuthed = d.claudeAuthed === true;
 		} catch { /* ignore */ }
 	}
 
