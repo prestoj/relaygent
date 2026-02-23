@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start GNOME desktop on Xvfb display :99 with screen lock disabled.
+# Start GNOME desktop on Xvfb display :99.
 # Also starts linux-server.py for computer-use MCP tools.
 #
 # Usage: ./start-desktop.sh
@@ -16,25 +16,23 @@ if ! xdpyinfo -display "$DISPLAY" &>/dev/null; then
     exit 1
 fi
 
-# Kill stale Chrome and GNOME to prevent multiple instances
+# Kill stale Chrome and desktop to prevent multiple instances
 pkill -u "$(whoami)" -f google-chrome 2>/dev/null || true
 pkill -u "$(whoami)" gnome-shell 2>/dev/null || true
 pkill -u "$(whoami)" gnome-session 2>/dev/null || true
 sleep 1
 
-# Start GNOME session with lock/screensaver disabled
-DBUS_SESSION_BUS_ADDRESS="" dbus-run-session -- bash -c "
-    gsettings set org.gnome.desktop.screensaver lock-enabled false
-    gsettings set org.gnome.desktop.session idle-delay 0
-    gsettings set org.gnome.desktop.screensaver idle-activation-enabled false
-    gsettings set org.gnome.desktop.notifications show-banners false
-    gnome-session
-" > /tmp/gnome-session.log 2>&1 &
-GNOME_PID=$!
-echo "GNOME session started (PID $GNOME_PID)"
+# Suppress GNOME Welcome dialog
+mkdir -p ~/.config
+echo "yes" > ~/.config/gnome-initial-setup-done 2>/dev/null || true
+
+# Start gnome-shell directly in X11 mode (gnome-session fails on Xvfb because
+# it can't establish a proper logind session — gnome-shell --x11 works standalone)
+gnome-shell --x11 > /tmp/gnome-shell.log 2>&1 &
+echo "gnome-shell started (PID $!)"
 
 # Wait for gnome-shell to appear
-for i in $(seq 1 15); do
+for i in $(seq 1 10); do
     if pgrep -u "$(whoami)" gnome-shell &>/dev/null; then
         echo "GNOME shell running after ${i}s"
         break
@@ -46,9 +44,7 @@ if ! pgrep -u "$(whoami)" gnome-shell &>/dev/null; then
     echo "Warning: gnome-shell did not start" >&2
 fi
 
-# Dismiss GNOME Welcome dialog if it appears
-mkdir -p ~/.config
-echo "yes" > ~/.config/gnome-initial-setup-done 2>/dev/null || true
+# Dismiss Welcome dialog if it appears
 wmctrl -c "Welcome" 2>/dev/null || true
 
 # Start computer-use HTTP server if not already running

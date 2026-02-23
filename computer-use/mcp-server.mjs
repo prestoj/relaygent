@@ -53,7 +53,9 @@ server.tool("screenshot", "Capture screenshot. Use find_elements for precise coo
 server.tool("click", "Click at coordinates. Auto-returns screenshot.",
 	{ x: n.describe("X"), y: n.describe("Y"),
 		right: bool.describe("Right-click"),
+		middle: bool.describe("Middle-click"),
 		double: bool.describe("Double-click"),
+		triple: bool.describe("Triple-click"),
 		modifiers: z.array(z.string()).optional().describe("Modifier keys: shift, cmd, alt, ctrl") },
 	async (p) => { const np = { ...p, x: sx(p.x), y: sx(p.y) }; await hsCall("POST", "/click", np); return actionRes(`Clicked (${p.x},${p.y})`, 400, np); }
 );

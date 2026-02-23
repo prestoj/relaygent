@@ -45,6 +45,10 @@ def click(params: dict) -> tuple[dict, int]:
 
     if params.get("right"):
         _xdotool("click", "3")
+    elif params.get("middle"):
+        _xdotool("click", "2")
+    elif params.get("triple"):
+        _xdotool("click", "--repeat", "3", "--delay", "50", "1")
     elif params.get("double"):
         _xdotool("click", "--repeat", "2", "--delay", "50", "1")
     else:
