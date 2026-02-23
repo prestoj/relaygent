@@ -92,6 +92,18 @@
 </section>
 
 <section class="card">
+	<h2>Remote Access</h2>
+	<p>Access your hub from your phone, laptop, or tablet over the network.</p>
+	<ol class="steps">
+		<li><strong>Install Tailscale</strong> — <a href="https://tailscale.com/download" target="_blank" rel="noopener">tailscale.com/download</a> on both machines</li>
+		<li><strong>Set up TLS</strong> — Run <code>relaygent setup-tls</code> to generate HTTPS certificates</li>
+		<li><strong>Set a password</strong> — Run <code>relaygent set-password</code> to protect the dashboard</li>
+		<li><strong>Restart</strong> — Run <code>relaygent restart</code> to apply changes</li>
+	</ol>
+	<p class="hint">Check your remote URL in <a href="/settings">Settings</a> under Configuration. Setup also offers to configure this during <code>./setup.sh</code>.</p>
+</section>
+
+<section class="card">
 	<h2>Troubleshooting</h2>
 	<dl class="concepts">
 		<dt>Agent won't start</dt>
