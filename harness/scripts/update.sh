@@ -50,7 +50,7 @@ fi
 if [ "$(uname)" = "Darwin" ] && [ -d "$HOME/.hammerspoon" ] && [ -d "$REPO_DIR/hammerspoon" ]; then
     cp "$REPO_DIR"/hammerspoon/*.lua "$HOME/.hammerspoon/" 2>/dev/null || true
     HS_PORT="${HAMMERSPOON_PORT:-8097}"
-    curl -sf "http://localhost:$HS_PORT/reload" -X POST >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}config reloaded${NC}" || true
+    curl -sf --max-time 2 "http://localhost:$HS_PORT/reload" -X POST >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}config reloaded${NC}" || true
 fi
 
 # Rebuild hub
