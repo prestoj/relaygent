@@ -67,6 +67,8 @@
 	{#if st.toolCalls}<span class="stat"><strong>{st.toolCalls}</strong> tool calls</span><span class="sep">·</span>{/if}
 	{#if st.totalTokens}<span class="stat"><strong>{fmtTokens(st.totalTokens)}</strong> tokens in</span><span class="sep">·</span>{/if}
 	{#if st.outputTokens}<span class="stat"><strong>{fmtTokens(st.outputTokens)}</strong> out</span>{/if}
+	{#if st.git_commits}<span class="sep">·</span><span class="stat git"><strong>{st.git_commits}</strong> commit{st.git_commits === 1 ? '' : 's'}</span>{/if}
+	{#if st.prs_created?.length}<span class="sep">·</span><span class="stat git"><strong>{st.prs_created.length}</strong> PR{st.prs_created.length === 1 ? '' : 's'}</span>{/if}
 </div>
 {/if}
 
@@ -140,7 +142,7 @@
 	h1 { margin: 0; font-size: 1.4em; }
 	.back { font-size: 0.9em; color: var(--text-muted); white-space: nowrap; }
 	.stats-row { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.5em; font-size: 0.85em; color: var(--text-muted); }
-	.stats-row strong { color: var(--text); }
+	.stats-row strong { color: var(--text); } .stat.git strong { color: #22c55e; }
 	.sep { color: var(--border); }
 	.tool-bar { display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center; margin-bottom: 0.75em; font-size: 0.8em; color: var(--text-muted); }
 	.tb strong { color: var(--text); }

@@ -148,3 +148,31 @@ test('parseSessionStats: contextPct is totalTokens / 2000 rounded', () => {
 	const s = parseSessionStats(p);
 	assert.equal(s.contextPct, Math.round(s.totalTokens / 2000));
 });
+
+// ── Git activity tracking ─────────────────────────────────────────────────
+
+test('parseSessionStats: tracks git commits, PRs created, and PRs merged', () => {
+	const lines = [
+		makeEntry('assistant', [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'git commit -m "fix: something"' } }], TS1, USAGE),
+		makeEntry('assistant', [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'gh pr create --title "fix: the bug" --body "desc"' } }], TS2, USAGE),
+		makeEntry('assistant', [{ type: 'tool_use', id: 't3', name: 'Bash', input: { command: 'gh pr merge 42 --squash' } }], TS2, USAGE),
+		makeEntry('assistant', [{ type: 'tool_use', id: 't4', name: 'Bash', input: { command: 'git commit -m "feat: another"' } }], TS2, USAGE),
+	];
+	const p = writeFixture('git-activity.jsonl', lines);
+	const s = parseSessionStats(p);
+	assert.equal(s.git_commits, 2);
+	assert.deepEqual(s.prs_created, ['fix: the bug']);
+	assert.deepEqual(s.prs_merged, [42]);
+});
+
+test('parseSessionStats: git fields default to empty when no git activity', () => {
+	const lines = [
+		makeEntry('assistant', [{ type: 'tool_use', id: 't1', name: 'Read', input: { file_path: '/a' } }], TS1, USAGE),
+		makeEntry('assistant', [{ type: 'text', text: 'No git commands in this session.' }], TS2, USAGE),
+	];
+	const p = writeFixture('no-git.jsonl', lines);
+	const s = parseSessionStats(p);
+	assert.equal(s.git_commits, 0);
+	assert.deepEqual(s.prs_created, []);
+	assert.deepEqual(s.prs_merged, []);
+});

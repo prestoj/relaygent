@@ -66,6 +66,7 @@ export function parseSessionStats(jsonlPath) {
 		let startTs = null, endTs = null, totalTokens = 0, outputTokens = 0;
 		const tools = {};
 		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null, handoffGoal = null;
+		let gitCommits = 0; const prsCreated = [], prsMerged = [];
 
 		for (const line of lines) {
 			try {
@@ -94,6 +95,14 @@ export function parseSessionStats(jsonlPath) {
 								if (name === 'Write' && /handoff/i.test(item.input?.file_path || '')) {
 									handoffGoal = extractMainGoal(item.input?.content || '');
 								}
+								if (name === 'Bash') {
+									const cmd = typeof item.input === 'string' ? item.input : (item.input?.command || '');
+									if (/git commit/.test(cmd)) gitCommits++;
+									const prT = cmd.match(/gh pr create\b.*?--title\s+"([^"]+)"/);
+									if (prT) prsCreated.push(prT[1]);
+									const prM = cmd.match(/gh pr merge\s+(\d+)/);
+									if (prM) prsMerged.push(parseInt(prM[1]));
+								}
 							} else if (item?.type === 'text' && item.text?.length > 5) {
 								textBlocks++;
 								if (!firstText) firstText = item.text.split('\n')[0].slice(0, 100);
@@ -114,6 +123,7 @@ export function parseSessionStats(jsonlPath) {
 			start: startTs, durationMin, totalTokens, outputTokens,
 			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
 			contextPct: Math.round(totalTokens / 2000),
+			git_commits: gitCommits, prs_created: prsCreated, prs_merged: prsMerged,
 		};
 
 		if (_statsCache.size >= MAX_STATS_CACHE) {
