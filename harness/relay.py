@@ -39,7 +39,7 @@ class RelayRunner:
         commit_kb()
         cleanup_context_file()
         state.new_session()
-        state.crash_count = state.idle_continuation_count = 0
+        state.crash_count = state.idle_continuation_count = state.api_error_count = 0
         self.claude = ClaudeProcess(state.session_id, self.timer, workspace, self.claude._claude_bin)
         log(f"Successor session: {state.session_id}")
         time.sleep(3)

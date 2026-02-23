@@ -9,7 +9,8 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from config import INCOMPLETE_BASE_DELAY, MAX_INCOMPLETE_RETRIES, MAX_RETRIES
+from config import (INCOMPLETE_BASE_DELAY, MAX_API_ERROR_RETRIES,
+                    MAX_INCOMPLETE_RETRIES, MAX_RETRIES)
 
 
 class Action(Enum):
@@ -38,6 +39,7 @@ class LoopState:
     incomplete_count: int = 0
     idle_continuation_count: int = 0
     no_output_count: int = 0
+    api_error_count: int = 0
 
     def new_session(self):
         """Generate new session ID and reset to fresh start."""
@@ -50,6 +52,7 @@ class LoopState:
         self.incomplete_count = 0
         self.crash_count = 0
         self.no_output_count = 0
+        self.api_error_count = 0
 
 
 def handle_error(result, state: LoopState) -> ErrorResult | None:
@@ -112,6 +115,22 @@ def handle_error(result, state: LoopState) -> ErrorResult | None:
         return ErrorResult(Action.CONTINUE, delay=delay,
                            log_msg=f"Exited mid-conversation ({state.incomplete_count}/"
                                    f"{MAX_INCOMPLETE_RETRIES}), resuming in {delay}s...")
+
+    if result.api_error and result.exit_code != 0:
+        state.api_error_count += 1
+        delay = min(15 * (2 ** (state.api_error_count - 1)), 120)
+        if state.api_error_count > MAX_API_ERROR_RETRIES:
+            state.new_session()
+            state.api_error_count = 0
+            return ErrorResult(Action.CONTINUE, delay=30,
+                               log_msg=f"Too many API errors ({MAX_API_ERROR_RETRIES + 1}), "
+                                       f"starting fresh session...")
+        if state.session_established:
+            state.resume_reason = ("The API returned a server error. "
+                                   "This is transient — please continue where you left off.")
+        return ErrorResult(Action.CONTINUE, delay=delay, status="api_error",
+                           log_msg=f"API server error ({state.api_error_count}/"
+                                   f"{MAX_API_ERROR_RETRIES}), retrying in {delay}s...")
 
     if result.exit_code != 0:
         state.crash_count += 1

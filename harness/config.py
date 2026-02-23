@@ -11,6 +11,7 @@ SLEEP_POLL_INTERVAL = 1         # Local file check frequency while sleeping
 HANG_CHECK_DELAY = 90           # Seconds before checking for hang patterns
 SILENCE_TIMEOUT = 300           # Seconds of no output before considering hung
 MAX_RETRIES = 2                 # 3 total attempts
+MAX_API_ERROR_RETRIES = 8       # Generous retries for transient API 5xx errors
 MAX_INCOMPLETE_RETRIES = 5      # Start fresh after 5 consecutive incomplete exits
 MAX_IDLE_CONTINUATIONS = 3      # Max times to resume due to short/idle output before sleeping
 INCOMPLETE_BASE_DELAY = 5       # Base delay for incomplete exit backoff (seconds)
