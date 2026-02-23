@@ -54,7 +54,8 @@
 		{@const s = p.session}
 		<div class="peer-card" class:unreachable={!p.health}>
 			<div class="peer-header">
-				<span class="peer-name">{p.health?.hostname || p.name}</span>
+				{#if !p.local && p.health}<a class="peer-name" href={p.url} target="_blank" rel="noopener">{p.health.hostname || p.name}</a>
+				{:else}<span class="peer-name">{p.health?.hostname || p.name}</span>{/if}
 				{#if p.local}<span class="local-tag">local</span>{/if}
 				<span class="badge {badge.cls}">{badge.label}</span>
 			</div>
@@ -109,7 +110,8 @@
 	.peer-card:hover { border-color: var(--link); }
 	.peer-card.unreachable { opacity: 0.6; }
 	.peer-header { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.5em; }
-	.peer-name { font-weight: 700; font-size: 1.1em; }
+	.peer-name { font-weight: 700; font-size: 1.1em; color: var(--text); text-decoration: none; }
+	a.peer-name:hover { color: var(--link); }
 	.local-tag { font-size: 0.7em; background: var(--code-bg); padding: 0.15em 0.4em; border-radius: 4px; color: var(--text-muted); }
 	.badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 10px; font-weight: 600; margin-left: auto; }
 	.badge.ok { background: var(--success); color: white; }
