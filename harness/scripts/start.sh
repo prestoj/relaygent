@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 load_config
+_T0=$(date +%s)
 echo -e "${CYAN}Starting Relaygent...${NC}"
 
 # Check critical dependencies
@@ -70,12 +71,14 @@ fi
 
 # Hub — build if needed
 if [ ! -d "$REPO_DIR/hub/build" ]; then
-    echo "  Building hub..."
+    echo -n "  Building hub..."
+    _tb=$(date +%s)
     if ! (cd "$REPO_DIR/hub" && npm run build >/dev/null 2>&1); then
-        echo -e "  ${RED}Hub build failed.${NC} Run manually to see errors:"
-        echo -e "    cd $REPO_DIR/hub && npm run build"
+        echo -e " ${RED}failed${NC}"
+        echo -e "    Run manually: cd $REPO_DIR/hub && npm run build"
         exit 1
     fi
+    echo -e " ${GREEN}done${NC} ($(($(date +%s) - _tb))s)"
 fi
 if is_platform_managed hub; then
     platform_start "Hub (port $HUB_PORT)" "hub"
@@ -113,15 +116,21 @@ if [ -f "$HOME/.relaygent/gmail/credentials.json" ]; then
     fi
 fi
 
-# Relay — verify Claude auth before starting
-if ! claude -p 'hi' >/dev/null 2>&1; then
-    echo -e "  Relay: ${RED}Claude not authenticated. Run 'claude' to log in first.${NC}"
+# Relay — fast auth check (no API call, instant)
+if ! command -v claude &>/dev/null; then
+    echo -e "  Relay: ${RED}Claude Code not installed. Run: npm install -g @anthropic-ai/claude-code${NC}"
+elif [ ! -d "$HOME/.claude" ]; then
+    echo -e "  Relay: ${YELLOW}Not authenticated — run 'claude' to log in first.${NC}"
 elif is_platform_managed relay; then
     platform_start "Relay" "relay"
 else
     start_service "Relay" "relay" python3 "$REPO_DIR/harness/relay.py"
 fi
 
-echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}\n  Logs: $REPO_DIR/logs/\n"
+_elapsed=$(($(date +%s) - _T0))
+echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}"
+echo -e "  Logs:      $REPO_DIR/logs/"
+echo -e "  Ready in ${_elapsed}s"
+echo -e "  ${CYAN}Troubleshoot: relaygent check${NC}\n"
 { sleep 2 && { [ "$(uname)" = "Darwin" ] && open "http://localhost:$HUB_PORT/" 2>/dev/null || \
     { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "http://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &
