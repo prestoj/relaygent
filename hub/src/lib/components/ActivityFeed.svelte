@@ -75,7 +75,7 @@
 		{#each filtered as item (itemKey(item))}
 			{@const expanded = expandedKey === itemKey(item)}
 			<div class="ai {item.type} {cat(item.name)}" class:new={item.isNew} class:expanded
-				onclick={() => expandedKey = expanded ? null : itemKey(item)}>
+				onclick={() => item.type === 'tool' && (expandedKey = expanded ? null : itemKey(item))}>
 				<span class="time">{relTime(item.time)}</span>
 				{#if item.type === 'tool'}
 					<div class="tc">
@@ -102,11 +102,7 @@
 						</div>
 					{/if}
 				{:else}
-					{#if expanded}
 					<span class="tx md">{@html sanitizeHtml(marked.parse(item.text))}</span>
-				{:else}
-					<span class="tx">{item.text.length > 100 ? item.text.slice(0, 100) + '...' : item.text}</span>
-				{/if}
 				{/if}
 			</div>
 		{/each}
@@ -126,7 +122,8 @@
 	.fclear:hover { color: var(--text); }
 	.cnt { font-size: 0.78em; color: var(--text-muted); }
 	.feed { display: flex; flex-direction: column; gap: 0.25em; }
-	.ai { display: grid; grid-template-columns: 2.5em 1fr; gap: 0.4em; font-size: 0.85em; padding: 0.35em 0.5em; background: var(--bg-surface); border-radius: 4px; border-left: 3px solid var(--border); cursor: pointer; transition: background 0.15s; }
+	.ai { display: grid; grid-template-columns: 2.5em 1fr; gap: 0.4em; font-size: 0.85em; padding: 0.35em 0.5em; background: var(--bg-surface); border-radius: 4px; border-left: 3px solid var(--border); transition: background 0.15s; }
+	.ai.tool { cursor: pointer; }
 	.ai:hover { background: var(--code-bg); }
 	.ai.expanded { background: var(--code-bg); }
 	.ai.new { animation: fadeIn 0.3s ease-out; background: var(--code-bg); }
