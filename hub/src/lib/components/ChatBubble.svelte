@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { initAudio, playChime, notifyDesktop } from './chatAudio.js';
-	import { renderMsg, fmtTime } from './chatUtils.js';
+	import { renderMsg, fmtTime, isRelayMsg, groupMessages } from './chatUtils.js';
 	import './ChatBubble.css';
 
 	let open = $state(false);
@@ -17,6 +17,15 @@
 	let textareaEl = $state(null);
 	let autoScroll = true;
 	let defaultTitle = '';
+	let expandedGroups = $state(new Set());
+
+	let groups = $derived(groupMessages(messages));
+
+	function toggleGroup(i) {
+		const next = new Set(expandedGroups);
+		next.has(i) ? next.delete(i) : next.add(i);
+		expandedGroups = next;
+	}
 
 	function updateTabTitle() {
 		if (!browser) return;
@@ -67,7 +76,7 @@
 			let msg; try { msg = JSON.parse(e.data); } catch { return; }
 			if (msg.type !== 'message') return;
 			messages = [...messages, msg.data];
-			if (msg.data.role === 'assistant') {
+			if (msg.data.role === 'assistant' && !isRelayMsg(msg.data)) {
 				const wasHidden = !open || !autoScroll;
 				if (!open) open = true;
 				if (wasHidden) {
@@ -137,10 +146,25 @@
 			<div class="cb-header"><span>Chat</span><button class="cb-close" onclick={toggle}>&times;</button></div>
 			<div class="cb-msgs" bind:this={chatEl} onscroll={onScroll}>
 				{#if loadingOlder}<div class="cb-loading">Loading...</div>{/if}
-				{#each messages as m}
-					<div class="cb-msg" class:human={m.role==='human'} class:bot={m.role==='assistant'}>
-						<div class="cb-bub"><span class="cb-text">{@html renderMsg(m)}</span><span class="cb-time">{fmtTime(m.created_at)}</span></div>
-					</div>
+				{#each groups as g, i}
+					{#if g.relay}
+						{#if g.msgs.length === 1 || expandedGroups.has(i)}
+							{#each g.msgs as m}
+								<div class="cb-msg bot relay">
+									<div class="cb-bub"><span class="cb-text">{@html renderMsg(m)}</span><span class="cb-time">{fmtTime(m.created_at)}</span></div>
+								</div>
+							{/each}
+							{#if g.msgs.length > 1}
+								<button class="cb-relay-btn" onclick={() => toggleGroup(i)}>hide {g.msgs.length} system messages</button>
+							{/if}
+						{:else}
+							<button class="cb-relay-btn" onclick={() => toggleGroup(i)}>{g.msgs.length} system messages</button>
+						{/if}
+					{:else}
+						<div class="cb-msg" class:human={g.msg.role==='human'} class:bot={g.msg.role==='assistant'}>
+							<div class="cb-bub"><span class="cb-text">{@html renderMsg(g.msg)}</span><span class="cb-time">{fmtTime(g.msg.created_at)}</span></div>
+						</div>
+					{/if}
 				{:else}<div class="cb-empty">No messages yet</div>{/each}
 			</div>
 			<div class="cb-inp">

@@ -52,6 +52,12 @@
 }
 .cb-inp button:hover:not(:disabled) { opacity: 0.9; }
 .cb-inp button:disabled { opacity: 0.4; cursor: not-allowed; }
+.cb-msg.relay .cb-bub { opacity: 0.55; font-size: 0.75em; padding: 0.2em 0.5em; }
+.cb-relay-btn {
+	background: none; border: none; color: var(--text-muted, #888); font-size: 0.7em;
+	cursor: pointer; padding: 0.15em 0; text-align: center; width: 100%; opacity: 0.7;
+}
+.cb-relay-btn:hover { opacity: 1; text-decoration: underline; }
 @media (max-width: 500px) {
 	.cb-panel { width: calc(100vw - 2em); right: -0.5em; bottom: 65px; height: 75vh; }
 	.cb-wrap { bottom: 1em; right: 1em; }
