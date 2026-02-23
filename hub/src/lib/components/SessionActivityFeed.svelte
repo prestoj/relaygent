@@ -1,4 +1,6 @@
 <script>
+	import { marked } from 'marked';
+	import { sanitizeHtml } from '$lib/sanitize.js';
 	import { itemKey, fmtTime, toolCategory as cat, shortName, fmtParams } from '$lib/sessionUtils.js';
 	let { activity = [] } = $props();
 	let expandedKey = $state(null);
@@ -63,7 +65,11 @@
 						</div>
 					{/if}
 				{:else}
-					<span class="tx">{expanded ? item.text : (item.text.length > 200 ? item.text.slice(0, 200) + '...' : item.text)}</span>
+					{#if expanded}
+					<span class="tx md">{@html sanitizeHtml(marked.parse(item.text))}</span>
+				{:else}
+					<span class="tx">{item.text.length > 200 ? item.text.slice(0, 200) + '...' : item.text}</span>
+				{/if}
 				{/if}
 			</div>
 		{/each}
@@ -94,6 +100,10 @@
 	.file .tn { color: #3b82f6; } .bash .tn { color: #f59e0b; } .mcp .tn { color: #8b5cf6; } .other .tn { color: #6b7280; }
 	.ti { color: var(--text-muted); font-family: monospace; font-size: 0.88em; word-break: break-word; }
 	.tx { color: var(--text); line-height: 1.4; min-width: 0; word-break: break-word; }
+	.tx.md :global(p) { margin: 0.3em 0; } .tx.md :global(p:first-child) { margin-top: 0; } .tx.md :global(p:last-child) { margin-bottom: 0; }
+	.tx.md :global(ul), .tx.md :global(ol) { margin: 0.3em 0; padding-left: 1.5em; } .tx.md :global(li) { margin: 0.15em 0; }
+	.tx.md :global(code) { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
+	.tx.md :global(pre) { background: var(--code-bg); padding: 0.5em; border-radius: 4px; overflow-x: auto; margin: 0.3em 0; } .tx.md :global(pre code) { background: none; padding: 0; } .tx.md :global(strong) { color: var(--text); }
 	.detail { margin-top: 0.3em; }
 	.detail-section { margin-bottom: 0.4em; }
 	.detail-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
