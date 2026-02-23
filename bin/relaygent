@@ -31,6 +31,7 @@ show_help() {
         "set-password" "Set/remove hub dashboard auth (--remove)" \
         "mcp" "Manage MCP servers (list, add, remove)" \
         "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
+        "session" "Live session stats (--json)" \
         "search <query>" "Search KB, sessions, and chat" \
         "chat <msg>" "Send a message to the agent (--read to view)" \
         "open [page]" "Open hub dashboard in browser" \
@@ -93,7 +94,7 @@ print(s,t)
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
-    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|search|setup-tls) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|search|session|setup-tls) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
