@@ -2,13 +2,16 @@ import { KEY_MAP } from './screenKeys.js';
 
 export function toNativeCoords(e, imgEl, nativeWidth) {
 	const rect = imgEl.getBoundingClientRect();
-	const effectiveW = nativeWidth || imgEl.naturalWidth;
-	const effectiveH = imgEl.naturalWidth > 0
-		? effectiveW * imgEl.naturalHeight / imgEl.naturalWidth
-		: imgEl.naturalHeight;
-	const scaleX = effectiveW / rect.width;
-	const scaleY = effectiveH / rect.height;
-	return { x: Math.round((e.clientX - rect.left) * scaleX), y: Math.round((e.clientY - rect.top) * scaleY) };
+	const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
+	const effectiveW = nativeWidth || natW;
+	const effectiveH = natW > 0 ? effectiveW * natH / natW : natH;
+	// Account for object-fit:contain letterboxing — visible image may be smaller than element
+	const scale = Math.min(rect.width / natW, rect.height / natH);
+	const visW = natW * scale, visH = natH * scale;
+	const offX = (rect.width - visW) / 2, offY = (rect.height - visH) / 2;
+	const relX = e.clientX - rect.left - offX, relY = e.clientY - rect.top - offY;
+	const x = Math.round(relX * effectiveW / visW), y = Math.round(relY * effectiveH / visH);
+	return { x: Math.max(0, Math.min(x, effectiveW - 1)), y: Math.max(0, Math.min(y, effectiveH - 1)) };
 }
 
 export async function sendScreenAction(body) {

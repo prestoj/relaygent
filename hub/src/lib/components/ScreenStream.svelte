@@ -62,6 +62,7 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
+		e.preventDefault(); // prevent browser image drag capturing mouseup
 		dragState = { bx: e.clientX, by: e.clientY, moved: false };
 	}
 
