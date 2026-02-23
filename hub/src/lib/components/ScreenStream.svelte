@@ -72,7 +72,7 @@
 		cursorPos = { left: e.clientX - rect.left, top: e.clientY - rect.top };
 		if (dragState) {
 			const { x, y } = coords(e);
-			if (Math.abs(x - dragState.startX) > 5 || Math.abs(y - dragState.startY) > 5) dragState.moved = true;
+			if (Math.abs(x - dragState.startX) > 15 || Math.abs(y - dragState.startY) > 15) dragState.moved = true;
 			return;
 		}
 		const now = Date.now();
