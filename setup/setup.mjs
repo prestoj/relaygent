@@ -13,7 +13,8 @@ import { setupVnc } from './setup-vnc.mjs';
 import { setupRemote } from './setup-remote.mjs';
 import { checkPortConflict, printSetupComplete, setupCliSymlink, checkPrerequisites, copyKbTemplates, initKbGit, installDeps } from './setup-utils.mjs';
 
-const REPO_DIR = process.argv[2] || resolve('.');
+const DOCKER = process.argv.includes('--docker');
+const REPO_DIR = process.argv.slice(2).find(a => !a.startsWith('--')) || resolve('.');
 const HOME = homedir();
 const CONFIG_DIR = join(HOME, '.relaygent');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -27,12 +28,15 @@ const ask = (q) => new Promise(r => rl.question(q, r));
 const openBrowser = (url) => { const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'; spawnSync(cmd, [url], { stdio: 'ignore' }); };
 
 async function main() {
-	checkPrerequisites(C);
+	if (DOCKER) console.log(`${C.cyan}Docker mode — non-interactive setup with defaults${C.reset}\n`);
+	if (!DOCKER) checkPrerequisites(C);
 	console.log(`Sets up a persistent AI agent with a web dashboard.\n`);
 
 	const agentName = 'relaygent'; const hubPort = 8080; const notifPort = 8083;
-	await checkPortConflict(hubPort, C);
-	await checkPortConflict(notifPort, C);
+	if (!DOCKER) {
+		await checkPortConflict(hubPort, C);
+		await checkPortConflict(notifPort, C);
+	}
 
 	console.log(`${C.yellow}Setting up directories...${C.reset}`);
 	mkdirSync(CONFIG_DIR, { recursive: true });
@@ -46,35 +50,46 @@ async function main() {
 		paths: { repo: REPO_DIR, kb: KB_DIR, logs: LOGS_DIR, data: DATA_DIR },
 		created: new Date().toISOString(),
 	};
+	if (DOCKER) config.docker = true;
 	writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 	console.log(`  Config: ${CONFIG_FILE}`);
 
 	const { today, kbRoot } = copyKbTemplates(REPO_DIR, KB_DIR, C);
 
-	// Prompt for initial intent so the agent knows what to work on
-	const intentFile = join(KB_DIR, 'INTENT.md');
-	if (readFileSync(intentFile, 'utf-8').includes('Delete everything above')) {
-		console.log(`\n${C.cyan}What should your agent focus on?${C.reset}\n${C.dim}Examples: "Build a blog", "Maintain my server", "Help with code reviews"${C.reset}`);
-		const intent = (await ask(`${C.cyan}Intent (Enter to skip): ${C.reset}`)).trim();
-		if (intent) {
-			writeFileSync(intentFile, `---\ntitle: Intent\ncreated: ${today}\nupdated: ${today}\ntags: [meta, intent]\n---\n\n${intent}\n`);
-			console.log(`  ${C.green}Intent saved${C.reset}`);
-		} else console.log(`  ${C.dim}Skipped — edit INTENT.md later${C.reset}`);
+	// Prompt for initial intent (skip in Docker — user configures later via noVNC)
+	if (!DOCKER) {
+		const intentFile = join(KB_DIR, 'INTENT.md');
+		if (readFileSync(intentFile, 'utf-8').includes('Delete everything above')) {
+			console.log(`\n${C.cyan}What should your agent focus on?${C.reset}\n${C.dim}Examples: "Build a blog", "Maintain my server", "Help with code reviews"${C.reset}`);
+			const intent = (await ask(`${C.cyan}Intent (Enter to skip): ${C.reset}`)).trim();
+			if (intent) {
+				writeFileSync(intentFile, `---\ntitle: Intent\ncreated: ${today}\nupdated: ${today}\ntags: [meta, intent]\n---\n\n${intent}\n`);
+				console.log(`  ${C.green}Intent saved${C.reset}`);
+			} else console.log(`  ${C.dim}Skipped — edit INTENT.md later${C.reset}`);
+		}
 	}
 
 	initKbGit(kbRoot, agentName, REPO_DIR, C);
 	installDeps(REPO_DIR, DATA_DIR, C);
 	setupClaudeMd(HOME, config, REPO_DIR, C);
 	await setupSecrets(REPO_DIR, C);
-	await setupSlackToken(REPO_DIR, HOME, C);
-	await setupHammerspoon(config, REPO_DIR, HOME, C, ask);
+	if (!DOCKER) await setupSlackToken(REPO_DIR, HOME, C);
+	if (!DOCKER) await setupHammerspoon(config, REPO_DIR, HOME, C, ask);
 	setupHooks(config, REPO_DIR, HOME, C);
 	setupCliSymlink(REPO_DIR, HOME, C);
-	optimizeTyping(C);
-	setupVnc(config, C);
-	await setupRemote(config, REPO_DIR, C, ask);
+	if (!DOCKER) optimizeTyping(C);
+	if (!DOCKER) setupVnc(config, C);
+	if (!DOCKER) await setupRemote(config, REPO_DIR, C, ask);
 
-	// Offer auto-restart service installation
+	if (DOCKER) {
+		// Docker: no services, no launch — entrypoint handles everything
+		printSetupComplete(hubPort, C, config);
+		console.log(`${C.green}Docker setup complete.${C.reset} Container entrypoint will start services.`);
+		rl.close();
+		return;
+	}
+
+	// Interactive: offer service installation and launch
 	let servicesInstalled = false;
 	const serviceScript = process.platform === 'darwin'
 		? join(REPO_DIR, 'scripts', 'install-launchagents.sh')

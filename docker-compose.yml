@@ -1,0 +1,29 @@
+services:
+  relaygent:
+    build: .
+    ports:
+      - "8080:8080"  # Hub dashboard + noVNC
+      - "5900:5900"  # VNC direct access
+    volumes:
+      # Persist Claude auth across restarts (one-time login via noVNC)
+      - claude-auth:/home/relaygent/.claude
+      # Persist agent config, secrets, credentials
+      - relaygent-config:/home/relaygent/.relaygent
+      # Persist knowledge base (agent's long-term memory)
+      - relaygent-kb:/home/relaygent/relaygent/knowledge
+      # Persist session data, digests, summaries
+      - relaygent-data:/home/relaygent/relaygent/data
+      # Persist logs for debugging
+      - relaygent-logs:/home/relaygent/relaygent/logs
+    environment:
+      - TZ=America/Los_Angeles
+    restart: unless-stopped
+    # Required for GNOME/Xvfb
+    shm_size: "256m"
+
+volumes:
+  claude-auth:
+  relaygent-config:
+  relaygent-kb:
+  relaygent-data:
+  relaygent-logs:
