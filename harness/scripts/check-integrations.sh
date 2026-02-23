@@ -63,3 +63,27 @@ for name, srv in cfg.get('mcpServers', {}).items():
         ck_fail "MCP servers" "$MCP_OK/$MCP_TOTAL valid — broken:${MCP_BAD}"
     fi
 else ck_warn "MCP config" "~/.claude.json not found — run: relaygent setup"; fi
+
+# --- Fleet peers ---
+CONFIG_FILE="$HOME/.relaygent/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    FLEET_PEERS=$(python3 -c "
+import json
+cfg = json.load(open('$CONFIG_FILE'))
+for p in cfg.get('fleet', []):
+    if p.get('name') and p.get('url'): print(p['name'], p['url'])
+" 2>/dev/null)
+    if [ -n "$FLEET_PEERS" ]; then
+        FLEET_OK=0; FLEET_TOTAL=0; FLEET_DOWN=""
+        while IFS=' ' read -r name url; do
+            [ -z "$name" ] && continue
+            FLEET_TOTAL=$((FLEET_TOTAL + 1))
+            if curl -sk --max-time 3 "$url/api/health" >/dev/null 2>&1; then
+                FLEET_OK=$((FLEET_OK + 1))
+            else FLEET_DOWN="${FLEET_DOWN} $name"; fi
+        done <<< "$FLEET_PEERS"
+        if [ "$FLEET_OK" -eq "$FLEET_TOTAL" ]; then
+            ck_ok "Fleet" "$FLEET_OK/$FLEET_TOTAL peers reachable"
+        else ck_warn "Fleet" "$FLEET_OK/$FLEET_TOTAL reachable — down:${FLEET_DOWN}"; fi
+    fi
+fi
