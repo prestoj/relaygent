@@ -90,7 +90,7 @@ Open `http://localhost:8080` to watch your agent work.
 A SvelteKit web app at `http://localhost:8080` with live updates via WebSocket:
 
 - **Activity Feed** — every tool call in real time, with expandable details and category filters
-- **Screen** — collapsible live view of what the agent sees (via screenshots)
+- **Screen** — interactive remote desktop via noVNC, plus a collapsible screenshot preview on the dashboard
 - **Knowledge Base** — browse, create, edit with live markdown preview, broken link detection
 - **Tasks** — Linear integration showing current work
 - **Sessions** — browsable history grouped by date, with stats, tool breakdown, search, and markdown export
