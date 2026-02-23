@@ -6,7 +6,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { platform } from "node:os";
-import { hsCall, takeScreenshot, readScreenshot, scaleFactor, checkHealth, SCREENSHOT_PATH } from "./hammerspoon.mjs";
+import { hsCall, takeScreenshot, readScreenshot, readRawScreenshot, scaleFactor, checkHealth, SCREENSHOT_PATH } from "./hammerspoon.mjs";
 import { registerBrowserTools } from "./browser-tools.mjs";
 import { registerBrowserQueryTools } from "./browser-query.mjs";
 import { registerBrowserNavTools } from "./browser-nav.mjs";
@@ -47,6 +47,22 @@ server.tool("screenshot", "Capture screenshot. Use find_elements for precise coo
 				{ type: "text", text: `Screenshot: ${sw}x${sh}px (use these coords for clicks)` },
 			] };
 		} catch { return { content: [{ type: "text", text: JSON.stringify(r) }] }; }
+	}
+);
+
+server.tool("zoom", "Zoom in on a screen region at native resolution for better detail. Does NOT return clickable coords — use screenshot for that.",
+	{ x: n.describe("Left X in screenshot coords"), y: n.describe("Top Y in screenshot coords"),
+		w: n.describe("Width to crop"), h: n.describe("Height to crop") },
+	async ({ x, y, w, h }) => {
+		const body = { path: SCREENSHOT_PATH, x: sx(x), y: sx(y), w: sx(w), h: sx(h) };
+		const r = await hsCall("POST", "/screenshot", body);
+		if (r.error) return jsonRes(r);
+		const img = readRawScreenshot();
+		if (!img) return { content: [{ type: "text", text: "(zoom failed — invalid image)" }] };
+		return { content: [
+			{ type: "image", data: img, mimeType: "image/png" },
+			{ type: "text", text: `Zoomed (${x},${y}) ${w}x${h} at native res. Use full screenshot for clickable coords.` },
+		] };
 	}
 );
 

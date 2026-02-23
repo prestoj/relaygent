@@ -75,10 +75,11 @@ local function handleRequest(method, path, headers, body)
             if params.x and params.y and params.w and params.h then
                 local img = scr:snapshot(hs.geometry.rect(params.x, params.y, params.w, params.h))
                 if img and ix and iy then img = annotateWithIndicator(img, ix - params.x, iy - params.y) end
+                local sz = img and img:size() or {w=params.w, h=params.h}
                 if img then img:saveToFile(p) end
                 img = nil; collectgarbage("collect")
                 return json.encode({path=p, width=params.w, height=params.h,
-                    crop={x=params.x,y=params.y,w=params.w,h=params.h}}), 200
+                    pixelWidth=sz.w, pixelHeight=sz.h, crop={x=params.x,y=params.y,w=params.w,h=params.h}}), 200
             end
             local img = scr:snapshot()
             if img and ix and iy then img = annotateWithIndicator(img, ix, iy) end
