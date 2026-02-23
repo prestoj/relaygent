@@ -148,7 +148,7 @@ _check_svc "Notifications" "$NOTIF_PORT" "notifications"
 if [[ "$(uname)" == "Darwin" ]] && [[ -d "$HOME/.hammerspoon" ]]; then
     echo -e "\n${CYAN}Hammerspoon config:${NC}"
     _HS_OK=1
-    for f in init.lua input_handlers.lua ax_handler.lua ax_press.lua held_input.lua window_manage.lua; do
+    for f in "$REPO_DIR"/hammerspoon/*.lua; do f="$(basename "$f")"
         if [[ ! -f "$HOME/.hammerspoon/$f" ]] && [[ -f "$REPO_DIR/hammerspoon/$f" ]]; then
             do_fix "Copy $f to ~/.hammerspoon/" "cp '$REPO_DIR/hammerspoon/$f' '$HOME/.hammerspoon/$f'"
             _HS_OK=0
