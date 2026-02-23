@@ -17,9 +17,10 @@ from jsonl_images import strip_all_images
 from harness_env import find_claude_binary
 from process import ClaudeProcess
 from relay_loop import Action, LoopState, handle_error
-from relay_utils import (acquire_lock, cleanup_context_file, cleanup_pid_file,
-                         commit_kb, notify_crash, notify_lifecycle, rotate_log,
-                         startup_init)
+from relay_utils import (acquire_lock, clear_crash_context, cleanup_context_file,
+                         cleanup_pid_file, commit_kb, notify_crash,
+                         notify_lifecycle, rotate_log, startup_init,
+                         write_crash_context)
 from session import SleepManager
 from wake_cycle import run_wake_cycle
 
@@ -101,10 +102,13 @@ class RelayRunner:
             err = handle_error(result, state)
             if err is not None:
                 self._apply_error(err, state)
+                if result.exit_code != 0:
+                    write_crash_context(result.exit_code, state.crash_count, state.session_id)
                 if err.action == Action.CONTINUE:
                     continue
                 break
 
+            clear_crash_context()
             if not should_sleep(self.claude.session_id, self.claude.workspace):
                 log("Session incomplete (no stdout), resuming...")
                 state.session_established = True

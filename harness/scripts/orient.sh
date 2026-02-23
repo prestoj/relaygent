@@ -41,6 +41,20 @@ CU_NAME="Hammerspoon"
 [ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
 check_service "$CU_NAME" "http://127.0.0.1:${HS_PORT}/health"
 
+# Crash context from previous session
+CRASH_FILE="$DATA_DIR/crash-context.json"
+if [ -f "$CRASH_FILE" ]; then
+    python3 - "$CRASH_FILE" <<'PYEOF' 2>/dev/null
+import json, sys
+d = json.load(open(sys.argv[1]))
+ts = d.get("timestamp", "?")[:19].replace("T", " ") + " UTC"
+code, count = d.get("exit_code", "?"), d.get("crash_count", 0)
+print(f'\n\033[1;31m⚠ Previous session crashed\033[0m (exit {code}, {count} crash(es), {ts})')
+for l in d.get("last_log_lines", [])[-3:]:
+    print(f'  \033[0;31m{l[:80]}\033[0m')
+PYEOF
+fi
+
 # Unread chat messages
 UNREAD=$(curl -s --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/chat?mode=unread" 2>/dev/null)
 UNREAD_COUNT=$(echo "$UNREAD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo 0)
