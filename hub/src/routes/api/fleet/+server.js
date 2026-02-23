@@ -43,10 +43,39 @@ async function queryPeer(peer) {
 	return { ...peer, health, session };
 }
 
+function writeConfig(cfg) {
+	fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2) + '\n');
+}
+
 /** GET /api/fleet — query all fleet peers for health + live session */
 export async function GET() {
 	const cfg = readConfig();
 	const fleet = buildFleetList(cfg);
 	const results = await Promise.all(fleet.map(queryPeer));
 	return json(results);
+}
+
+/** POST /api/fleet — add a fleet peer { name, url } */
+export async function POST({ request }) {
+	const { name, url } = await request.json();
+	if (!name || !url) return json({ error: 'name and url required' }, { status: 400 });
+	const cfg = readConfig();
+	if (!cfg.fleet) cfg.fleet = [];
+	if (cfg.fleet.some(p => p.name === name)) return json({ error: 'peer already exists' }, { status: 409 });
+	cfg.fleet.push({ name, url: url.replace(/\/+$/, '') });
+	writeConfig(cfg);
+	return json({ ok: true, fleet: cfg.fleet });
+}
+
+/** DELETE /api/fleet — remove a fleet peer { name } */
+export async function DELETE({ request }) {
+	const { name } = await request.json();
+	if (!name) return json({ error: 'name required' }, { status: 400 });
+	const cfg = readConfig();
+	if (!cfg.fleet) return json({ error: 'no peers configured' }, { status: 404 });
+	const before = cfg.fleet.length;
+	cfg.fleet = cfg.fleet.filter(p => p.name !== name);
+	if (cfg.fleet.length === before) return json({ error: 'peer not found' }, { status: 404 });
+	writeConfig(cfg);
+	return json({ ok: true, fleet: cfg.fleet });
 }
