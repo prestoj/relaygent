@@ -7,10 +7,15 @@
 	let connected = $state(false);
 	let passwordNeeded = $state(false);
 	let password = $state('');
+	let configPw = null;
 
 	onMount(async () => {
 		try {
-			const mod = await new Function('return import("/novnc/rfb.js")')();
+			const [mod, cfg] = await Promise.all([
+				new Function('return import("/novnc/rfb.js")')(),
+				fetch('/api/vnc').then(r => r.json()).catch(() => ({}))
+			]);
+			configPw = cfg.password || new URLSearchParams(location.search).get('pw');
 			const RFB = mod.default;
 			const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
 			const url = `${proto}//${location.host}/ws/vnc`;
@@ -24,8 +29,7 @@
 				rfb = null;
 			});
 			rfb.addEventListener('credentialsrequired', () => {
-				const qp = new URLSearchParams(location.search).get('pw');
-				if (qp) { rfb.sendCredentials({ password: qp }); status = 'Authenticating...'; return; }
+				if (configPw) { rfb.sendCredentials({ password: configPw }); status = 'Authenticating...'; return; }
 				passwordNeeded = true;
 				status = 'VNC password required';
 			});
