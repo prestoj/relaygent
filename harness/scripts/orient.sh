@@ -37,8 +37,7 @@ check_service() {
 }
 check_service "Notifications" "http://127.0.0.1:${NOTIF_PORT}/health"
 check_service "Hub" "http://127.0.0.1:${HUB_PORT}/api/health"
-CU_NAME="Hammerspoon"
-[ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
+CU_NAME="Hammerspoon"; [ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
 check_service "$CU_NAME" "http://127.0.0.1:${HS_PORT}/health"
 
 # Crash context from previous session
@@ -106,9 +105,7 @@ if [ -f "$STATUS_FILE" ]; then
     RELAY_INFO="$RELAY_ST"; [ -n "$CTX_PCT" ] && RELAY_INFO="$RELAY_INFO, context ${CTX_PCT}%"
     echo -e "\n\033[0;34mRelay:\033[0m $RELAY_INFO"
 fi
-DISK_USED=$(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')
-echo -e "\033[0;34mDisk:\033[0m ${DISK_USED:-unknown}"
-
+echo -e "\033[0;34mDisk:\033[0m $(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')"
 # Last session summary
 if [ -f "$DATA_DIR/last-session-summary.json" ]; then
     python3 - "$DATA_DIR/last-session-summary.json" <<'PYEOF' 2>/dev/null
@@ -170,7 +167,6 @@ PYEOF
 fi
 
 # Due tasks
-TASKS_FILE="$KB_DIR/tasks.md"
 if [ -f "$TASKS_FILE" ]; then
     DUE_TASKS=$(python3 "$SCRIPT_DIR/due-tasks.py" "$TASKS_FILE" 2>/dev/null)
     [ -n "$DUE_TASKS" ] && echo "$DUE_TASKS"
@@ -201,5 +197,4 @@ if [ -f "$HANDOFF_FILE" ]; then
     fi
 fi
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

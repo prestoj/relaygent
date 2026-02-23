@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open chat version help"
+_relaygent_commands="setup start stop restart status stats history test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -35,6 +35,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'install-services:Set up auto-restart services'
             'set-password:Set/remove hub auth (--remove)'
             'mcp:Manage MCP servers (list, add, remove, test)'
+            'search:Search KB, sessions, and chat'
             'chat:Send a message to the agent (--read to view)'
             'open:Open hub dashboard in browser'
             'archive-linear:Archive old Linear issues'
@@ -54,6 +55,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
+                search) compadd -- --type --json ;;
                 chat) compadd -- --read ;;
                 open) compadd -- intent kb tasks sessions logs files search notifications settings help ;;
             esac
@@ -84,6 +86,8 @@ else
                 COMPREPLY=($(compgen -W "--dry-run --days" -- "$cur")) ;;
             set-password)
                 COMPREPLY=($(compgen -W "--remove" -- "$cur")) ;;
+            search)
+                COMPREPLY=($(compgen -W "--type --json" -- "$cur")) ;;
             chat)
                 COMPREPLY=($(compgen -W "--read" -- "$cur")) ;;
             open)
