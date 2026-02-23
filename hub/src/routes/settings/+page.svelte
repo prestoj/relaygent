@@ -1,6 +1,5 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import FleetSettings from '$lib/components/FleetSettings.svelte';
 	let { data } = $props();
 	let services = $state(data.services);
 	let restarting = $state(false);
@@ -118,8 +117,6 @@
 	{/if}
 	<p class="hint">Manage with <code>relaygent mcp add|remove</code></p>
 </section>
-
-<FleetSettings />
 
 <section class="card">
 	<h2>Configuration</h2>
