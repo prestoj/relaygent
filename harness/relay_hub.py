@@ -27,9 +27,33 @@ def _hub_uses_launchagent() -> bool:
     return sys.platform == "darwin" and LAUNCHAGENT_PLIST.exists()
 
 
+def _load_config() -> dict:
+    """Load config values with sensible defaults."""
+    config_file = Path.home() / ".relaygent" / "config.json"
+    defaults = {
+        "hub_port": "8080",
+        "kb_dir": str(REPO_DIR / "knowledge" / "topics"),
+        "data_dir": str(REPO_DIR / "data"),
+        "notifications_port": "8083",
+    }
+    if config_file.exists():
+        try:
+            cfg = json.loads(config_file.read_text())
+            defaults["hub_port"] = str(cfg.get("hub", {}).get("port", 8080))
+            defaults["kb_dir"] = cfg.get("paths", {}).get("kb", defaults["kb_dir"])
+            defaults["data_dir"] = cfg.get("paths", {}).get("data", defaults["data_dir"])
+            defaults["notifications_port"] = str(
+                cfg.get("services", {}).get("notifications", {}).get("port", 8083))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return defaults
+
+
 def check_and_rebuild_hub() -> None:
     """Rebuild hub if build is stale (git HEAD differs from last built commit)."""
-    build_commit_file = REPO_DIR / "data" / "hub-build-commit"
+    conf = _load_config()
+    data_dir = conf["data_dir"]
+    build_commit_file = Path(data_dir) / "hub-build-commit"
     try:
         current = subprocess.run(
             ["git", "-C", str(REPO_DIR), "rev-parse", "HEAD"],
@@ -46,21 +70,10 @@ def check_and_rebuild_hub() -> None:
         return
 
     log("Hub build is stale — rebuilding...")
-    config_file = Path.home() / ".relaygent" / "config.json"
-    hub_port = "8080"
-    kb_dir = str(REPO_DIR / "knowledge" / "topics")
-    data_dir = str(Path.home() / "data")
-    notifications_port = "8083"
+    hub_port = conf["hub_port"]
+    kb_dir = conf["kb_dir"]
+    notifications_port = conf["notifications_port"]
     pid_dir = Path.home() / ".relaygent"
-    if config_file.exists():
-        try:
-            cfg = json.loads(config_file.read_text())
-            hub_port = str(cfg.get("hub", {}).get("port", 8080))
-            kb_dir = cfg.get("paths", {}).get("kb", kb_dir)
-            data_dir = cfg.get("paths", {}).get("data", data_dir)
-            notifications_port = str(cfg.get("services", {}).get("notifications", {}).get("port", 8083))
-        except (json.JSONDecodeError, OSError):
-            pass
 
     uses_launchagent = _hub_uses_launchagent()
 
@@ -92,16 +105,17 @@ def check_and_rebuild_hub() -> None:
     )
     if result.returncode != 0:
         log(f"Hub rebuild failed: {result.stderr.decode(errors='replace').strip()[-500:]}")
-        # Restart hub even if build failed so it keeps serving old build
-        if uses_launchagent:
-            _launchctl("start", LAUNCHAGENT_LABEL)
-        return
+    else:
+        build_commit_file.parent.mkdir(parents=True, exist_ok=True)
+        build_commit_file.write_text(current)
+        log("Hub rebuilt successfully")
 
-    build_commit_file.parent.mkdir(parents=True, exist_ok=True)
-    build_commit_file.write_text(current)
-    log("Hub rebuilt successfully")
+    # Restart hub (even on build failure — serve old build rather than nothing)
+    _start_hub(uses_launchagent, hub_port, kb_dir, data_dir, notifications_port, pid_dir)
 
-    # Restart hub
+
+def _start_hub(uses_launchagent, hub_port, kb_dir, data_dir, notifications_port, pid_dir):
+    """Start (or restart) the hub process."""
     if uses_launchagent:
         log("Starting hub via launchctl...")
         _launchctl("start", LAUNCHAGENT_LABEL)
@@ -113,17 +127,24 @@ def check_and_rebuild_hub() -> None:
         env = os.environ.copy()
         env.update({
             "PORT": hub_port,
-            "RELAY_STATUS_FILE": str(REPO_DIR / "data" / "relay-status.json"),
+            "RELAY_STATUS_FILE": str(Path(data_dir) / "relay-status.json"),
             "RELAYGENT_KB_DIR": kb_dir,
             "RELAYGENT_DATA_DIR": data_dir,
             "RELAYGENT_NOTIFICATIONS_PORT": notifications_port,
         })
         hub_pid_file = pid_dir / "hub.pid"
-        proc = subprocess.Popen(
-            ["node", str(hub_dir / "ws-server.mjs")],
-            stdout=open(log_dir / "relaygent-hub.log", "a"),
-            stderr=subprocess.STDOUT,
-            env=env,
-        )
+        log_file = open(log_dir / "relaygent-hub.log", "a")
+        try:
+            proc = subprocess.Popen(
+                ["node", str(REPO_DIR / "hub" / "ws-server.mjs")],
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                env=env,
+            )
+        except OSError as e:
+            log(f"Failed to start hub: {e}")
+            log_file.close()
+            return
+        log_file.close()  # Safe to close in parent after fork
         hub_pid_file.write_text(f"{proc.pid}\n")
         log(f"Hub restarted on :{hub_port} (PID {proc.pid})")
