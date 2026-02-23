@@ -98,7 +98,7 @@ if [ "$LAUNCHAGENTS_REFRESHED" = false ]; then
     echo -e "  Hub: ${GREEN}restarted on :$HUB_PORT${NC}"
 
     echo -e "  Restarting daemons..."
-    for pat in "notifications/server.py" "slack-socket-listener" "email-poller" "notification-poller"; do
+    for pat in "notifications/server.py" "slack-socket-listener" "email-poller" "notification-poller" "linux-server.py"; do
         pkill -f "$pat" 2>/dev/null || true
     done
     sleep 2
@@ -114,6 +114,10 @@ if [ "$LAUNCHAGENTS_REFRESHED" = false ]; then
     if [ -f "$HOME/.relaygent/gmail/credentials.json" ]; then
         HUB_PORT="$HUB_PORT" node "$REPO_DIR/email/email-poller.mjs" >> "$REPO_DIR/logs/relaygent-email-poller.log" 2>&1 &
         echo $! > "$PID_DIR/email-poller.pid"
+    fi
+    if [ "$(uname)" = "Linux" ] && [ -n "${DISPLAY:-}" ] && [ -f "$REPO_DIR/computer-use/linux-server.py" ]; then
+        DISPLAY="${DISPLAY:-:0}" python3 "$REPO_DIR/computer-use/linux-server.py" >> "$REPO_DIR/logs/relaygent-computer-use.log" 2>&1 &
+        echo $! > "$PID_DIR/computer-use.pid"
     fi
     echo -e "  Daemons: ${GREEN}restarted${NC}"
 fi
