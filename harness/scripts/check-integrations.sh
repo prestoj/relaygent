@@ -34,7 +34,7 @@ if [ -f "$LINEAR_KEY" ] && [ -s "$LINEAR_KEY" ]; then ck_ok "Linear" "API key co
 else ck_warn "Linear" "no API key (optional — needed for issue tracking)"; fi
 
 # --- CLAUDE.md ---
-if [ -f "$REPO_DIR/CLAUDE.md" ]; then ck_ok "CLAUDE.md" "project instructions present"
+if [ -f "$HOME/CLAUDE.md" ] || [ -f "$REPO_DIR/CLAUDE.md" ]; then ck_ok "CLAUDE.md" "project instructions present"
 else ck_warn "CLAUDE.md" "missing — run: ./setup.sh to generate"; fi
 
 # --- MCP servers ---
