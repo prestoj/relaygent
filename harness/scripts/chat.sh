@@ -4,7 +4,7 @@ set -euo pipefail
 # Send/read chat messages via hub API
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
-load_config_soft
+load_config
 
 PORT="${HUB_PORT:-8080}"
 SCHEME="${HUB_SCHEME:-http}"
