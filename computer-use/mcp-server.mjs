@@ -38,7 +38,7 @@ server.tool("screenshot", "Capture screenshot. Use find_elements for precise coo
 		const r = await hsCall("POST", "/screenshot", body);
 		if (r.error) return { content: [{ type: "text", text: JSON.stringify(r) }] };
 		try {
-			const img = readScreenshot(r.width);
+			const img = readScreenshot(r.width, r.pixelWidth);
 			if (!img) return { content: [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }] };
 			const sf = scaleFactor();
 			const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);

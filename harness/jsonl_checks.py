@@ -121,7 +121,8 @@ def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) 
             has_tool = any(isinstance(x, dict) and x.get("type") == "tool_use" for x in c)
             text = "".join(x.get("text", "") for x in c if isinstance(x, dict) and x.get("type") == "text")
             return not has_tool and len(text.strip()) < max_chars
-    except Exception: pass
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        pass
     return False
 
 

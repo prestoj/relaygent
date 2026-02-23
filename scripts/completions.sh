@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats history test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -20,6 +20,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'restart:Restart all services'
             'status:Show running services'
             'stats:Session history and metrics'
+            'history:Recent sessions timeline (-n NUM, --json)'
             'test:Run test suite (harness, hub, notifications, ...)'
             'logs:View logs (-f follow, -n lines, --list)'
             'orient:Quick system status snapshot'
@@ -50,6 +51,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 mcp) _describe 'mcp command' mcp_cmds ;;
                 test) compadd -- harness hub notifications email slack setup secrets computer-use ;;
                 logs) compadd -- --list -f -n ;;
+                history) compadd -- -n --json ;;
                 doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
@@ -76,6 +78,8 @@ else
                 COMPREPLY=($(compgen -W "$_relaygent_test_suites" -- "$cur")) ;;
             logs)
                 COMPREPLY=($(compgen -W "$_relaygent_logs_flags" -- "$cur")) ;;
+            history)
+                COMPREPLY=($(compgen -W "-n --json" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             cleanup|clean-logs)
