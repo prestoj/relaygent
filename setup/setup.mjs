@@ -72,6 +72,8 @@ async function main() {
 	initKbGit(kbRoot, agentName, REPO_DIR, C);
 	installDeps(REPO_DIR, DATA_DIR, C);
 	setupClaudeMd(HOME, config, REPO_DIR, C);
+	console.log(`${C.yellow}Discovering machine...${C.reset}`);
+	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'discover.sh')], { stdio: 'inherit' });
 	await setupSecrets(REPO_DIR, C);
 	if (!DOCKER) await setupSlackToken(REPO_DIR, HOME, C);
 	if (!DOCKER) await setupHammerspoon(config, REPO_DIR, HOME, C, ask);

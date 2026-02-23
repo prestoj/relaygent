@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history session fleet test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats history session fleet test logs orient check doctor health update cleanup clean-logs changelog digest discover install-services set-password mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
