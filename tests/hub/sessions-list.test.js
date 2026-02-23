@@ -84,3 +84,9 @@ test('limit is capped at 100', async () => {
 	const body = JSON.parse(await res.text());
 	assert.equal(body.limit, 100);
 });
+
+test('stats is null when no summary file exists', async () => {
+	const res = await GET(makeUrl());
+	const { sessions } = JSON.parse(await res.text());
+	for (const s of sessions) assert.equal(s.stats, null);
+});

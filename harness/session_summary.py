@@ -16,6 +16,7 @@ from config import CONTEXT_WINDOW, REPO_DIR, log
 from jsonl_checks import find_jsonl_path
 
 SUMMARY_FILE = REPO_DIR / "data" / "last-session-summary.json"
+SUMMARIES_DIR = REPO_DIR / "data" / "session-summaries"
 
 
 def generate_summary(session_id: str, workspace: Path) -> dict | None:
@@ -94,12 +95,15 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
 
 
 def save_summary(session_id: str, workspace: Path) -> None:
-    """Generate and save session summary to last-session-summary.json."""
+    """Generate and save session summary to last-session-summary.json + per-session cache."""
     summary = generate_summary(session_id, workspace)
     if not summary:
         return
+    data = json.dumps(summary, indent=2)
     try:
-        SUMMARY_FILE.write_text(json.dumps(summary, indent=2))
+        SUMMARY_FILE.write_text(data)
+        SUMMARIES_DIR.mkdir(parents=True, exist_ok=True)
+        (SUMMARIES_DIR / f"{session_id}.json").write_text(data)
         log(f"Session summary: {summary['turns']} turns, "
             f"{summary['context_pct']:.0f}% context")
     except Exception as e:

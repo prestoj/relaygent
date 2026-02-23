@@ -160,15 +160,30 @@ class TestSaveSummary:
     def test_saves_to_file(self, tmp_jsonl, tmp_path):
         sid, ws, _, write = tmp_jsonl
         write([_assistant_entry([("Read", {"file_path": "/x.py"})])])
-        with patch("session_summary.SUMMARY_FILE", tmp_path / "summary.json"):
+        with patch("session_summary.SUMMARY_FILE", tmp_path / "summary.json"), \
+             patch("session_summary.SUMMARIES_DIR", tmp_path / "summaries"):
             save_summary(sid, ws)
-        out = tmp_path / "summary.json"
-        assert out.exists()
-        data = json.loads(out.read_text())
+        assert (tmp_path / "summary.json").exists()
+        data = json.loads((tmp_path / "summary.json").read_text())
         assert data["turns"] == 1
+
+    def test_saves_per_session(self, tmp_jsonl, tmp_path):
+        sid, ws, _, write = tmp_jsonl
+        write([_assistant_entry([("Bash", {"command": "git commit -m 'test'"})])])
+        sdir = tmp_path / "summaries"
+        with patch("session_summary.SUMMARY_FILE", tmp_path / "summary.json"), \
+             patch("session_summary.SUMMARIES_DIR", sdir):
+            save_summary(sid, ws)
+        per_session = sdir / f"{sid}.json"
+        assert per_session.exists()
+        data = json.loads(per_session.read_text())
+        assert data["session_id"] == sid
+        assert data["git_commits"] == 1
 
     def test_no_jsonl_no_file(self, tmp_jsonl, tmp_path):
         _, ws, _, _ = tmp_jsonl
-        with patch("session_summary.SUMMARY_FILE", tmp_path / "summary.json"):
+        with patch("session_summary.SUMMARY_FILE", tmp_path / "summary.json"), \
+             patch("session_summary.SUMMARIES_DIR", tmp_path / "summaries"):
             save_summary("nonexistent", ws)
         assert not (tmp_path / "summary.json").exists()
+        assert not (tmp_path / "summaries").exists()
