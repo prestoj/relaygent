@@ -149,4 +149,22 @@ if [ "$STASHED" = true ]; then
     fi
 fi
 
-echo -e "\n  ${GREEN}Done.${NC}"
+# Post-update health verification
+echo -e "\n  Verifying services..."
+sleep 3
+UPDATE_HEALTHY=true
+for svc_check in "Hub:$HUB_PORT:/api/health" "Notifications:$NOTIF_PORT:/health"; do
+    IFS=: read -r svc_name svc_port svc_path <<< "$svc_check"
+    if curl -sf --max-time 3 "http://127.0.0.1:${svc_port}${svc_path}" >/dev/null 2>&1; then
+        echo -e "  $svc_name: ${GREEN}healthy${NC}"
+    else
+        echo -e "  $svc_name: ${RED}not responding — run: relaygent health${NC}"
+        UPDATE_HEALTHY=false
+    fi
+done
+if [ "$UPDATE_HEALTHY" = true ]; then
+    echo -e "\n  ${GREEN}Update complete — all services healthy.${NC}"
+else
+    echo -e "\n  ${YELLOW}Update complete — some services may still be starting.${NC}"
+    echo -e "  ${YELLOW}Run 'relaygent health' to check, or 'relaygent doctor' to fix.${NC}"
+fi
