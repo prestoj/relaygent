@@ -108,7 +108,9 @@ else ck_warn "Relay" "not running — start with: relaygent start"; fi
 
 # --- Service installation ---
 echo ""
-if [ "$(uname)" = "Darwin" ]; then
+if is_docker 2>/dev/null; then
+    ck_ok "Services" "Docker mode (entrypoint-managed)"
+elif [ "$(uname)" = "Darwin" ]; then
     LA_DIR="$HOME/Library/LaunchAgents"
     if [ -f "$LA_DIR/com.relaygent.hub.plist" ]; then
         INSTALLED=$(ls "$LA_DIR"/com.relaygent.*.plist 2>/dev/null | wc -l | tr -d ' ')

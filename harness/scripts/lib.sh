@@ -9,6 +9,8 @@ PID_DIR="$HOME/.relaygent"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
+is_docker() { [[ -f /.dockerenv ]] || grep -q '"docker".*true' "$CONFIG_FILE" 2>/dev/null; }
+
 load_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "${RED}Not set up yet. Run: ./setup.sh${NC}"; exit 1
@@ -78,6 +80,7 @@ ensure_venv() {
 
 is_platform_managed() {
     local svc=$1
+    is_docker 2>/dev/null && return 1
     if [ "$(uname)" = "Darwin" ]; then
         launchctl list "com.relaygent.${svc}" &>/dev/null && return 0
     else
@@ -88,6 +91,7 @@ is_platform_managed() {
 
 platform_start() {
     local name=$1 svc=$2
+    if is_docker 2>/dev/null; then echo -e "  $name: ${YELLOW}Docker — start via entrypoint${NC}"; return; fi
     if [ "$(uname)" = "Darwin" ]; then
         local plist="$HOME/Library/LaunchAgents/com.relaygent.${svc}.plist"
         launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
@@ -132,6 +136,8 @@ check_process() {
         echo -e "  $n: ${GREEN}running${NC} (pid $(cat "$p"))"
     elif [[ -n "$port" ]] && port_pids "$port" &>/dev/null; then
         echo -e "  $n: ${GREEN}running${NC} (port $port)"
+    elif is_docker 2>/dev/null; then
+        echo -e "  $n: ${RED}stopped${NC} (Docker — restart container)"
     elif [ "$(uname)" = "Darwin" ]; then
         local la; la=$(launchctl list 2>/dev/null | grep "	com\.relaygent\.${svc}$" || true)
         if [ -n "$la" ] && [ "$(echo "$la" | awk '{print $1}')" != "-" ]; then
