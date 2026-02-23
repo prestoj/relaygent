@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats test logs orient check health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open chat version help"
+_relaygent_commands="setup start stop restart status stats test logs orient check doctor health update cleanup clean-logs changelog digest install-services set-password mcp archive-linear open chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -24,6 +24,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'logs:View logs (-f follow, -n lines, --list)'
             'orient:Quick system status snapshot'
             'check:Diagnose configuration'
+            'doctor:Auto-fix common issues (--dry-run)'
             'health:Ping all services'
             'update:Pull latest, rebuild, restart'
             'changelog:Show recent merged PRs and commits'
@@ -48,6 +49,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 mcp) _describe 'mcp command' mcp_cmds ;;
                 test) compadd -- harness hub notifications email slack setup secrets computer-use ;;
                 logs) compadd -- --list -f -n ;;
+                doctor) compadd -- --dry-run ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
                 chat) compadd -- --read ;;
@@ -72,6 +74,8 @@ else
                 COMPREPLY=($(compgen -W "$_relaygent_test_suites" -- "$cur")) ;;
             logs)
                 COMPREPLY=($(compgen -W "$_relaygent_logs_flags" -- "$cur")) ;;
+            doctor)
+                COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             cleanup|clean-logs)
                 COMPREPLY=($(compgen -W "--dry-run --days" -- "$cur")) ;;
             set-password)
