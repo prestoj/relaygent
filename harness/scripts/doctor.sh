@@ -21,7 +21,7 @@ dry_msg() { echo -e "  ${CYAN}Would fix:${NC} $1"; FIXED=$((FIXED+1)); }
 do_fix() { [[ "$DRY_RUN" == 1 ]] && dry_msg "$1" || { eval "$2" && fix_msg "$1" || skip_msg "$1 (command failed)"; }; }
 
 # Load config (soft — may not exist yet)
-HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""; DATA_DIR="$REPO_DIR/data"
+HUB_PORT=8080; NOTIF_PORT=8083; HS_PORT=8097; KB_DIR=""; DATA_DIR="$REPO_DIR/data"; CURL_K=""
 load_config_soft 2>/dev/null || true
 
 # --- 1. Git hooks ---
