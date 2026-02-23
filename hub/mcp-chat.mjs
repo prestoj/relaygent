@@ -3,15 +3,26 @@
  * Hub Chat MCP Server — lets Claude interact with the hub chat.
  * Talks to the hub's HTTP API on the configured port.
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 const NOTIF_CACHE = "/tmp/relaygent-notifications-cache.json";
 
+let protocol = "http";
+try {
+	const cfg = JSON.parse(readFileSync(join(homedir(), ".relaygent", "config.json"), "utf8"));
+	if (cfg.hub?.tls?.cert) {
+		protocol = "https";
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+	}
+} catch {}
+
 const HUB_PORT = process.env.HUB_PORT || "8080";
-const API = `http://127.0.0.1:${HUB_PORT}/api/chat`;
+const API = `${protocol}://127.0.0.1:${HUB_PORT}/api/chat`;
 
 async function api(path, method = "GET", body = null) {
 	const opts = { method, headers: { "Content-Type": "application/json" } };

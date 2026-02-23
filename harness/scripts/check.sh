@@ -51,7 +51,7 @@ fi
 
 # --- Services ---
 echo ""
-if curl -sf --max-time 2 "http://127.0.0.1:${HUB_PORT}/api/health" >/dev/null 2>&1; then
+if curl -sf $CURL_K --max-time 2 "${HUB_SCHEME}://127.0.0.1:${HUB_PORT}/api/health" >/dev/null 2>&1; then
     ck_ok "Hub" "running on :$HUB_PORT"
 else ck_fail "Hub" "not responding on :$HUB_PORT — run: relaygent start"; fi
 

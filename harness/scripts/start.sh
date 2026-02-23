@@ -88,7 +88,7 @@ else
         RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_DATA_DIR="$DATA_DIR" \
         RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT" node "$REPO_DIR/hub/ws-server.mjs"
 fi
-verify_service "Hub" "http://localhost:$HUB_PORT/" 5 || true
+verify_service "Hub" "${HUB_SCHEME}://localhost:$HUB_PORT/" 5 || true
 
 # Notifications
 if is_platform_managed notifications; then
@@ -128,9 +128,9 @@ else
 fi
 
 _elapsed=$(($(date +%s) - _T0))
-echo -e "\n  Dashboard: ${CYAN}http://localhost:$HUB_PORT/${NC}"
+echo -e "\n  Dashboard: ${CYAN}${HUB_SCHEME}://localhost:$HUB_PORT/${NC}"
 echo -e "  Logs:      $REPO_DIR/logs/"
 echo -e "  Ready in ${_elapsed}s"
 echo -e "  ${CYAN}Troubleshoot: relaygent check${NC}\n"
-{ sleep 2 && { [ "$(uname)" = "Darwin" ] && open "http://localhost:$HUB_PORT/" 2>/dev/null || \
-    { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "http://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &
+{ sleep 2 && { [ "$(uname)" = "Darwin" ] && open "${HUB_SCHEME}://localhost:$HUB_PORT/" 2>/dev/null || \
+    { command -v xdg-open &>/dev/null && [ -n "${DISPLAY:-}" ] && xdg-open "${HUB_SCHEME}://localhost:$HUB_PORT/" 2>/dev/null; }; }; } &

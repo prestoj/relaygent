@@ -18,14 +18,16 @@ load_config() {
 import json,shlex,sys
 try:
  c=json.load(open('$CONFIG_FILE'));s=c['services']
+ tls='https' if c.get('hub',{}).get('tls',{}).get('cert') else 'http'
  for k,v in[('HUB_PORT',c['hub']['port']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
-  ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb'])]:print(f'{k}={shlex.quote(str(v))}')
+  ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb']),('HUB_SCHEME',tls)]:print(f'{k}={shlex.quote(str(v))}')
 except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
 ")" || { echo -e "${RED}Failed to parse $CONFIG_FILE — see error above. Re-run ./setup.sh${NC}"; exit 1; }
     eval "$config_vars"
     export RELAYGENT_DATA_DIR="$DATA_DIR" RELAYGENT_KB_DIR="$KB_DIR" RELAYGENT_HUB_PORT="$HUB_PORT"
     export HAMMERSPOON_PORT="$HS_PORT" RELAYGENT_NOTIFICATIONS_PORT="$NOTIF_PORT"
+    [[ "${HUB_SCHEME:-http}" == "https" ]] && CURL_K="-k" || CURL_K=""
 }
 
 port_pids() {
@@ -149,7 +151,7 @@ verify_service() {
     local name=$1 url=$2 retries=${3:-5}
     for i in $(seq 1 "$retries"); do
         sleep 1
-        if curl -sf --max-time 2 "$url" >/dev/null 2>&1; then return 0; fi
+        if curl -sf $CURL_K --max-time 2 "$url" >/dev/null 2>&1; then return 0; fi
     done
     echo -e "    ${YELLOW}Warning: $name started but not responding after ${retries}s${NC}"
     return 1

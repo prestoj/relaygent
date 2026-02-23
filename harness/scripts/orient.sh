@@ -29,14 +29,14 @@ echo -e "\n\033[0;34mTime:\033[0m $(date '+%Y-%m-%d %H:%M %Z')"
 echo -e "\n\033[0;34mServices:\033[0m"
 check_service() {
     local name=$1 url=$2
-    if curl -s --max-time 2 "$url" >/dev/null 2>&1; then
+    if curl -s $CURL_K --max-time 2 "$url" >/dev/null 2>&1; then
         echo -e "  ✓ $name: \033[0;32mrunning\033[0m"
     else
         echo -e "  ✗ $name: \033[0;31mdown\033[0m"
     fi
 }
 check_service "Notifications" "http://127.0.0.1:${NOTIF_PORT}/health"
-check_service "Hub" "http://127.0.0.1:${HUB_PORT}/api/health"
+check_service "Hub" "${HUB_SCHEME}://127.0.0.1:${HUB_PORT}/api/health"
 CU_NAME="Hammerspoon"; [ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
 check_service "$CU_NAME" "http://127.0.0.1:${HS_PORT}/health"
 
