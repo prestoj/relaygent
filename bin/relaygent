@@ -99,6 +99,8 @@ print(s,t)
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
+        source "$SCRIPT_DIR/harness/scripts/lib.sh"
+        if is_docker 2>/dev/null; then echo "Docker mode — services managed by entrypoint, no init system needed."; exit 0; fi
         [ "$(uname)" = "Darwin" ] && bash "$SCRIPT_DIR/scripts/install-launchagents.sh" "${@:2}" \
             || bash "$SCRIPT_DIR/scripts/install-systemd-services.sh" "${@:2}" ;;
     open)
