@@ -69,8 +69,11 @@ test('returns recent tools', async () => {
 	const data = await GET().json();
 	assert.ok(Array.isArray(data.recentTools));
 	assert.ok(data.recentTools.length > 0);
-	const names = data.recentTools.map(t => t.name);
-	assert.ok(names.includes('Edit') || names.includes('Bash') || names.includes('Read'));
+	// Should only contain tool entries (no text blocks)
+	for (const t of data.recentTools) {
+		assert.ok(t.name, 'each recent tool has a name');
+		assert.ok(!t.type, 'type field not included');
+	}
 });
 
 test('returns sessionId from relay status', async () => {

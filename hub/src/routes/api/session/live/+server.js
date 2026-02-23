@@ -76,8 +76,8 @@ export function GET() {
 		if (!stats) return json({ active: false, status: relay.status || 'off' });
 
 		const activity = parseSession(sessionFile, 30);
-		const recent = activity.slice(-5).reverse().map(a => ({
-			type: a.type, name: a.name, input: a.input, time: a.time,
+		const recent = activity.filter(a => a.type === 'tool').slice(-5).reverse().map(a => ({
+			name: a.name, input: a.input, time: a.time,
 		}));
 
 		return json({
