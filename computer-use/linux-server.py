@@ -13,6 +13,7 @@ import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import linux_input as inp
+import linux_held_input as held
 import linux_display as display
 import linux_a11y as a11y
 
@@ -135,13 +136,13 @@ class Handler(BaseHTTPRequestHandler):
             "/type": inp.type_input,
             "/drag": inp.drag,
             "/scroll": inp.scroll,
-            "/key_down": inp.key_down,
-            "/key_up": inp.key_up,
-            "/mouse_down": inp.mouse_down,
-            "/mouse_up": inp.mouse_up,
-            "/mouse_move": inp.mouse_move,
-            "/release_all": inp.release_all,
-            "/input_sequence": inp.input_sequence,
+            "/key_down": held.key_down,
+            "/key_up": held.key_up,
+            "/mouse_down": held.mouse_down,
+            "/mouse_up": held.mouse_up,
+            "/mouse_move": held.mouse_move,
+            "/release_all": held.release_all,
+            "/input_sequence": held.input_sequence,
             "/type_from_file": inp.type_from_file,
             "/focus": display.focus,
             "/launch": display.launch,
