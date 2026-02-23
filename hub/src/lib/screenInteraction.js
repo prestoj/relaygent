@@ -5,7 +5,7 @@ export function toNativeCoords(e, imgEl, nativeWidth) {
 	const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
 	const effectiveW = nativeWidth || natW;
 	const effectiveH = natW > 0 ? effectiveW * natH / natW : natH;
-	const fit = getComputedStyle(imgEl).objectFit;
+	const fit = typeof getComputedStyle === 'function' ? getComputedStyle(imgEl).objectFit : 'fill';
 	let offX = 0, offY = 0, visW = rect.width, visH = rect.height;
 	if (fit === 'contain' || fit === 'scale-down') {
 		const scale = Math.min(rect.width / natW, rect.height / natH);

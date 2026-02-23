@@ -62,7 +62,6 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
-		e.preventDefault(); // prevent browser image drag capturing mouseup
 		dragState = { bx: e.clientX, by: e.clientY, moved: false };
 	}
 
@@ -90,13 +89,16 @@
 			const end = coords(e);
 			doAction({ action: 'drag', startX: start.x, startY: start.y, endX: end.x, endY: end.y },
 				`drag ${start.x},${start.y} → ${end.x},${end.y}`);
-		} else {
-			justDragged = true;
-			const { x, y } = coords(e);
-			doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
+			setTimeout(() => { justDragged = false; }, 100);
 		}
-		setTimeout(() => { justDragged = false; }, 200);
 		dragState = null;
+	}
+
+	function handleClick(e) {
+		if (!interactive || !imgEl || justDragged) return;
+		e.preventDefault();
+		const { x, y } = coords(e);
+		doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
 	}
 
 	function handleDblClick(e) {
@@ -167,7 +169,7 @@
 		onmouseleave={() => { cursorPos = null; }}>
 		{#if !everLoaded}<div class="placeholder">Connecting...</div>{/if}
 		<img bind:this={imgEl} alt="Screen" style="display:{everLoaded ? 'block' : 'none'}"
-			ondblclick={handleDblClick} oncontextmenu={handleContextMenu}
+			onclick={handleClick} ondblclick={handleDblClick} oncontextmenu={handleContextMenu}
 			onauxclick={handleAuxClick} draggable="false" />
 		{#if interactive && cursorPos}
 			<div class="crosshair" style="left:{cursorPos.left}px;top:{cursorPos.top}px"></div>
