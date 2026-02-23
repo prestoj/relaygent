@@ -37,6 +37,16 @@ end
 function M.mouse_move(params)
     local x = params.x; local y = params.y
     if not x or not y then return json.encode({error="x,y required"}), 400 end
+    if params.relative then
+        local pos = hs.mouse.absolutePosition()
+        local types = hs.eventtap.event.types
+        local props = hs.eventtap.event.properties
+        local evt = hs.eventtap.event.newMouseEvent(types.mouseMoved, pos)
+        evt:setProperty(props.mouseEventDeltaX, x)
+        evt:setProperty(props.mouseEventDeltaY, y)
+        evt:post()
+        return json.encode({moved_relative={dx=x, dy=y}}), 200
+    end
     local pt = hs.geometry.point(x, y)
     hs.mouse.absolutePosition(pt)
     return json.encode({moved={x=x, y=y}}), 200
