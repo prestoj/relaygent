@@ -77,11 +77,11 @@ export async function load() {
 		memTotal: fmtBytes(os.totalmem()),
 		disk,
 	};
-	const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
+	const repoRoot = process.env.RELAYGENT_REPO_DIR || path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
 	let version = '';
 	try {
-		const hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
-		const date = execFileSync('git', ['log', '-1', '--format=%cd', '--date=short'], { cwd: repoRoot, timeout: 2000 }).toString().trim();
+		const hash = execFileSync('git', ['-C', repoRoot, 'rev-parse', '--short', 'HEAD'], { timeout: 2000 }).toString().trim();
+		const date = execFileSync('git', ['-C', repoRoot, 'log', '-1', '--format=%cd', '--date=short'], { timeout: 2000 }).toString().trim();
 		version = `${hash} (${date})`;
 	} catch { /* not in git repo */ }
 	const config = loadConfig();

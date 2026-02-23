@@ -18,6 +18,8 @@ import { handleStreamUpload } from './src/lib/streamUpload.js';
 import { isAuthEnabled, validateSession, COOKIE_NAME } from './src/lib/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Expose repo root for SvelteKit routes (their __dirname is wrong in built chunks)
+process.env.RELAYGENT_REPO_DIR = process.env.RELAYGENT_REPO_DIR || path.resolve(__dirname, '..');
 const TRIGGER_FILE = process.env.HUB_CHAT_TRIGGER_FILE || '/tmp/hub-chat-new.json';
 const HOOK_OUTPUT = '/tmp/relaygent-hook-output.json';
 
