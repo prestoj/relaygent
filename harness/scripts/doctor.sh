@@ -109,7 +109,42 @@ else
     fi
 fi
 
-# --- 7. Updates ---
+# --- 7. Node modules ---
+echo -e "\n${CYAN}Node modules:${NC}"
+if [[ ! -d "$REPO_DIR/hub/node_modules" ]]; then
+    do_fix "Install hub node_modules" "cd '$REPO_DIR/hub' && npm install --silent 2>/dev/null"
+else
+    ok_msg "Hub node_modules installed"
+fi
+
+# --- 8. Service health ---
+echo -e "\n${CYAN}Service health:${NC}"
+_check_svc() {
+    local name=$1 port=$2 svc_name=$3
+    local path=${4:-/health}
+    if curl -sf --max-time 2 "http://127.0.0.1:$port$path" >/dev/null 2>&1; then
+        ok_msg "$name responding on :$port"
+    elif [[ "$(uname)" == "Darwin" ]]; then
+        local plist="com.relaygent.${svc_name}.plist"
+        if [[ -f "$HOME/Library/LaunchAgents/$plist" ]]; then
+            do_fix "Restart $name (LaunchAgent)" \
+                "launchctl kickstart -k 'gui/$(id -u)/com.relaygent.$svc_name' 2>/dev/null || launchctl stop 'com.relaygent.$svc_name' 2>/dev/null; sleep 1; launchctl start 'com.relaygent.$svc_name' 2>/dev/null"
+        else
+            skip_msg "$name not responding and no LaunchAgent found"
+        fi
+    else
+        local unit="relaygent-${svc_name}.service"
+        if systemctl --user is-enabled "$unit" &>/dev/null; then
+            do_fix "Restart $name (systemd)" "systemctl --user restart '$unit'"
+        else
+            skip_msg "$name not responding and no systemd service found"
+        fi
+    fi
+}
+_check_svc "Hub" "$HUB_PORT" "hub" "/api/health"
+_check_svc "Notifications" "$NOTIF_PORT" "notifications"
+
+# --- 9. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
 BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
