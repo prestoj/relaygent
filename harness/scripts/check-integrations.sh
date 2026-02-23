@@ -1,6 +1,6 @@
 #!/bin/bash
 # Integration checks for relaygent (sourced by check.sh)
-# Requires: REPO_DIR, ck_ok, ck_warn, ck_fail from lib.sh
+# Requires: REPO_DIR, ck_ok, ck_warn, ck_fail from check-lib.sh
 
 # --- Slack ---
 SLACK_USER="$HOME/.relaygent/slack/token.json"
