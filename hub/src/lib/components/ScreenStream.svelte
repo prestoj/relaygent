@@ -13,9 +13,11 @@
 	let interval = null;
 	let pending = false;
 	let dragState = null;
-	let justDragged = false;
 	let nativeWidth = 0;
 	let lastInteraction = 0;
+	let lastClickTime = 0;
+	let lastClickX = 0;
+	let lastClickY = 0;
 	let lastHoverSent = 0;
 	const HOVER_THROTTLE = 80;
 	const ACTIVE_FPS = 30;
@@ -62,6 +64,7 @@
 
 	function handleMouseDown(e) {
 		if (!interactive || !imgEl || e.button !== 0) return;
+		e.preventDefault();
 		dragState = { bx: e.clientX, by: e.clientY, moved: false, t: Date.now() };
 	}
 
@@ -82,31 +85,27 @@
 	}
 
 	function handleMouseUp(e) {
-		if (!dragState) return;
+		if (!interactive || !imgEl || e.button !== 0 || !dragState) { dragState = null; return; }
 		const isDrag = dragState.moved && (Date.now() - dragState.t) > 300;
 		if (isDrag) {
-			justDragged = true;
 			const start = toNativeCoords({ clientX: dragState.bx, clientY: dragState.by }, imgEl, nativeWidth);
 			const end = coords(e);
 			doAction({ action: 'drag', startX: start.x, startY: start.y, endX: end.x, endY: end.y },
 				`drag ${start.x},${start.y} → ${end.x},${end.y}`);
-			setTimeout(() => { justDragged = false; }, 100);
+			dragState = null; return;
 		}
 		dragState = null;
-	}
-
-	function handleClick(e) {
-		if (!interactive || !imgEl || justDragged) return;
-		e.preventDefault();
 		const { x, y } = coords(e);
-		doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
-	}
-
-	function handleDblClick(e) {
-		if (!interactive || !imgEl) return;
-		e.preventDefault();
-		const { x, y } = coords(e);
-		doAction({ action: 'click', x, y, double: true, modifiers: mouseModifiers(e) }, `dblclick ${x},${y}`);
+		const now = Date.now();
+		const isDbl = (now - lastClickTime < 400) &&
+			Math.abs(x - lastClickX) < 20 && Math.abs(y - lastClickY) < 20;
+		if (isDbl) {
+			doAction({ action: 'click', x, y, double: true, modifiers: mouseModifiers(e) }, `dblclick ${x},${y}`);
+			lastClickTime = 0;
+		} else {
+			doAction({ action: 'click', x, y, modifiers: mouseModifiers(e) }, `click ${x},${y}`);
+			lastClickTime = now; lastClickX = x; lastClickY = y;
+		}
 	}
 
 	function handleContextMenu(e) {
@@ -167,11 +166,10 @@
 	<div class="frame" class:interactive bind:this={frameEl} tabindex={interactive ? 0 : -1}
 		onkeydown={handleKeyDown} onwheel={handleScroll} onpaste={handlePaste}
 		onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}
-		onmouseleave={() => { cursorPos = null; }}>
+		onmouseleave={() => { cursorPos = null; dragState = null; }}>
 		{#if !everLoaded}<div class="placeholder">Connecting...</div>{/if}
 		<img bind:this={imgEl} alt="Screen" style="display:{everLoaded ? 'block' : 'none'}"
-			onclick={handleClick} ondblclick={handleDblClick} oncontextmenu={handleContextMenu}
-			onauxclick={handleAuxClick} draggable="false" />
+			oncontextmenu={handleContextMenu} onauxclick={handleAuxClick} draggable="false" />
 		{#if interactive && cursorPos}
 			<div class="crosshair" style="left:{cursorPos.left}px;top:{cursorPos.top}px"></div>
 		{/if}

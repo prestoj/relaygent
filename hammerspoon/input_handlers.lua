@@ -81,6 +81,7 @@ function M.click(params)
         local app = target or hs.application.frontmostApplication()
         if app then ev:post(app) else ev:post() end
     end
+    hs.mouse.absolutePosition(pt)
     if params.right then
         postWithFlags(hs.eventtap.event.newMouseEvent(types.rightMouseDown, pt))
         hs.timer.doAfter(0.02, function()
