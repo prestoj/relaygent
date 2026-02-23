@@ -19,9 +19,10 @@ import json,shlex,sys
 try:
  c=json.load(open('$CONFIG_FILE'));s=c['services']
  tls='https' if c.get('hub',{}).get('tls',{}).get('cert') else 'http'
+ tls_host=c.get('hub',{}).get('tls',{}).get('hostname','')
  for k,v in[('HUB_PORT',c['hub']['port']),
   ('NOTIF_PORT',s['notifications']['port']),('HS_PORT',s.get('hammerspoon',{}).get('port',8097)),
-  ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb']),('HUB_SCHEME',tls)]:print(f'{k}={shlex.quote(str(v))}')
+  ('DATA_DIR',c['paths']['data']),('KB_DIR',c['paths']['kb']),('HUB_SCHEME',tls),('TLS_HOSTNAME',tls_host)]:print(f'{k}={shlex.quote(str(v))}')
 except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
 ")" || { echo -e "${RED}Failed to parse $CONFIG_FILE — see error above. Re-run ./setup.sh${NC}"; exit 1; }
     eval "$config_vars"

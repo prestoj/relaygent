@@ -55,6 +55,7 @@ case "${1:-help}" in
         check_process "Email-poller" "email-poller"
         [ "$(uname)" = "Darwin" ] && { pgrep -x Hammerspoon >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}running${NC}" || echo -e "  Hammerspoon: ${RED}stopped${NC}"; } \
             || { check_process "Computer-use" "computer-use"; check_process "Xvfb" "xvfb"; }
+        [[ -n "$TLS_HOSTNAME" ]] && echo -e "\n  Remote: ${CYAN}https://${TLS_HOSTNAME}:${HUB_PORT}/${NC}"
         # Agent state + context fill
         STATUS_FILE="${DATA_DIR:-$SCRIPT_DIR/data}/relay-status.json"
         if [ -f "$STATUS_FILE" ]; then
@@ -99,7 +100,7 @@ print(s,t)
             || bash "$SCRIPT_DIR/scripts/install-systemd-services.sh" "${@:2}" ;;
     open)
         source "$SCRIPT_DIR/harness/scripts/lib.sh"; load_config_soft
-        URL="http://localhost:${HUB_PORT:-8080}${2:+/$2}"
+        URL="${HUB_SCHEME:-http}://localhost:${HUB_PORT:-8080}${2:+/$2}"
         if [ "$(uname)" = "Darwin" ]; then open "$URL"
         elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
         else echo "$URL"; fi
