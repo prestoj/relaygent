@@ -67,7 +67,7 @@
 				</div>
 				{#if s?.active}
 					<div class="session-info">
-						<div class="stat"><span class="label">Session</span><span class="val">{s.sessionId?.slice(0, 8) || '--'}</span></div>
+						<div class="stat"><span class="label">Session</span>{#if p.local}<a class="val session-link" href="/sessions/{s.sessionId}">{s.sessionId?.slice(0, 8)}</a>{:else}<span class="val">{s.sessionId?.slice(0, 8) || '--'}</span>{/if}</div>
 						<div class="stat"><span class="label">Duration</span><span class="val">{fmtDuration(s.durationMin)}</span></div>
 						<div class="stat"><span class="label">Turns</span><span class="val">{s.turns ?? '--'}</span></div>
 						<div class="stat"><span class="label">Context</span><span class="val ctx" class:ctx-warn={s.contextPct > 60} class:ctx-danger={s.contextPct > 80}>{fmtContext(s.contextPct)}</span></div>
@@ -124,6 +124,8 @@
 	.stat { display: flex; justify-content: space-between; }
 	.label { color: var(--text-muted); font-size: 0.85em; }
 	.val { font-weight: 600; font-size: 0.9em; }
+	.session-link { color: var(--link); text-decoration: none; }
+	.session-link:hover { text-decoration: underline; }
 	.ctx-warn { color: var(--warning); }
 	.ctx-danger { color: var(--error); }
 	.tools { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.5em; }
