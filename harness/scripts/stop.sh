@@ -43,7 +43,7 @@ done
 # MCP servers and Chrome
 mpids=$(pgrep -f "mcp-chat\.mjs|mcp-server\.mjs|notification-poller" 2>/dev/null) || true
 [ -n "$mpids" ] && kill $mpids 2>/dev/null || true
-pkill -f google-chrome 2>/dev/null && echo -e "  Chrome: ${YELLOW}stopped${NC}" || true
+pkill -f 'google-chrome|chromium' 2>/dev/null && echo -e "  Chrome/Chromium: ${YELLOW}stopped${NC}" || true
 rm -f "$REPO_DIR/harness/.relay.lock"
 
 echo -e "\n  ${GREEN}All services stopped.${NC}"
