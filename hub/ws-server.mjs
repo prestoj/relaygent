@@ -13,6 +13,7 @@ import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { wssVnc } from './vnc-proxy.mjs';
 import { summarizeInput, summarizeResult, extractResultText, findLatestSession } from './src/lib/relayActivity.js';
 import { createSessionParser } from './src/lib/sessionParser.js';
 import { handleStreamUpload } from './src/lib/streamUpload.js';
@@ -58,8 +59,12 @@ const server = tlsOpts ? createSecureServer(tlsOpts, requestHandler) : createSer
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (req, socket, head) => {
-	if (req.url !== '/ws' || !checkReqAuth(req)) { socket.destroy(); return; }
-	wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
+	if (!checkReqAuth(req)) { socket.destroy(); return; }
+	if (req.url === '/ws/vnc') {
+		wssVnc.handleUpgrade(req, socket, head, ws => wssVnc.emit('connection', ws));
+	} else if (req.url === '/ws') {
+		wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
+	} else { socket.destroy(); }
 });
 
 function broadcast(msg) {
