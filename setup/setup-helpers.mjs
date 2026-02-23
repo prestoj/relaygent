@@ -101,6 +101,18 @@ export async function setupSlackToken(REPO_DIR, HOME, C) {
 	}
 }
 
+export function optimizeTyping(C) {
+	if (process.platform !== 'darwin') return;
+	console.log(`${C.yellow}Optimizing macOS typing for agent use...${C.reset}`);
+	const keys = ['NSAutocorrect', 'NSAutomaticSpellingCorrectionEnabled',
+		'NSAutomaticCapitalizationEnabled', 'NSAutomaticPeriodSubstitutionEnabled',
+		'NSAutomaticTextCompletionEnabled'];
+	for (const key of keys) {
+		spawnSync('defaults', ['write', 'NSGlobalDomain', key, '-bool', 'false']);
+	}
+	console.log(`  ${C.green}Disabled autocorrect, autocapitalize, auto-period, text completion${C.reset}`);
+}
+
 export function envFromConfig(config) {
 	return {
 		RELAYGENT_HUB_PORT: String(config.hub.port),
