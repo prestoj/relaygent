@@ -99,7 +99,7 @@ print(s,t)
             || bash "$SCRIPT_DIR/scripts/install-systemd-services.sh" "${@:2}" ;;
     open)
         source "$SCRIPT_DIR/harness/scripts/lib.sh"; load_config_soft
-        URL="http://localhost:${HUB_PORT:-8080}${2:+/$2}"
+        URL="${HUB_SCHEME:-http}://localhost:${HUB_PORT:-8080}${2:+/$2}"
         if [ "$(uname)" = "Darwin" ]; then open "$URL"
         elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
         else echo "$URL"; fi
