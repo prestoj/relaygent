@@ -5,7 +5,7 @@
 <svelte:head><title>Screen — Relaygent</title></svelte:head>
 
 <div class="screen-page">
-	<ScreenStream fps={10} />
+	<ScreenStream fps={10} startInteractive={true} />
 </div>
 
 <style>

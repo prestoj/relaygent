@@ -2,12 +2,12 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { toNativeCoords, sendScreenAction, buildKeyAction, mouseModifiers, scrollAmount } from '$lib/screenInteraction.js';
 
-	let { fps = 10 } = $props();
+	let { fps = 10, startInteractive = false } = $props();
 	let imgEl = $state(null);
 	let frameEl = $state(null);
 	let online = $state(false);
 	let everLoaded = $state(false);
-	let interactive = $state(false);
+	let interactive = $state(startInteractive);
 	let lastAction = $state('');
 	let cursorPos = $state(null);
 	let interval = null;
@@ -147,7 +147,7 @@
 
 	function toggleFs() { document.fullscreenElement ? document.exitFullscreen() : frameEl?.requestFullscreen(); }
 
-	onMount(() => { refresh(); startLoop(); });
+	onMount(() => { refresh(); startLoop(); if (startInteractive && frameEl) frameEl.focus(); });
 	onDestroy(stopLoop);
 </script>
 
