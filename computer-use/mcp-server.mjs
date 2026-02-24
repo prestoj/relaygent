@@ -6,7 +6,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { platform } from "node:os";
-import { hsCall, takeScreenshot, readScreenshot, readRawScreenshot, scaleFactor, checkHealth, SCREENSHOT_PATH } from "./hammerspoon.mjs";
+import { hsCall, takeScreenshot, scaleFactor, checkHealth } from "./hammerspoon.mjs";
+import { registerScreenTools } from "./screen-tools.mjs";
 import { registerBrowserTools } from "./browser-tools.mjs";
 import { registerBrowserQueryTools } from "./browser-query.mjs";
 import { registerBrowserNavTools } from "./browser-nav.mjs";
@@ -21,7 +22,6 @@ const server = new McpServer({ name: "computer-use", version: "1.0.0" });
 const n = z.coerce.number();
 // Claude sometimes serializes booleans as strings ("true"/"false") — coerce safely
 const bool = z.preprocess(v => v === "true" ? true : v === "false" ? false : v, z.boolean().optional());
-const jsonRes = (r) => ({ content: [{ type: "text", text: JSON.stringify(r, null, 2) }] });
 const ACTION_DELAY = 1500;
 const actionRes = async (text, delay, indicator) => ({
 	content: [{ type: "text", text }, ...await takeScreenshot(delay ?? ACTION_DELAY, indicator)]
@@ -29,42 +29,7 @@ const actionRes = async (text, delay, indicator) => ({
 /** Scale coordinates from image space to native screen space. */
 const sx = (v) => Math.round(v * scaleFactor());
 
-server.tool("screenshot", "Capture screenshot. Use find_elements for precise coordinates.",
-	{ x: n.optional().describe("Crop X"), y: n.optional().describe("Crop Y"),
-		w: n.optional().describe("Crop width"), h: n.optional().describe("Crop height") },
-	async ({ x, y, w, h }) => {
-		const body = { path: SCREENSHOT_PATH };
-		if (x !== null && y !== null && w !== null && h !== null) Object.assign(body, { x: sx(x), y: sx(y), w: sx(w), h: sx(h) });
-		const r = await hsCall("POST", "/screenshot", body);
-		if (r.error) return { content: [{ type: "text", text: JSON.stringify(r) }] };
-		try {
-			const img = readScreenshot(r.width, r.pixelWidth);
-			if (!img) return { content: [{ type: "text", text: "(screenshot unavailable — image was invalid or too large)" }] };
-			const sf = scaleFactor();
-			const sw = Math.round(r.width / sf), sh = Math.round(r.height / sf);
-			return { content: [
-				{ type: "image", data: img, mimeType: "image/png" },
-				{ type: "text", text: `Screenshot: ${sw}x${sh}px (use these coords for clicks)` },
-			] };
-		} catch { return { content: [{ type: "text", text: JSON.stringify(r) }] }; }
-	}
-);
-
-server.tool("zoom", "Zoom in on a screen region at native resolution for better detail. Does NOT return clickable coords — use screenshot for that.",
-	{ x: n.describe("Left X in screenshot coords"), y: n.describe("Top Y in screenshot coords"),
-		w: n.describe("Width to crop"), h: n.describe("Height to crop") },
-	async ({ x, y, w, h }) => {
-		const body = { path: SCREENSHOT_PATH, x: sx(x), y: sx(y), w: sx(w), h: sx(h) };
-		const r = await hsCall("POST", "/screenshot", body);
-		if (r.error) return jsonRes(r);
-		const img = readRawScreenshot();
-		if (!img) return { content: [{ type: "text", text: "(zoom failed — invalid image)" }] };
-		return { content: [
-			{ type: "image", data: img, mimeType: "image/png" },
-			{ type: "text", text: `Zoomed (${x},${y}) ${w}x${h} at native res. Use full screenshot for clickable coords.` },
-		] };
-	}
-);
+registerScreenTools(server);
 
 server.tool("click", "Click at coordinates. Auto-returns screenshot.",
 	{ x: n.describe("X"), y: n.describe("Y"),
