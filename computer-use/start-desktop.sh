@@ -22,12 +22,27 @@ pkill -u "$(whoami)" gnome-shell 2>/dev/null || true
 pkill -u "$(whoami)" gnome-session 2>/dev/null || true
 sleep 1
 
+# System D-Bus + logind (gnome-shell needs org.freedesktop.login1 on the system bus)
+if [ ! -S /var/run/dbus/system_bus_socket ]; then
+    sudo mkdir -p /var/run/dbus
+    sudo dbus-daemon --system --fork
+    echo "System D-Bus: started"
+fi
+if ! pgrep -f systemd-logind &>/dev/null; then
+    sudo /usr/lib/systemd/systemd-logind > /tmp/logind.log 2>&1 &
+    sleep 2
+    echo "logind: started"
+fi
+
+# Software rendering (no GPU in containers/Xvfb)
+export LIBGL_ALWAYS_SOFTWARE=1
+export MUTTER_ALLOW_SOFTWARE_RENDERING=1
+
 # Suppress GNOME Welcome dialog
 mkdir -p ~/.config
 echo "yes" > ~/.config/gnome-initial-setup-done 2>/dev/null || true
 
-# Start gnome-shell directly in X11 mode (gnome-session fails on Xvfb because
-# it can't establish a proper logind session — gnome-shell --x11 works standalone)
+# Start gnome-shell directly in X11 mode
 gnome-shell --x11 > /tmp/gnome-shell.log 2>&1 &
 echo "gnome-shell started (PID $!)"
 
