@@ -38,7 +38,8 @@ show_help() {
         "digest" "Daily summary of PRs, commits, and status" \
         "changelog" "Show recent merged PRs and commits (--days N)"
     echo -e "\n${CYAN}Configuration:${NC}"
-    printf "$F" "setup-tls" "Configure HTTPS with Tailscale certs" \
+    printf "$F" "config" "View/edit config (get, set, unset, path)" \
+        "setup-tls" "Configure HTTPS with Tailscale certs" \
         "set-password" "Set/remove hub dashboard auth (--remove)" \
         "mcp" "Manage MCP servers (list, add, remove)" \
         "install-services" "Set up auto-restart services (macOS/Linux)" \
@@ -110,7 +111,7 @@ print(s,t)
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
-    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup|restore|kb-lint) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    config|mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup|restore|kb-lint) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
