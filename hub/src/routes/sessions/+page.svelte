@@ -1,5 +1,22 @@
 <script>
 	let { data } = $props();
+	const PRICING = {
+		opus:   { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.50 },
+		sonnet: { input: 3,  output: 15, cacheWrite: 3.75,  cacheRead: 0.30 },
+		haiku:  { input: 0.8, output: 4, cacheWrite: 1.0,   cacheRead: 0.08 },
+	};
+	const M = 1_000_000;
+	function modelTier(name) {
+		if (!name) return 'sonnet';
+		const n = name.toLowerCase();
+		return n.includes('opus') ? 'opus' : n.includes('haiku') ? 'haiku' : 'sonnet';
+	}
+	function sessionCost(s) {
+		const r = PRICING[modelTier(s.model)];
+		return ((s.inputTokens||0)*r.input + (s.cacheWriteTokens||0)*r.cacheWrite
+			+ (s.cacheReadTokens||0)*r.cacheRead + (s.outputTokens||0)*r.output) / M;
+	}
+	function fmtCost(n) { return n >= 1 ? `$${n.toFixed(0)}` : n >= 0.01 ? `$${n.toFixed(2)}` : ''; }
 	function fmtTokens(n) {
 		if (!n) return '0';
 		if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M`;
@@ -37,6 +54,7 @@
 		return groups;
 	}
 	const st = data.stats;
+	let totalCost = $derived(data.sessions.reduce((sum, s) => sum + sessionCost(s), 0));
 	let query = $state('');
 	let hideEmpty = $state(true);
 	let filtered = $derived.by(() => {
@@ -64,8 +82,8 @@
 	<span class="stat"><strong>{fmtTokens(st.totalTokens)}</strong> tokens in</span>
 	<span class="sep">·</span>
 	<span class="stat"><strong>{st.avgDuration}m</strong> avg</span>
-	{#if st.topTools[0]}<span class="sep">·</span>
-	<span class="stat">top: <strong>{st.topTools[0].name}</strong> ({st.topTools[0].count}×)</span>{/if}
+	{#if totalCost > 0}<span class="sep">·</span>
+	<span class="stat"><strong>${totalCost.toFixed(0)}</strong> est. cost</span>{/if}
 </div>
 {/if}
 
@@ -92,7 +110,7 @@
 						<a href="/sessions/{s.id}">{s.displayTime}</a>
 						{#if fmtRelative(s.displayTime)}<span class="rel">{fmtRelative(s.displayTime)}</span>{/if}
 						<span class="meta">
-							{#if s.durationMin != null}{s.durationMin}m · {/if}{#if s.totalTokens != null}{fmtTokens(s.totalTokens)} tok · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{isFirst ? ' · current' : ''}
+							{#if s.durationMin != null}{s.durationMin}m · {/if}{#if fmtCost(sessionCost(s))}{fmtCost(sessionCost(s))} · {/if}{#if s.toolCalls != null}{s.toolCalls} tools{/if}{isFirst ? ' · current' : ''}
 						</span>
 						{#if s.gitCommits > 0}<span class="badge commit">{s.gitCommits} commit{s.gitCommits > 1 ? 's' : ''}</span>{/if}
 						{#if s.prsCreated > 0}<span class="badge pr-created">{s.prsCreated} PR{s.prsCreated > 1 ? 's' : ''}</span>{/if}
