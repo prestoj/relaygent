@@ -23,26 +23,28 @@ def main():
     kb_dir = sys.argv[1]
     print(f"{CYAN}KB Lint{NC} — {kb_dir}\n")
 
-    # Collect all topics
-    topics = {}  # basename (no .md) -> filepath
+    # Collect all topics — index by basename AND relative path
+    topics = {}  # key -> filepath (multiple keys per file)
+    canon = {}   # canonical key -> filepath (one per file, for iteration)
     for root, _dirs, files in os.walk(kb_dir):
         for fname in files:
             if not fname.endswith(".md"):
                 continue
             fpath = os.path.join(root, fname)
-            base = fname[:-3]  # strip .md
-            topics[base] = fpath
-            topics[base.lower()] = fpath  # also index lowercase
+            base = fname[:-3]
+            rel = os.path.relpath(fpath, kb_dir)[:-3]  # e.g. contacts/name
+            canon[rel] = fpath
+            # Index by multiple keys for link resolution
+            for key in [base, base.lower(), rel, rel.lower()]:
+                topics[key] = fpath
 
-    incoming = {base: 0 for base in topics}
+    incoming = {k: 0 for k in canon}
     broken_links = []
     oversize = []
     no_frontmatter = []
     total_links = 0
 
-    for base, fpath in sorted(topics.items()):
-        if base != os.path.basename(fpath)[:-3]:
-            continue  # skip lowercase duplicates
+    for rel_key, fpath in sorted(canon.items()):
 
         with open(fpath, "r", errors="replace") as f:
             content = f.read()
@@ -65,8 +67,10 @@ def main():
             found = False
             for c in candidates:
                 if c in topics:
-                    key = os.path.basename(topics[c])[:-3]
-                    incoming[key] = incoming.get(key, 0) + 1
+                    # Track incoming link using canonical rel key
+                    target_path = topics[c]
+                    target_rel = os.path.relpath(target_path, kb_dir)[:-3]
+                    incoming[target_rel] = incoming.get(target_rel, 0) + 1
                     found = True
                     break
             if not found:
@@ -75,8 +79,7 @@ def main():
     # Find orphans (no incoming links, excluding meta files)
     orphans = sorted(
         f"{t}.md" for t, count in incoming.items()
-        if count == 0 and t not in META_FILES
-        and t == os.path.basename(topics.get(t, ""))[:-3]  # skip lowercase dupes
+        if count == 0 and os.path.basename(t) not in META_FILES
     )
 
     # Report
@@ -111,9 +114,7 @@ def main():
         print()
 
     # Summary
-    topic_count = len({
-        os.path.basename(v)[:-3] for v in topics.values()
-    })
+    topic_count = len(canon)
     print(f"  {CYAN}Summary:{NC}")
     print(f"    Topics:         {topic_count}")
     print(f"    Wiki-links:     {total_links}")
