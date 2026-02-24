@@ -33,7 +33,7 @@ export function listSessions() {
 				const id = `${runId}--${uuid8}`;
 				const st = parseSessionStats(fp) || {};
 				const displayTime = st.start ? fmtLocal(st.start) : `${m[1]} ${m[2]}:${m[3]}`;
-				sessions.push({ id, displayTime, size: fst.size, durationMin: st.durationMin, totalTokens: st.totalTokens, outputTokens: st.outputTokens || 0, inputTokens: st.inputTokens || 0, cacheWriteTokens: st.cacheWriteTokens || 0, cacheReadTokens: st.cacheReadTokens || 0, model: st.model || null, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null, git_commits: st.git_commits || 0, prs_created: st.prs_created || [], prs_merged: st.prs_merged || [] });
+				sessions.push({ id, displayTime, size: fst.size, durationMin: st.durationMin, totalTokens: st.totalTokens, toolCalls: st.toolCalls, summary: st.handoffGoal || st.firstText || null, git_commits: st.git_commits || 0, prs_created: st.prs_created || [], prs_merged: st.prs_merged || [] });
 			}
 		}
 	} catch { /* ignore */ }
