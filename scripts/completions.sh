@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history recap session test logs orient check doctor health update backup cleanup clean-logs changelog digest discover install-services set-password mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats history recap session test logs orient check doctor health update backup restore cleanup clean-logs changelog digest discover install-services set-password mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -31,6 +31,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'changelog:Show recent merged PRs and commits'
             'digest:Daily summary of PRs, commits, and status'
             'backup:Archive KB, config, and data to tarball'
+            'restore:Restore from a backup tarball (--dry-run)'
             'cleanup:Free disk space (--dry-run)'
             'clean-logs:Remove old logs (--dry-run, --days N)'
             'install-services:Set up auto-restart services'
@@ -58,6 +59,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 recap) compadd -- -d --days --json ;;
                 session) compadd -- --json --watch ;;
                 doctor) compadd -- --dry-run ;;
+                restore) compadd -- --dry-run --yes ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
                 search) compadd -- --type --json ;;
@@ -91,6 +93,8 @@ else
                 COMPREPLY=($(compgen -W "--json --watch" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
+            restore)
+                COMPREPLY=($(compgen -W "--dry-run --yes" -- "$cur")) ;;
             cleanup|clean-logs)
                 COMPREPLY=($(compgen -W "--dry-run --days" -- "$cur")) ;;
             set-password)
