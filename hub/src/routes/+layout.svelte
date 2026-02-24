@@ -46,9 +46,9 @@
 		<span class="bar" class:open={menuOpen}></span>
 	</button>
 	<div class="links" class:open={menuOpen}>
+		<a href="/activity" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Chat</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
-		<a href="/activity" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>

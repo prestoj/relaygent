@@ -7,9 +7,9 @@
 	let inputEl;
 
 	const pages = [
+		{ name: 'Activity', path: '/activity', keys: ['activity', 'feed', 'tools'] },
 		{ name: 'Chat', path: '/', keys: ['home', 'chat', 'message'] },
 		{ name: 'Screen', path: '/screen', keys: ['screen', 'vnc', 'remote'] },
-		{ name: 'Activity', path: '/activity', keys: ['activity', 'feed', 'tools'] },
 		{ name: 'Intent', path: '/intent', keys: ['intent', 'goal'] },
 		{ name: 'Knowledge Base', path: '/kb', keys: ['kb', 'knowledge', 'wiki'] },
 		{ name: 'Tasks', path: '/tasks', keys: ['tasks', 'todo'] },
