@@ -31,7 +31,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help',activity:'Activity'}[$page.url.pathname.split('/')[1]] || '');
 
 </script>
 
@@ -56,6 +56,7 @@
 		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
 		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
+		<a href="/activity" class="mobile-only" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
@@ -107,12 +108,15 @@
 	}
 	.logout-btn:hover { color: var(--text); }
 
+	.mobile-only { display: none; }
 	.content-row { display: flex; flex: 1; min-height: 0; }
 	main { flex: 1; min-width: 0; overflow-y: auto; }
 	main.home { display: flex; flex-direction: column; overflow: hidden; }
 	.page-content { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
 	@media (max-width: 800px) {
+		.mobile-only { display: inline; }
+		:global(.sidebar) { display: none !important; }
 		nav { padding: 0.5em 1em; }
 		.hamburger {
 			display: flex; flex-direction: column; gap: 4px;

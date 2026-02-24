@@ -116,7 +116,7 @@
 
 <style>
 	.cp { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; min-height: 350px; max-height: 60vh; margin-bottom: 1em; }
-	.cp.full { border: none; border-radius: 0; background: var(--bg); min-height: 0; max-height: none; height: 100%; margin: 0; }
+	.cp.full { border: none; border-radius: 0; background: var(--bg); min-height: 0; max-height: none; height: 100%; margin: 0 auto; max-width: 800px; width: 100%; padding: 0 1em; }
 	.cp-header { font-weight: 700; font-size: 0.85em; padding: 0.5em 0.8em; border-bottom: 1px solid var(--border); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 	.cp-msgs { flex: 1; overflow-y: auto; padding: 0.5em 0.8em; display: flex; flex-direction: column; gap: 0.4em; }
 	.cp-loading { text-align: center; color: var(--text-muted); font-size: 0.8em; padding: 0.5em; }
