@@ -94,14 +94,14 @@ class TestAckSlackEndpoint:
 class TestResolveUsername:
     def test_resolves_display_name(self, _isolated, monkeypatch):
         monkeypatch.setattr(sc, "_USER_CACHE", {})
-        fake_resp = {"ok": True, "user": {"real_name": "Preston Jensen", "name": "preston"}}
+        fake_resp = {"ok": True, "user": {"real_name": "Test User", "name": "testuser"}}
         with patch.object(sc.urllib.request, "urlopen") as mock_open:
             resp = MagicMock()
             resp.read.return_value = json.dumps(fake_resp).encode()
             resp.__enter__ = lambda s: s
             resp.__exit__ = lambda s, *a: None
             mock_open.return_value = resp
-            assert sc._resolve_username("token", "U0AG66N31Q8") == "Preston Jensen"
+            assert sc._resolve_username("token", "U0TEST12345") == "Test User"
 
     def test_caches_result(self, _isolated, monkeypatch):
         monkeypatch.setattr(sc, "_USER_CACHE", {"UCACHED": "Cached Name"})
