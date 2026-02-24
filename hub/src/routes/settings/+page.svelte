@@ -180,8 +180,7 @@
 	.restart-btn { padding: 0.3em 0.7em; border: 1px solid var(--error); border-radius: 6px; background: var(--bg); color: var(--error); font-size: 0.78em; cursor: pointer; font-weight: 600; }
 	.restart-btn:hover:not(:disabled) { background: var(--error); color: #fff; }  .restart-btn:disabled { opacity: 0.5; cursor: default; }
 	.restart-msg { font-size: 0.78em; color: var(--text-muted); }
-	.mcp-list { display: flex; flex-direction: column; gap: 0.4em; }
-	.mcp-row { display: flex; align-items: baseline; gap: 0.75em; font-size: 0.9em; padding: 0.3em 0.5em; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); }
+	.mcp-list { display: flex; flex-direction: column; gap: 0.4em; }  .mcp-row { display: flex; align-items: baseline; gap: 0.75em; font-size: 0.9em; padding: 0.3em 0.5em; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); }
 	.mcp-name { font-weight: 600; font-family: monospace; white-space: nowrap; }  .mcp-cmd { color: var(--text-muted); font-family: monospace; font-size: 0.85em; word-break: break-word; }
 	.relay-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.relay-btn { padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.8em; cursor: pointer; margin-left: auto; }
@@ -189,12 +188,13 @@
 	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; }
 	.check-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
-	.check-label { font-weight: 600; min-width: 5em; }
-	.check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
+	.check-label { font-weight: 600; min-width: 5em; }  .check-hint { color: var(--text-muted); font-size: 0.85em; font-family: monospace; }
 	.update-btn { padding: 0.3em 0.7em; border: 1px solid var(--link); border-radius: 6px; background: var(--bg); color: var(--link); font-size: 0.78em; cursor: pointer; font-weight: 600; }
 	.update-btn:hover:not(:disabled) { background: var(--link); color: #fff; }  .update-btn:disabled { opacity: 0.5; cursor: default; }
 	.update-output { font-size: 0.75em; color: var(--text-muted); background: var(--code-bg); padding: 0.5em 0.75em; border-radius: 4px; margin: 0.5em 0 0; white-space: pre-wrap; max-height: 12em; overflow-y: auto; }
 	@media (max-width: 600px) {
-		.grid { grid-template-columns: 7em 1fr; gap: 0.25em 0.5em; font-size: 0.85em; }
+		.grid { grid-template-columns: 1fr; gap: 0.15em; font-size: 0.85em; }
+		.label { font-weight: 600; color: var(--text); }  .value { margin-bottom: 0.4em; }
+		.value.mono { word-break: break-all; }  .mcp-row { flex-wrap: wrap; }  .mcp-cmd { word-break: break-all; }
 	}
 </style>

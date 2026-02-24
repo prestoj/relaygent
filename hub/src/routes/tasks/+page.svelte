@@ -143,4 +143,10 @@
 	.edit-input { flex: 1; padding: 0.3em 0.5em; border: 1px solid var(--link); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.9em; outline: none; }
 	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; } .error { color: var(--error); font-size: 0.85em; margin: 0.25em 0; }
 	.oneoff { background: var(--bg); }
+	@media (max-width: 600px) {
+		.task { flex-wrap: wrap; gap: 0.4em; }
+		.task-meta { white-space: normal; flex-wrap: wrap; gap: 0.4em; }
+		.add-row { flex-wrap: wrap; }
+		.add-row input { min-width: 0; }
+	}
 </style>

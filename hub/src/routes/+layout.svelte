@@ -116,7 +116,7 @@
 	}
 	.logout-btn:hover { color: var(--text); }
 	.content-row { display: flex; flex: 1; min-height: 0; }
-	main { flex: 1; min-width: 0; overflow-y: auto; }
+	main { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; }
 	main.home { display: flex; flex-direction: column; overflow: hidden; }
 	.page-content { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
