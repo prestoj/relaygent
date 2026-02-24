@@ -8,8 +8,6 @@ import os
 import time
 import urllib.request
 
-from notif_config import app
-from flask import jsonify
 
 logger = logging.getLogger(__name__)
 
@@ -163,28 +161,4 @@ def collect(notifications):
     _save_last_check()
 
 
-def _mark_read_ids(notif_ids):
-    """Mark specific Linear notifications as read."""
-    mutation = """
-    mutation($id: String!) {
-        notificationUpdate(id: $id, input: { readAt: "%s" }) {
-            notification { id }
-        }
-    }
-    """ % time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    for nid in notif_ids[:20]:
-        _graphql(mutation, {"id": nid})
-
-
-@app.route("/notifications/ack-linear", methods=["POST"])
-def ack_linear():
-    """HTTP endpoint — mark recent Linear notifications as read."""
-    if not _get_api_key():
-        return jsonify({"status": "skipped", "reason": "no api key"})
-    data = _graphql(_NOTIF_QUERY, {})
-    if data:
-        nodes = data.get("notifications", {}).get("nodes", [])
-        ids = [n["id"] for n in nodes if n.get("id")]
-        if ids:
-            _mark_read_ids(ids)
-    return jsonify({"status": "ok"})
+# ack endpoint extracted to linear_ack.py (imported in routes.py)

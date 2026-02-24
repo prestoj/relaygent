@@ -13,6 +13,7 @@ import pytest
 import notif_config as config
 import db as notif_db
 import linear_collector as lc
+import linear_ack
 
 
 @pytest.fixture(autouse=True)
@@ -174,7 +175,7 @@ class TestCollect:
 
 
 class TestAckEndpoint:
-    @patch.object(lc, "_graphql")
+    @patch.object(linear_ack, "_graphql")
     def test_ack_skips_no_key(self, mock_gql, client, monkeypatch):
         monkeypatch.setattr(lc, "_KEY_PATH", "/nonexistent")
         resp = client.post("/notifications/ack-linear")
@@ -182,8 +183,8 @@ class TestAckEndpoint:
         assert resp.get_json()["status"] == "skipped"
         mock_gql.assert_not_called()
 
-    @patch.object(lc, "_mark_read_ids")
-    @patch.object(lc, "_graphql")
+    @patch.object(linear_ack, "_mark_read_ids")
+    @patch.object(linear_ack, "_graphql")
     def test_ack_marks_notifications_read(self, mock_gql, mock_mark, client):
         mock_gql.return_value = _fake_graphql_response([
             _make_notif(notif_id="n-abc"),
