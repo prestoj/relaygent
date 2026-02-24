@@ -32,7 +32,16 @@ _CHROME_ARGS = [
 ]
 
 
+def _clear_stale_locks() -> None:
+    for name in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
+        try:
+            os.remove(os.path.join(_CHROME_DATA, name))
+        except FileNotFoundError:
+            pass
+
+
 def _patch_chrome_prefs() -> None:
+    _clear_stale_locks()
     import json as _json
     pref = f"{_CHROME_DATA}/Default/Preferences"
     try:

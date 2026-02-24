@@ -15,10 +15,17 @@ export function findLinuxBrowser() {
   return "google-chrome"; // fallback
 }
 
+function clearStaleLocks() {
+  for (const f of ["SingletonLock", "SingletonSocket", "SingletonCookie"]) {
+    try { const p = `${CHROME_DATA}/${f}`; if (existsSync(p)) { execSync(`rm -f "${p}"`, { timeout: 1000 }); log(`cleared stale ${f}`); } } catch {}
+  }
+}
+
 let _chromeStarting = false;
 export async function ensureChrome() {
   if (_chromeStarting) return; _chromeStarting = true;
   try { execSync("pkill -f 'google-chrome|chromium'", { timeout: 2000 }); await new Promise(r => setTimeout(r, 500)); } catch {}
+  clearStaleLocks();
   const isMac = existsSync("/Applications/Google Chrome.app");
   const bin = isMac ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : findLinuxBrowser();
   const args = [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${CHROME_DATA}`, "--no-first-run"];
