@@ -72,7 +72,7 @@
 		<div class="page-content">{@render children()}</div>
 	</main>
 </div>
-<ChatBubble />
+{#if $page.url.pathname !== '/'}<ChatBubble />{/if}
 <CommandPalette />
 </div>
 
