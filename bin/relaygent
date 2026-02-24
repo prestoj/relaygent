@@ -23,6 +23,7 @@ show_help() {
         "history" "Recent sessions timeline (-n NUM, --json)" \
         "stats" "Session history, errors, and context usage" \
         "recap" "Aggregate stats across sessions (-d DAYS, --json)" \
+        "cost" "Estimate API costs (-d DAYS, --json, --per-session)" \
         "search <query>" "Search KB, sessions, and chat"
     echo -e "\n${CYAN}Diagnostics:${NC}"
     printf "$F" "check" "Diagnose configuration" \
@@ -66,7 +67,7 @@ case "${1:-help}" in
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
-    config|mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup|restore|kb-lint) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    config|mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|cost|search|session|setup-tls|discover|backup|restore|kb-lint) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
