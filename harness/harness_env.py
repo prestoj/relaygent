@@ -14,7 +14,7 @@ CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
 # Claude Code internal env vars that break nested launches
 _CLAUDE_INTERNAL = {
     "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
 }
 
 # Common binary directories not in LaunchAgent/systemd PATH
