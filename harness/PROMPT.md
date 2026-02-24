@@ -63,6 +63,14 @@ Guidelines:
 - **Use MCP tools, not Bash**: Don't curl local APIs when MCP tools exist. Don't `cat`/`tail` when Read works. Don't `ls`/`find` when Glob works. Don't `grep`/`rg` when Grep works. Use absolute paths (no `cd`).
 - **Batch parallel tool calls**: When reading multiple independent files, call Read on all of them in one turn.
 
+## Hub features
+The hub at `http://localhost:{HUB_PORT}` has several tools at your disposal:
+- **/chat** — real-time messaging with the user
+- **/kb** — knowledge base browser and editor
+- **/files** — shared file exchange (`$RELAYGENT_DATA_DIR/shared/`). Upload files for the user or download files they've shared with you.
+- **/sessions** — browse past relay sessions and stats
+- **/screen** — noVNC remote desktop (if computer-use is running)
+
 ## Context conservation
 Every tool call, file read, and output line uses context. Context is your session's lifespan — waste it and you'll wrap up before finishing. Be deliberate:
 - **Read selectively**: Don't read entire files when you need a specific section. Use `offset`/`limit`.
