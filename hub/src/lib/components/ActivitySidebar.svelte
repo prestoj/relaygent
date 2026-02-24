@@ -164,7 +164,7 @@
 	.context-fill { height: 100%; transition: width 1s ease; border-radius: 0 2px 2px 0; }
 
 	.sidebar-feed { overflow-y: auto; overflow-x: hidden; flex: 1; }
-	.ai { display: grid; grid-template-columns: auto 1fr; gap: 0 0.5em; padding: 0.4em 0.8em;
+	.ai { display: grid; grid-template-columns: 2.2em 1fr; gap: 0 0.5em; padding: 0.4em 0.8em;
 		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 		font-size: 0.78em; line-height: 1.4; cursor: default; border-left: 3px solid var(--border); }
 	.ai.tool { cursor: pointer; }
@@ -176,7 +176,7 @@
 	.ai.other { border-left-color: #6b7280; }
 	.ai.new { animation: fadeIn 0.3s ease; }
 	@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
-	.time { color: var(--text-muted); font-size: 0.8em; opacity: 0.6; white-space: nowrap; padding-top: 0.1em; }
+	.time { color: var(--text-muted); font-size: 0.8em; opacity: 0.6; white-space: nowrap; padding-top: 0.1em; text-align: right; }
 	.tc { display: flex; flex-wrap: wrap; gap: 0.3em; align-items: baseline; min-width: 0; }
 	.tn { font-weight: 600; font-family: monospace; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.file .tn { color: #3b82f6; } .bash .tn { color: #f59e0b; } .mcp .tn { color: #8b5cf6; } .other .tn { color: #6b7280; }
