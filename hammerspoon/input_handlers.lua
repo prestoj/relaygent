@@ -78,8 +78,7 @@ function M.click(params)
     end
     local function postWithFlags(ev, target)
         if next(flags) then ev:setFlags(flags) end
-        local app = target or hs.application.frontmostApplication()
-        if app then ev:post(app) else ev:post() end
+        ev:post()
     end
     if params.right then
         postWithFlags(hs.eventtap.event.newMouseEvent(types.rightMouseDown, pt))
@@ -125,8 +124,7 @@ function M.type_input(params)
         end
         local down = hs.eventtap.event.newKeyEvent(mods, k, true)
         local up = hs.eventtap.event.newKeyEvent(mods, k, false)
-        if targetApp then down:post(targetApp); up:post(targetApp)
-        else down:post(); up:post() end
+        down:post(); up:post()
         if #mods > 0 then
             for _, m in ipairs(mods) do hs.eventtap.event.newKeyEvent(m, false):post() end
         end

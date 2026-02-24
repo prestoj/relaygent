@@ -15,18 +15,18 @@ function M.drag(params)
     hs.mouse.absolutePosition(hs.geometry.point(sx, sy))
     hs.timer.doAfter(0.05, function()
         local app = hs.application.frontmostApplication()
-        hs.eventtap.event.newMouseEvent(types.leftMouseDown, hs.geometry.point(sx, sy)):post(app or nil)
+        hs.eventtap.event.newMouseEvent(types.leftMouseDown, hs.geometry.point(sx, sy)):post()
         local function doStep(i)
             local t = i / steps
             local cx = sx + (ex - sx) * t
             local cy = sy + (ey - sy) * t
             hs.mouse.absolutePosition(hs.geometry.point(cx, cy))
-            hs.eventtap.event.newMouseEvent(types.leftMouseDragged, hs.geometry.point(cx, cy)):post(app or nil)
+            hs.eventtap.event.newMouseEvent(types.leftMouseDragged, hs.geometry.point(cx, cy)):post()
             if i < steps then
                 hs.timer.doAfter(stepDelay, function() doStep(i + 1) end)
             else
                 hs.timer.doAfter(0.02, function()
-                    hs.eventtap.event.newMouseEvent(types.leftMouseUp, hs.geometry.point(ex, ey)):post(app or nil)
+                    hs.eventtap.event.newMouseEvent(types.leftMouseUp, hs.geometry.point(ex, ey)):post()
                 end)
             end
         end
