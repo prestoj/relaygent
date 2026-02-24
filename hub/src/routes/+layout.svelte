@@ -26,12 +26,27 @@
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
 	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
-	let isFullPage = $derived($page.url.pathname === '/' || $page.url.pathname === '/chat');
+	let isRootPage = $derived($page.url.pathname === '/');
+	let isChatPage = $derived($page.url.pathname === '/chat');
+	let isFullPage = $derived(isRootPage || isChatPage);
 
-	async function pollUnread() {
-		try { const r = await fetch('/api/chat?mode=unread'); const d = await r.json(); unreadChat = d.count || 0; } catch {}
+	// Track unread assistant messages via WebSocket (not API — avoids counting user's own msgs)
+	let layoutWs = null;
+	function connectLayout() {
+		if (!browser) return;
+		const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+		layoutWs = new WebSocket(`${proto}//${location.host}/ws`);
+		layoutWs.onmessage = (e) => {
+			let msg; try { msg = JSON.parse(e.data); } catch { return; }
+			if (msg.type === 'message' && msg.data?.role === 'assistant') {
+				if (!isChatPage) unreadChat++;
+			}
+		};
+		layoutWs.onclose = () => setTimeout(connectLayout, 3000);
 	}
-	onMount(() => { if (browser) { pollUnread(); setInterval(pollUnread, 15000); } });
+	// Reset unread when navigating to chat
+	$effect(() => { if (isChatPage) unreadChat = 0; });
+	onMount(() => { if (browser) connectLayout(); });
 </script>
 
 <svelte:head><title>{pageName ? `Relaygent · ${pageName}` : 'Relaygent'}</title><link rel="icon" href="/favicon.svg" /></svelte:head>
@@ -65,7 +80,7 @@
 </nav>
 
 <div class="content-row">
-	{#if !isFullPage}<ActivitySidebar />{/if}
+	{#if !isRootPage}<ActivitySidebar />{/if}
 	<main class:home={isFullPage}>
 		{#if isFullPage}
 			{@render children()}
