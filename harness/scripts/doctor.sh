@@ -149,10 +149,22 @@ _check_svc() {
 _check_svc "Hub" "$HUB_PORT" "hub" "/api/health"
 _check_svc "Notifications" "$NOTIF_PORT" "notifications"
 
-# --- 9+10. macOS-specific checks (Hammerspoon, typing) ---
+# --- 9. Security ---
+echo -e "\n${CYAN}Security:${NC}"
+_has_tls=0; _has_pw=0
+[[ -f "$CONFIG_FILE" ]] && {
+    _tls_cert=$(node -e "try{const c=JSON.parse(require('fs').readFileSync('$CONFIG_FILE','utf-8'));console.log(c.hub?.tls?.cert||'')}catch{}" 2>/dev/null || true)
+    _pw_hash=$(node -e "try{const c=JSON.parse(require('fs').readFileSync('$CONFIG_FILE','utf-8'));console.log(c.hub?.passwordHash||'')}catch{}" 2>/dev/null || true)
+    [[ -n "$_tls_cert" ]] && _has_tls=1
+    [[ -n "$_pw_hash" ]] && _has_pw=1
+}
+[[ "$_has_tls" == 1 ]] && ok_msg "TLS configured" || echo -e "  ${YELLOW}▸ HTTPS not configured — run: relaygent setup-tls${NC}"
+[[ "$_has_pw" == 1 ]] && ok_msg "Hub password set" || echo -e "  ${YELLOW}▸ No hub password — run: relaygent set-password${NC}"
+
+# --- 10+11. macOS-specific checks (Hammerspoon, typing) ---
 [[ "$(uname)" == "Darwin" ]] && source "$SCRIPT_DIR/doctor-macos.sh"
 
-# --- 11. Updates ---
+# --- 12. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
 BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
