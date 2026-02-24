@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
+	import ActivitySidebar from '$lib/components/ActivitySidebar.svelte';
 	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
@@ -70,6 +71,7 @@
 </main>
 <ChatBubble />
 <CommandPalette />
+<ActivitySidebar />
 </div>
 
 <style>
