@@ -48,6 +48,11 @@ show_help() {
         "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
         "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
         "version" "Show version info"
+    echo -e "\n${CYAN}Quick Start:${NC}"
+    echo "  Something broken?      relaygent check → doctor → health"
+    echo "  Watch the agent work:   relaygent session --watch"
+    echo "  Debug a service:        relaygent logs hub -f"
+    echo "  Open the dashboard:     relaygent open"
 }
 
 case "${1:-help}" in
