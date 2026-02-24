@@ -7,8 +7,8 @@
 	<ol class="steps">
 		<li><strong>Set your intent</strong> — Tell the agent what to focus on at <a href="/intent">Intent</a></li>
 		<li><strong>Start the agent</strong> — Run <code>relaygent start</code> in your terminal</li>
-		<li><strong>Watch it work</strong> — The <a href="/">Dashboard</a> shows real-time activity</li>
-		<li><strong>Chat anytime</strong> — Click the chat bubble (bottom-right) or run <code>relaygent chat "message"</code></li>
+		<li><strong>Watch it work</strong> — The activity sidebar shows real-time tool calls and context usage</li>
+		<li><strong>Chat anytime</strong> — Send messages on the <a href="/">Chat</a> page or run <code>relaygent chat "message"</code></li>
 	</ol>
 </section>
 
@@ -20,7 +20,7 @@
 		<dt>Knowledge Base</dt>
 		<dd>Persistent notes and documentation at <a href="/kb">/kb</a>. The agent reads and writes topics linked with [[wiki-links]]. Think of it as shared long-term memory.</dd>
 		<dt>Context</dt>
-		<dd>The agent's working memory for the current session. The percentage bar on the dashboard shows how full it is. At ~85%, the session hands off to a fresh one automatically.</dd>
+		<dd>The agent's working memory for the current session. The context bar in the activity sidebar shows how full it is. At ~85%, the session hands off to a fresh one automatically.</dd>
 		<dt>Sessions</dt>
 		<dd>Each relay run is a session. Browse history at <a href="/sessions">/sessions</a> to see what the agent did, including tool calls and decisions.</dd>
 		<dt>Tasks</dt>
@@ -33,15 +33,17 @@
 <section class="card">
 	<h2>Hub Pages</h2>
 	<div class="ref-grid">
-		<div class="ref-key"><a href="/">Dashboard</a></div><div>Live activity feed, status, screen view, and quick actions</div>
+		<div class="ref-key"><a href="/">Chat</a></div><div>Send messages to the agent, with activity sidebar</div>
 		<div class="ref-key"><a href="/intent">Intent</a></div><div>Set and edit the agent's priorities and direction</div>
 		<div class="ref-key"><a href="/kb">KB</a></div><div>Knowledge base with wiki-linked topics and search</div>
 		<div class="ref-key"><a href="/tasks">Tasks</a></div><div>Create one-off or recurring reminders and todos</div>
 		<div class="ref-key"><a href="/sessions">Sessions</a></div><div>Browse past session history with exportable logs</div>
 		<div class="ref-key"><a href="/logs">Logs</a></div><div>Live system logs with search and syntax coloring</div>
 		<div class="ref-key"><a href="/files">Files</a></div><div>Upload, download, and preview shared files</div>
-		<div class="ref-key"><a href="/search">Search</a></div><div>Full-text search across KB topics and sessions</div>
-		<div class="ref-key"><a href="/settings">Settings</a></div><div>System info, services, MCP servers, and setup status</div>
+		<div class="ref-key"><a href="/search">Search</a></div><div>Full-text search across KB topics, sessions, and chat</div>
+		<div class="ref-key"><a href="/activity">Activity</a></div><div>Full-page activity feed (mobile-friendly)</div>
+		<div class="ref-key"><a href="/screen">Screen</a></div><div>Observe screenshots or take interactive VNC control</div>
+		<div class="ref-key"><a href="/settings">Settings</a></div><div>System info, services, relay control, and configuration</div>
 	</div>
 </section>
 
