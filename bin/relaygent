@@ -30,6 +30,7 @@ show_help() {
         "health" "Ping all services and report status"
     echo -e "\n${CYAN}Maintenance:${NC}"
     printf "$F" "update" "Pull latest, rebuild, restart" \
+        "backup [path]" "Archive KB, config, and data to tarball" \
         "cleanup" "Free disk: old sessions, caches, logs (--dry-run)" \
         "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
         "digest" "Daily summary of PRs, commits, and status" \
@@ -102,7 +103,7 @@ print(s,t)
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
-    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
+    mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
