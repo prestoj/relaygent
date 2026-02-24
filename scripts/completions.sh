@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history recap session test logs orient check doctor health kb-lint update backup restore cleanup clean-logs changelog digest discover install-services set-password mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats history recap session test logs orient check doctor health kb-lint update backup restore cleanup clean-logs changelog digest discover install-services set-password config mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -28,6 +28,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'doctor:Auto-fix common issues (--dry-run)'
             'health:Ping all services'
             'kb-lint:Check KB health (broken links, orphans)'
+            'config:View/edit config (get, set, unset, path)'
             'update:Pull latest, rebuild, restart'
             'changelog:Show recent merged PRs and commits'
             'digest:Daily summary of PRs, commits, and status'
@@ -63,6 +64,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 restore) compadd -- --dry-run --yes ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
                 set-password) compadd -- --remove ;;
+                config) compadd -- get set unset path ;;
                 search) compadd -- --type --json ;;
                 chat) compadd -- --read --follow ;;
                 open) compadd -- intent kb tasks sessions logs files search notifications settings help ;;
@@ -100,6 +102,8 @@ else
                 COMPREPLY=($(compgen -W "--dry-run --days" -- "$cur")) ;;
             set-password)
                 COMPREPLY=($(compgen -W "--remove" -- "$cur")) ;;
+            config)
+                COMPREPLY=($(compgen -W "get set unset path" -- "$cur")) ;;
             search)
                 COMPREPLY=($(compgen -W "--type --json" -- "$cur")) ;;
             chat)
