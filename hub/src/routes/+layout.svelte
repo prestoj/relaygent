@@ -3,17 +3,15 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import ActivitySidebar from '$lib/components/ActivitySidebar.svelte';
 	let { children, data } = $props();
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
-	// Sync dueTasks when layout data changes (e.g. navigation)
+	let unreadChat = $state(0);
 	$effect(() => { dueTasks = data.dueTasks || 0; });
 
-	// Initialize darkMode from localStorage, then keep body class in sync
 	if (browser) {
 		const stored = localStorage.getItem('darkMode');
 		darkMode = stored !== null ? stored === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -22,17 +20,18 @@
 
 	function toggleDark() {
 		darkMode = !darkMode;
-		if (browser) {
-			localStorage.setItem('darkMode', darkMode);
-			document.body.classList.toggle('dark-mode', darkMode);
-		}
+		if (browser) { localStorage.setItem('darkMode', darkMode); document.body.classList.toggle('dark-mode', darkMode); }
 	}
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help',activity:'Activity'}[$page.url.pathname.split('/')[1]] || '');
-	let isActivityPage = $derived($page.url.pathname === '/activity');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
+	let isFullPage = $derived($page.url.pathname === '/' || $page.url.pathname === '/chat');
 
+	async function pollUnread() {
+		try { const r = await fetch('/api/chat?mode=unread'); const d = await r.json(); unreadChat = d.count || 0; } catch {}
+	}
+	onMount(() => { if (browser) { pollUnread(); setInterval(pollUnread, 15000); } });
 </script>
 
 <svelte:head><title>{pageName ? `Relaygent · ${pageName}` : 'Relaygent'}</title><link rel="icon" href="/favicon.svg" /></svelte:head>
@@ -46,8 +45,8 @@
 		<span class="bar" class:open={menuOpen}></span>
 	</button>
 	<div class="links" class:open={menuOpen}>
-		<a href="/activity" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
-		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Chat</a>
+		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Activity</a>
+		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
@@ -59,23 +58,22 @@
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-			{darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+			{darkMode ? '☀️' : '🌙'}
 		</button>
 		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="logout-btn" type="submit">Logout</button></form>{/if}
 	</div>
 </nav>
 
 <div class="content-row">
-	{#if !isActivityPage}<ActivitySidebar />{/if}
-	<main class:home={$page.url.pathname === '/' || isActivityPage}>
-		{#if $page.url.pathname === '/' || isActivityPage}
+	{#if !isFullPage}<ActivitySidebar />{/if}
+	<main class:home={isFullPage}>
+		{#if isFullPage}
 			{@render children()}
 		{:else}
 			<div class="page-content">{@render children()}</div>
 		{/if}
 	</main>
 </div>
-{#if $page.url.pathname !== '/'}<ChatBubble />{/if}
 <CommandPalette />
 </div>
 
@@ -91,21 +89,17 @@
 	.links a.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link); padding-bottom: 0.1em; text-decoration: none; }
 	.hamburger { display: none; }
 	.unread-badge { display: inline-block; background: var(--error); color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
-
 	.theme-toggle {
 		background: none; border: none; cursor: pointer;
 		font-size: 1.15em; padding: 0.15em 0.3em; border-radius: 4px; line-height: 1;
 		transition: transform 0.2s;
 	}
 	.theme-toggle:hover { transform: scale(1.2); }
-	.notif-bell { font-size: 1.1em; line-height: 1; text-decoration: none !important; display: inline-flex; align-items: center; }
-	.notif-bell:hover { transform: scale(1.15); }
 	.logout-btn {
 		background: none; border: 1px solid var(--border); cursor: pointer;
 		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
 	}
 	.logout-btn:hover { color: var(--text); }
-
 	.content-row { display: flex; flex: 1; min-height: 0; }
 	main { flex: 1; min-width: 0; overflow-y: auto; }
 	main.home { display: flex; flex-direction: column; overflow: hidden; }
