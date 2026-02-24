@@ -80,6 +80,20 @@ echo "  Hub: started (port 8080)"
 echo $! > "$PID_DIR/notifications.pid"
 echo "  Notifications: started (port 8083)"
 
+# 8. Chrome (auto-launch with hub dashboard)
+CHROME_DATA="$DATA/chrome-debug-profile"
+for f in SingletonLock SingletonSocket SingletonCookie; do rm -f "$CHROME_DATA/$f" 2>/dev/null; done
+BROWSER=$(command -v google-chrome || command -v chromium-browser || command -v chromium || echo "")
+if [ -n "$BROWSER" ]; then
+    mkdir -p "$CHROME_DATA/Default"
+    DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 "$BROWSER" \
+        --no-sandbox --no-first-run --disable-gpu --disable-default-apps \
+        --remote-debugging-port=9222 --user-data-dir="$CHROME_DATA" \
+        "http://localhost:8080" > "$LOGS/chrome.log" 2>&1 &
+    echo $! > "$PID_DIR/chrome.pid"
+    echo "  Chrome: started (CDP port 9222)"
+fi
+
 echo ""
 echo "=== Services Ready ==="
 echo "  Hub:     http://localhost:8080"
@@ -87,7 +101,7 @@ echo "  VNC:     vnc://localhost:5900"
 echo "  noVNC:   http://localhost:8080/screen"
 echo ""
 
-# 8. Watch for Claude auth and auto-start relay
+# 9. Watch for Claude auth and auto-start relay
 if [ -d "$HOME/.claude" ]; then
     echo "  Claude auth found — starting relay..."
     python3 "$REPO/harness/relay.py" > "$LOGS/relay.log" 2>&1 &
@@ -119,7 +133,7 @@ else
     ) &
 fi
 
-# 9. Watchdog — restart crashed services every 30s
+# 10. Watchdog — restart crashed services every 30s
 watchdog() {
     sleep 30
     while true; do
@@ -160,6 +174,15 @@ watchdog() {
             echo "[watchdog] Restarting gnome-shell..."
             DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 MUTTER_ALLOW_SOFTWARE_RENDERING=1 \
                 gnome-shell --x11 >> "$LOGS/gnome.log" 2>&1 &
+        fi
+        # Chrome
+        if [ -n "$BROWSER" ] && ! pgrep -f "chrome|chromium" >/dev/null 2>&1; then
+            echo "[watchdog] Restarting Chrome..."
+            for f in SingletonLock SingletonSocket SingletonCookie; do rm -f "$CHROME_DATA/$f" 2>/dev/null; done
+            DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 "$BROWSER" --no-sandbox --no-first-run --disable-gpu \
+                --remote-debugging-port=9222 --user-data-dir="$CHROME_DATA" \
+                "http://localhost:8080" >> "$LOGS/chrome.log" 2>&1 &
+            echo $! > "$PID_DIR/chrome.pid"
         fi
         sleep 30
     done
