@@ -10,6 +10,31 @@ import { pathToFileURL } from 'url';
 
 function configPath() { return join(homedir(), '.relaygent', 'config.json'); }
 
+/** Prompt for password without echoing characters to the terminal. */
+function readPassword(prompt) {
+	return new Promise(resolve => {
+		process.stdout.write(prompt);
+		const stdin = process.stdin;
+		const wasRaw = stdin.isRaw;
+		stdin.setRawMode(true);
+		stdin.resume();
+		let input = '';
+		const onData = (key) => {
+			const ch = key.toString();
+			if (ch === '\r' || ch === '\n') {
+				stdin.setRawMode(wasRaw || false);
+				stdin.removeListener('data', onData);
+				process.stdout.write('\n');
+				resolve(input);
+			} else if (ch === '\x7f' || ch === '\b') {
+				if (input.length > 0) input = input.slice(0, -1);
+			} else if (ch === '\x03') { process.exit(1);
+			} else { input += ch; }
+		};
+		stdin.on('data', onData);
+	});
+}
+
 export async function setupRemote(config, REPO_DIR, C, ask) {
 	console.log(`\n${C.cyan}Remote Access${C.reset}`);
 	console.log(`${C.dim}Access your hub from other devices (phone, laptop, tablet)${C.reset}`);
@@ -91,12 +116,12 @@ async function setupPassword(config, REPO_DIR, C, ask) {
 	const pwAnswer = (await ask(`\n${C.cyan}Set a hub password? ${label} [Y/n]: ${C.reset}`)).trim().toLowerCase();
 	if (pwAnswer === 'n') return;
 
-	const pw = await ask(`  Password (min 4 chars): `);
+	const pw = await readPassword(`  Password (min 4 chars): `);
 	if (!pw || pw.length < 4) {
 		console.log(`  ${C.yellow}Too short — skipped. Run 'relaygent set-password' later.${C.reset}`);
 		return;
 	}
-	const pw2 = await ask(`  Confirm: `);
+	const pw2 = await readPassword(`  Confirm: `);
 	if (pw !== pw2) {
 		console.log(`  ${C.yellow}Didn't match — skipped. Run 'relaygent set-password' later.${C.reset}`);
 		return;
