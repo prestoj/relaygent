@@ -36,9 +36,10 @@ function readPassword(prompt) {
 }
 
 export async function setupRemote(config, REPO_DIR, C, ask) {
-	console.log(`\n${C.cyan}Remote Access${C.reset}`);
-	console.log(`${C.dim}Access your hub from other devices (phone, laptop, tablet)${C.reset}`);
-	const answer = (await ask(`\n${C.cyan}Set up remote access? [Y/n]: ${C.reset}`)).trim().toLowerCase();
+	console.log(`\n${C.cyan}Remote Access (HTTPS)${C.reset}`);
+	console.log(`${C.dim}HTTPS encrypts traffic and prevents eavesdropping on your agent's activity.${C.reset}`);
+	console.log(`${C.dim}Recommended if your machine is on a shared network or accessible remotely.${C.reset}`);
+	const answer = (await ask(`\n${C.cyan}Set up HTTPS via Tailscale? [Y/n]: ${C.reset}`)).trim().toLowerCase();
 	if (answer === 'n') {
 		console.log(`  ${C.dim}Skipped — run 'relaygent setup-tls' later${C.reset}`);
 		return;
@@ -111,7 +112,7 @@ function setupTls(config, C) {
 	}
 }
 
-async function setupPassword(config, REPO_DIR, C, ask) {
+export async function setupPassword(config, REPO_DIR, C, ask) {
 	const label = config.hub?.tls ? '(recommended)' : '(recommended for remote access)';
 	const pwAnswer = (await ask(`\n${C.cyan}Set a hub password? ${label} [Y/n]: ${C.reset}`)).trim().toLowerCase();
 	if (pwAnswer === 'n') return;

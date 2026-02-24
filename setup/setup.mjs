@@ -10,7 +10,7 @@ import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { setupHammerspoon, setupHooks, setupSecrets, setupSlackToken, setupClaudeMd, envFromConfig, optimizeTyping } from './setup-helpers.mjs';
 import { setupVnc } from './setup-vnc.mjs';
-import { setupRemote } from './setup-remote.mjs';
+import { setupRemote, setupPassword } from './setup-remote.mjs';
 import { checkPortConflict, printSetupComplete, setupCliSymlink, checkPrerequisites, copyKbTemplates, initKbGit, installDeps } from './setup-utils.mjs';
 
 const DOCKER = process.argv.includes('--docker');
@@ -82,6 +82,14 @@ async function main() {
 	if (!DOCKER) optimizeTyping(C);
 	if (!DOCKER) setupVnc(config, C);
 	if (!DOCKER) await setupRemote(config, REPO_DIR, C, ask);
+
+	// Always offer password if not yet set (even if remote access was skipped)
+	if (!DOCKER && !config.hub?.passwordHash) {
+		console.log(`\n${C.cyan}Hub Security${C.reset}`);
+		console.log(`${C.dim}Without a password, anyone on your network can access the hub dashboard.${C.reset}`);
+		await setupPassword(config, REPO_DIR, C, ask);
+		writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+	}
 
 	if (DOCKER) {
 		// Docker: no services, no launch — entrypoint handles everything
