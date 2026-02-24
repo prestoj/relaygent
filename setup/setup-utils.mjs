@@ -29,6 +29,14 @@ export function printSetupComplete(hubPort, C, config = {}) {
 	console.log(`${C.green}│${C.reset}  Doctor:     ${C.bold}relaygent doctor${C.reset}  (auto-fix common issues)`);
 	console.log(`${C.green}│${C.reset}  Orient:     ${C.bold}relaygent orient${C.reset}  (quick status snapshot)`);
 	console.log(`${C.green}│${C.reset}`);
+	const hasTls = !!config.hub?.tls;
+	const hasPassword = !!config.hub?.passwordHash;
+	if (!hasTls || !hasPassword) {
+		console.log(`${C.green}│${C.reset}  ${C.yellow}Security:${C.reset}`);
+		if (!hasTls) console.log(`${C.green}│${C.reset}    ${C.yellow}▸${C.reset} Enable HTTPS: ${C.bold}relaygent setup-tls${C.reset} (via Tailscale)`);
+		if (!hasPassword) console.log(`${C.green}│${C.reset}    ${C.yellow}▸${C.reset} Set password: ${C.bold}relaygent set-password${C.reset}`);
+		console.log(`${C.green}│${C.reset}`);
+	}
 	console.log(`${C.green}│${C.reset}  ${C.yellow}Next steps:${C.reset}`);
 	console.log(`${C.green}│${C.reset}  1. Edit ${C.bold}knowledge/topics/INTENT.md${C.reset} with your priorities`);
 	console.log(`${C.green}│${C.reset}  2. Your agent will greet you in hub chat after launching`);
