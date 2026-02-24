@@ -16,6 +16,7 @@ from jsonl_checks import (
     check_incomplete_exit,
     find_jsonl_path,
     get_jsonl_size,
+    last_output_is_idle,
 )
 
 
@@ -162,3 +163,49 @@ class TestCheckIncompleteExit:
         path.write_text("not valid json\n")
         incomplete, tool = check_incomplete_exit(sid, ws)
         assert not incomplete
+
+
+# --- last_output_is_idle ---
+
+
+class TestLastOutputIsIdle:
+    def test_short_text_is_idle(self, tmp_jsonl):
+        sid, ws, path, write = tmp_jsonl
+        write([{"type": "assistant", "message": {"content": [
+            {"type": "text", "text": "Sleeping now."}
+        ]}}])
+        assert last_output_is_idle(sid, ws) is True
+
+    def test_long_text_not_idle(self, tmp_jsonl):
+        sid, ws, path, write = tmp_jsonl
+        write([{"type": "assistant", "message": {"content": [
+            {"type": "text", "text": "x" * 300}
+        ]}}])
+        assert last_output_is_idle(sid, ws) is False
+
+    def test_tool_use_not_idle(self, tmp_jsonl):
+        sid, ws, path, write = tmp_jsonl
+        write([{"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "t1", "name": "Read", "input": {}},
+            {"type": "text", "text": "short"},
+        ]}}])
+        assert last_output_is_idle(sid, ws) is False
+
+    def test_sleep_tool_not_idle(self, tmp_jsonl):
+        """Sleep MCP tool in recent messages → not idle (intentional sleep)."""
+        sid, ws, path, write = tmp_jsonl
+        write([
+            {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "id": "t1",
+                 "name": "mcp__relaygent-notifications__sleep", "input": {}},
+                {"type": "text", "text": "Going to sleep."},
+            ]}},
+            {"type": "user", "message": {"content": [
+                {"type": "tool_result", "tool_use_id": "t1",
+                 "content": "Sleep activated."}
+            ]}},
+            {"type": "assistant", "message": {"content": [
+                {"type": "text", "text": "Sleeping until woken."}
+            ]}},
+        ])
+        assert last_output_is_idle(sid, ws) is False

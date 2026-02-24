@@ -108,19 +108,35 @@ def should_sleep(session_id: str, workspace: Path) -> bool:
 
 
 def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) -> bool:
-    """True if Claude's last output was short text with no tool calls (idle/conversational)."""
+    """True if Claude's last output was short text with no tool calls (idle/conversational).
+
+    Returns False if the sleep MCP tool was called recently (intentional sleep, not idle).
+    """
     jsonl = find_jsonl_path(session_id, workspace)
     if not jsonl: return False
     try:
-        for line in reversed(_read_tail(jsonl)):
+        lines = _read_tail(jsonl)
+        # Check last few assistant messages for sleep tool call
+        assistant_count = 0
+        for line in reversed(lines):
             if not line.strip(): continue
             try: e = json.loads(line)
             except json.JSONDecodeError: continue
             if e.get("type") != "assistant": continue
+            assistant_count += 1
             c = e.get("message", {}).get("content") or []
             has_tool = any(isinstance(x, dict) and x.get("type") == "tool_use" for x in c)
-            text = "".join(x.get("text", "") for x in c if isinstance(x, dict) and x.get("type") == "text")
-            return not has_tool and len(text.strip()) < max_chars
+            has_sleep = any(isinstance(x, dict) and x.get("type") == "tool_use"
+                           and "sleep" in (x.get("name") or "") for x in c)
+            if has_sleep:
+                return False  # Intentional sleep — not idle
+            if assistant_count == 1:
+                text = "".join(x.get("text", "") for x in c
+                               if isinstance(x, dict) and x.get("type") == "text")
+                is_idle = not has_tool and len(text.strip()) < max_chars
+            if assistant_count >= 3:
+                break
+        return is_idle if assistant_count >= 1 else False
     except (OSError, json.JSONDecodeError, KeyError, TypeError):
         pass
     return False
