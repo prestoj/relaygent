@@ -53,5 +53,14 @@ while true; do
             "http://localhost:8080" >> "$LOGS/chrome.log" 2>&1 &
         echo $! > "$PID_DIR/chrome.pid"
     fi
+    # Log rotation — truncate files over 10MB to last 1000 lines
+    for logfile in "$LOGS"/*.log; do
+        [ -f "$logfile" ] || continue
+        size=$(stat -c%s "$logfile" 2>/dev/null || stat -f%z "$logfile" 2>/dev/null || echo 0)
+        if [ "${size:-0}" -gt 10485760 ]; then
+            echo "[watchdog] Rotating $(basename "$logfile") ($(( size / 1048576 ))MB)"
+            tail -1000 "$logfile" > "$logfile.tmp" && mv "$logfile.tmp" "$logfile"
+        fi
+    done
     sleep 30
 done
