@@ -53,9 +53,7 @@
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
-		<a href="/logs" class:active={isActive('/logs')} onclick={closeMenu}>Logs</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
-		<a href="/search" class:active={isActive('/search')} onclick={closeMenu}>Search</a>
 		<a href="/activity" class="mobile-only" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>

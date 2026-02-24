@@ -38,12 +38,10 @@
 		<div class="ref-key"><a href="/kb">KB</a></div><div>Knowledge base with wiki-linked topics and search</div>
 		<div class="ref-key"><a href="/tasks">Tasks</a></div><div>Create one-off or recurring reminders and todos</div>
 		<div class="ref-key"><a href="/sessions">Sessions</a></div><div>Browse past session history with exportable logs</div>
-		<div class="ref-key"><a href="/logs">Logs</a></div><div>Live system logs with search and syntax coloring</div>
 		<div class="ref-key"><a href="/files">Files</a></div><div>Upload, download, and preview shared files</div>
-		<div class="ref-key"><a href="/search">Search</a></div><div>Full-text search across KB topics, sessions, and chat</div>
 		<div class="ref-key"><a href="/activity">Activity</a></div><div>Full-page activity feed (mobile-friendly)</div>
 		<div class="ref-key"><a href="/screen">Screen</a></div><div>Observe screenshots or take interactive VNC control</div>
-		<div class="ref-key"><a href="/settings">Settings</a></div><div>System info, services, relay control, and configuration</div>
+		<div class="ref-key"><a href="/settings">Settings</a></div><div>System info, services, relay control, logs, and configuration</div>
 	</div>
 </section>
 
