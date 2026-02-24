@@ -46,7 +46,7 @@
 		<span class="bar" class:open={menuOpen}></span>
 	</button>
 	<div class="links" class:open={menuOpen}>
-		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Dashboard</a>
+		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Chat</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB{#if deadKbLinks > 0}<span class="unread-badge">{deadKbLinks}</span>{/if}</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
@@ -68,8 +68,12 @@
 
 <div class="content-row">
 	<ActivitySidebar />
-	<main>
-		<div class="page-content">{@render children()}</div>
+	<main class:home={$page.url.pathname === '/'}>
+		{#if $page.url.pathname === '/'}
+			{@render children()}
+		{:else}
+			<div class="page-content">{@render children()}</div>
+		{/if}
 	</main>
 </div>
 {#if $page.url.pathname !== '/'}<ChatBubble />{/if}
@@ -105,6 +109,7 @@
 
 	.content-row { display: flex; flex: 1; min-height: 0; }
 	main { flex: 1; min-width: 0; overflow-y: auto; }
+	main.home { display: flex; flex-direction: column; overflow: hidden; }
 	.page-content { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
 	@media (max-width: 800px) {

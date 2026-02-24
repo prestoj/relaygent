@@ -4,6 +4,7 @@
 	import { initAudio, playChime, notifyDesktop } from './chatAudio.js';
 	import { renderMsg, fmtTime, isRelayMsg, groupMessages } from './chatUtils.js';
 
+	let { fullPage = false } = $props();
 	let messages = $state([]);
 	let input = $state('');
 	let sending = $state(false);
@@ -84,8 +85,8 @@
 	onDestroy(() => { if (ws) ws.close(); if (browser) document.removeEventListener('click', initAudio); });
 </script>
 
-<section class="cp">
-	<div class="cp-header">Chat</div>
+<section class="cp" class:full={fullPage}>
+	{#if !fullPage}<div class="cp-header">Chat</div>{/if}
 	<div class="cp-msgs" bind:this={chatEl} onscroll={onScroll}>
 		{#if loadingOlder}<div class="cp-loading">Loading...</div>{/if}
 		{#each groups as g, i}
@@ -115,6 +116,7 @@
 
 <style>
 	.cp { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; min-height: 350px; max-height: 60vh; margin-bottom: 1em; }
+	.cp.full { border: none; border-radius: 0; background: var(--bg); min-height: 0; max-height: none; height: 100%; margin: 0; }
 	.cp-header { font-weight: 700; font-size: 0.85em; padding: 0.5em 0.8em; border-bottom: 1px solid var(--border); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 	.cp-msgs { flex: 1; overflow-y: auto; padding: 0.5em 0.8em; display: flex; flex-direction: column; gap: 0.4em; }
 	.cp-loading { text-align: center; color: var(--text-muted); font-size: 0.8em; padding: 0.5em; }
