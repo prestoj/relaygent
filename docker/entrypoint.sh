@@ -21,13 +21,27 @@ echo $! > "$PID_DIR/xvfb.pid"
 sleep 1
 echo "  Xvfb: started (DISPLAY=:99)"
 
-# 2. D-Bus (required for GNOME)
+# 2. D-Bus — session bus for general IPC
 if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
     eval "$(dbus-launch --sh-syntax)"
     export DBUS_SESSION_BUS_ADDRESS
 fi
 
-# 3. GNOME desktop
+# 2b. System D-Bus + logind (gnome-shell needs org.freedesktop.login1)
+if [ ! -S /var/run/dbus/system_bus_socket ]; then
+    sudo mkdir -p /var/run/dbus
+    sudo dbus-daemon --system --fork
+    echo "  System D-Bus: started"
+fi
+if ! pgrep -f systemd-logind &>/dev/null; then
+    sudo /usr/lib/systemd/systemd-logind > "$LOGS/logind.log" 2>&1 &
+    sleep 2
+    echo "  logind: started"
+fi
+
+# 3. GNOME desktop (software rendering — no GPU in containers)
+export LIBGL_ALWAYS_SOFTWARE=1
+export MUTTER_ALLOW_SOFTWARE_RENDERING=1
 mkdir -p "$HOME/.config"
 echo "yes" > "$HOME/.config/gnome-initial-setup-done" 2>/dev/null || true
 gnome-shell --x11 > "$LOGS/gnome.log" 2>&1 &
@@ -140,6 +154,12 @@ watchdog() {
             DISPLAY=:99 python3 "$REPO/computer-use/linux-server.py" \
                 >> "$LOGS/computer-use.log" 2>&1 &
             echo $! > "$PID_DIR/computer-use.pid"
+        fi
+        # GNOME shell
+        if ! pgrep -x "gnome-shell" >/dev/null 2>&1; then
+            echo "[watchdog] Restarting gnome-shell..."
+            DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 MUTTER_ALLOW_SOFTWARE_RENDERING=1 \
+                gnome-shell --x11 >> "$LOGS/gnome.log" 2>&1 &
         fi
         sleep 30
     done
