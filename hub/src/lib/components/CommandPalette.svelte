@@ -7,7 +7,7 @@
 	let inputEl;
 
 	const pages = [
-		{ name: 'Dashboard', path: '/', keys: ['home', 'dash'] },
+		{ name: 'Chat', path: '/', keys: ['home', 'chat', 'message'] },
 		{ name: 'Intent', path: '/intent', keys: ['intent', 'goal'] },
 		{ name: 'Knowledge Base', path: '/kb', keys: ['kb', 'knowledge', 'wiki'] },
 		{ name: 'Tasks', path: '/tasks', keys: ['tasks', 'todo'] },
@@ -15,7 +15,8 @@
 		{ name: 'Logs', path: '/logs', keys: ['logs', 'debug'] },
 		{ name: 'Files', path: '/files', keys: ['files', 'browse'] },
 		{ name: 'Search', path: '/search', keys: ['search', 'find'] },
-		{ name: 'Notifications', path: '/notifications', keys: ['notifications', 'alerts'] },
+		{ name: 'Activity', path: '/activity', keys: ['activity', 'feed', 'tools'] },
+		{ name: 'Screen', path: '/screen', keys: ['screen', 'vnc', 'remote'] },
 		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
 	];
