@@ -74,14 +74,18 @@ echo "  noVNC:   http://localhost:8080/screen"
 echo ""
 
 # 8. Watch for Claude auth and auto-start relay
-if [ -d "$HOME/.claude" ]; then
+claude_authed() { [ -d "$HOME/.claude" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; }
+
+if claude_authed; then
+    [ -n "${ANTHROPIC_API_KEY:-}" ] && echo "  Auth: ANTHROPIC_API_KEY set"
     echo "  Claude auth found — starting relay..."
     python3 "$REPO/harness/relay.py" > "$LOGS/relay.log" 2>&1 &
     echo $! > "$PID_DIR/relay.pid"
     echo "  Relay: started"
 else
     echo "  Claude not authenticated yet."
-    echo "  Connect via noVNC → open terminal → run 'claude' to log in."
+    echo "  Option 1: Set ANTHROPIC_API_KEY in docker-compose.yml and restart"
+    echo "  Option 2: Connect via noVNC → open terminal → run 'claude' to log in"
     echo "  Watching for auth..."
     # Open terminal with setup instructions so user sees them via VNC
     gnome-terminal -- bash -c '
@@ -97,7 +101,7 @@ else
         echo ""
         exec bash' 2>/dev/null &
     (
-        while [ ! -d "$HOME/.claude" ]; do sleep 5; done
+        while ! claude_authed; do sleep 5; done
         echo "  Claude auth detected — starting relay..."
         python3 "$REPO/harness/relay.py" > "$LOGS/relay.log" 2>&1 &
         echo $! > "$PID_DIR/relay.pid"

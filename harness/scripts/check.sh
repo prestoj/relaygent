@@ -31,7 +31,8 @@ else ck_fail "git" "not found — required for KB and hooks"; fi
 if command -v claude &>/dev/null; then
     ck_ok "Claude Code" "$(claude --version 2>/dev/null | head -1 | tr -d '\n')"
     if [ -d "$HOME/.claude" ]; then ck_ok "Auth" "credentials directory found"
-    else ck_warn "Auth" "~/.claude not found — run: claude"; fi
+    elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then ck_ok "Auth" "ANTHROPIC_API_KEY set"
+    else ck_warn "Auth" "~/.claude not found — run: claude, or set ANTHROPIC_API_KEY"; fi
 else
     ck_fail "Claude Code" "not found — install: npm install -g @anthropic-ai/claude-code"
     ck_warn "Auth" "cannot check (Claude Code missing)"

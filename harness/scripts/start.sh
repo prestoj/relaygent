@@ -119,8 +119,8 @@ fi
 # Relay — fast auth check (no API call, instant)
 if ! command -v claude &>/dev/null; then
     echo -e "  Relay: ${RED}Claude Code not installed. Run: npm install -g @anthropic-ai/claude-code${NC}"
-elif [ ! -d "$HOME/.claude" ]; then
-    echo -e "  Relay: ${YELLOW}Not authenticated — run 'claude' to log in first.${NC}"
+elif [ ! -d "$HOME/.claude" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    echo -e "  Relay: ${YELLOW}Not authenticated — run 'claude' to log in, or set ANTHROPIC_API_KEY.${NC}"
 elif is_platform_managed relay; then
     platform_start "Relay" "relay"
 else

@@ -17,6 +17,8 @@ services:
       - relaygent-logs:/home/relaygent/relaygent/logs
     environment:
       - TZ=America/Los_Angeles
+      # Optional: set API key to skip interactive auth via noVNC
+      # - ANTHROPIC_API_KEY=sk-ant-...
     restart: unless-stopped
     # Required for GNOME/Xvfb
     shm_size: "256m"
