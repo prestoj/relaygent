@@ -59,5 +59,6 @@ You have MCP tools for: hub chat, notifications (reminders + sleep), computer-us
 - `relaygent check` — diagnose configuration issues
 - `relaygent doctor` — auto-fix common problems (venv, hooks, stale builds, down services)
 - `relaygent health` — ping all services and integrations
+- `relaygent kb-lint` — check KB for broken wiki-links, oversize files, orphans
 - `relaygent logs [service] -f` — tail service logs in real-time
 - `relaygent update` — pull latest code, rebuild hub, restart all services

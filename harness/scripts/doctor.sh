@@ -59,6 +59,12 @@ if [[ -n "$KB_DIR" ]] && [[ -d "$KB_DIR" ]]; then
         fi
     done
     [[ "$KB_FIXED" == 0 ]] && ok_msg "All KB files present"
+    # Check wiki-link health
+    if python3 "$SCRIPT_DIR/kb-lint.py" "$KB_DIR" >/dev/null 2>&1; then
+        ok_msg "No broken wiki-links"
+    else
+        skip_msg "Broken wiki-links found — run: relaygent kb-lint"
+    fi
 elif [[ -z "$KB_DIR" ]]; then
     skip_msg "KB directory not configured — run: relaygent setup"
 else
