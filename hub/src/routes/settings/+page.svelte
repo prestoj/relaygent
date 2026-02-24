@@ -132,7 +132,7 @@
 			<div class="label">Repo</div><div class="value mono">{data.config.repoPath}</div>
 		{/if}
 	</div>
-	<p class="hint">Edit <code>~/.relaygent/config.json</code> to change</p>
+	<p class="hint">Change with <code>relaygent config set &lt;key&gt; &lt;value&gt;</code></p>
 </section>
 
 <style>
