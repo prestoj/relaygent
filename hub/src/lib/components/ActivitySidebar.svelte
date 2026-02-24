@@ -4,7 +4,6 @@
 	import { marked } from 'marked';
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import { shortName, cat, relTime, itemKey } from '$lib/activityUtils.js';
-	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	let activities = $state([]);
 	let connected = $state(false);
 	let ws = null;
@@ -24,7 +23,7 @@
 		if (loading || !hasMore) return;
 		loading = true;
 		try {
-			const r = await fetch(`/api/session/activity?offset=${historyOffset}&limit=30`);
+			const r = await fetch(`/api/session/activity?offset=${historyOffset}&limit=20`);
 			if (r.ok) {
 				const d = await r.json();
 				const fresh = d.items.filter(i => !seenKeys.has(itemKey(i)));
@@ -67,19 +66,16 @@
 	onDestroy(() => { if (ws) ws.close(); });
 </script>
 
-<svelte:head><title>Relaygent</title></svelte:head>
-
-<div class="activity-page">
-	<div class="activity-header">
-		<span class="activity-title">Activity</span>
+<aside class="sidebar">
+	<div class="sidebar-header">
+		<span class="sidebar-title">Activity</span>
 		{#if connected}<span class="live-badge">LIVE</span>{/if}
 	</div>
 	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
-	<TodoWidget {activities} />
 	{#if activities.length === 0}
-		<div class="activity-empty">No activity yet</div>
+		<div class="sidebar-empty">No activity yet</div>
 	{:else}
-		<div class="activity-feed" onscroll={onFeedScroll}>
+		<div class="sidebar-feed" onscroll={onFeedScroll}>
 			{#each activities as a (itemKey(a))}
 				{@const expanded = expandedKey === itemKey(a)}
 				<div class="ai {a.type} {a.type === 'tool' ? cat(a.name) : 'text'}" class:new={a.isNew} class:expanded
@@ -88,12 +84,14 @@
 					{#if a.type === 'tool'}
 						<div class="tc">
 							<span class="tn">{a.name?.startsWith('mcp__') ? shortName(a.name) : a.name}</span>
-							{#if a.input && !expanded}<span class="ti">{a.input.length > 120 ? a.input.slice(0, 120) + '...' : a.input}</span>{/if}
+							{#if a.input && !expanded}<span class="ti">{a.input.length > 80 ? a.input.slice(0, 80) + '...' : a.input}</span>{/if}
 						</div>
 						{#if expanded}
 							<div class="detail">
 								{#if a.input}<pre class="detail-pre">{a.input}</pre>{/if}
-								{#if a.fullResult || a.result}<pre class="detail-pre result">{a.fullResult || a.result}</pre>{/if}
+								{#if a.fullResult || a.result}
+									<pre class="detail-pre result">{a.fullResult || a.result}</pre>
+								{/if}
 							</div>
 						{/if}
 					{:else}
@@ -101,25 +99,33 @@
 					{/if}
 				</div>
 			{/each}
-			{#if loading}<div class="load-more">Loading...</div>{/if}
+		{#if loading}<div class="load-more">Loading...</div>{/if}
 		</div>
 	{/if}
-</div>
+</aside>
 
 <style>
-	.activity-page { display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; width: 100%; }
-	.activity-header { display: flex; align-items: center; gap: 0.5em; padding: 0.8em 1em; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-	.activity-title { font-weight: 700; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em; }
+	.sidebar {
+		width: 320px; flex-shrink: 0; overflow: hidden;
+		background: var(--bg); border-right: 1px solid var(--border);
+		display: flex; flex-direction: column;
+	}
+	.sidebar-header {
+		display: flex; align-items: center; gap: 0.5em; padding: 0.6em 0.8em;
+		border-bottom: 1px solid var(--border); flex-shrink: 0;
+	}
+	.sidebar-title { font-weight: 700; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.05em; }
 	.live-badge { font-size: 0.6em; font-weight: 700; padding: 0.15em 0.4em; border-radius: 4px; background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent); color: var(--success, #22c55e); }
-	.activity-empty { padding: 3em 1em; text-align: center; color: var(--text-muted); font-size: 0.9em; }
-	.context-row { display: flex; align-items: center; gap: 0.5em; padding: 0.3em 1em; flex-shrink: 0; }
+	.sidebar-empty { padding: 2em 0.8em; text-align: center; color: var(--text-muted); font-size: 0.8em; }
+	.context-row { display: flex; align-items: center; gap: 0.4em; padding: 0.2em 0.8em; flex-shrink: 0; }
 	.context-bar { height: 3px; background: var(--code-bg); flex: 1; }
 	.context-fill { height: 100%; transition: width 1s ease; border-radius: 0 2px 2px 0; }
-	.context-pct { font-size: 0.7em; font-weight: 600; white-space: nowrap; }
-	.activity-feed { overflow-y: auto; flex: 1; }
-	.ai { display: grid; grid-template-columns: 2.5em 1fr; gap: 0 0.5em; padding: 0.5em 1em;
+	.context-pct { font-size: 0.65em; font-weight: 600; white-space: nowrap; }
+
+	.sidebar-feed { overflow-y: auto; overflow-x: hidden; flex: 1; }
+	.ai { display: grid; grid-template-columns: 2.2em 1fr; gap: 0 0.5em; padding: 0.4em 0.8em;
 		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-		font-size: 0.85em; line-height: 1.4; cursor: default; border-left: 3px solid var(--border); }
+		font-size: 0.78em; line-height: 1.4; cursor: default; border-left: 3px solid var(--border); }
 	.ai.tool { cursor: pointer; }
 	.ai.tool:hover { background: var(--code-bg); }
 	.ai.text { border-left-color: var(--success); }
@@ -141,7 +147,11 @@
 	.tx :global(pre code) { background: none; padding: 0; }
 	.detail { grid-column: 1 / -1; margin-top: 0.3em; }
 	.detail-pre { font-size: 0.82em; background: var(--code-bg); padding: 0.4em 0.6em; border-radius: 4px;
-		white-space: pre-wrap; word-break: break-all; max-height: 16em; overflow-y: auto; margin: 0.2em 0; }
+		white-space: pre-wrap; word-break: break-all; max-height: 12em; overflow-y: auto; margin: 0.2em 0; }
 	.detail-pre.result { color: var(--text-muted); }
-	.load-more { text-align: center; padding: 0.5em; color: var(--text-muted); font-size: 0.8em; }
+	.load-more { text-align: center; padding: 0.5em; color: var(--text-muted); font-size: 0.75em; }
+
+	@media (max-width: 800px) {
+		.sidebar { width: 280px; }
+	}
 </style>

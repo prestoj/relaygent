@@ -1,13 +1,25 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
+	import LogViewer from '$lib/components/LogViewer.svelte';
 	let { data } = $props();
 	let services = $state(data.services);
-	let restarting = $state(false);
-	let restartMsg = $state('');
-	let updating = $state(false);
-	let updateMsg = $state('');
+	let restarting = $state(false), restartMsg = $state('');
+	let updating = $state(false), updateMsg = $state('');
 	let anyDown = $derived(services.some(s => !s.ok));
+	let relayRunning = $state(null), relayToggling = $state(false);
+	let showLogs = $state(false);
 	let pollTimer;
+
+	async function fetchRelayStatus() {
+		try { const r = await fetch('/api/relay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status' }) }); if (r.ok) { const d = await r.json(); relayRunning = d.running; } } catch {}
+	}
+
+	async function toggleRelay() {
+		relayToggling = true;
+		const action = relayRunning ? 'stop' : 'start';
+		try { const r = await fetch('/api/relay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); if (r.ok) relayRunning = !relayRunning; } catch {}
+		relayToggling = false;
+	}
 
 	async function restartAll() {
 		restarting = true; restartMsg = '';
@@ -32,6 +44,7 @@
 	}
 
 	onMount(() => {
+		fetchRelayStatus();
 		pollTimer = setInterval(async () => {
 			try {
 				const res = await fetch('/api/services');
@@ -61,6 +74,17 @@
 	<p class="hint">Complete all checks for the best experience</p>
 </section>
 {/if}
+
+<section class="card">
+	<h2>Relay</h2>
+	<div class="relay-row">
+		<span class="dot" class:up={relayRunning} class:down={relayRunning === false}></span>
+		<span class="svc-name">{relayRunning === null ? 'Checking...' : relayRunning ? 'Running' : 'Stopped'}</span>
+		{#if relayRunning !== null}
+			<button class="relay-btn" onclick={toggleRelay} disabled={relayToggling}>{relayToggling ? '...' : relayRunning ? 'Stop' : 'Start'}</button>
+		{/if}
+	</div>
+</section>
 
 <section class="card">
 	<h2>System</h2>
@@ -135,9 +159,14 @@
 	<p class="hint">Change with <code>relaygent config set &lt;key&gt; &lt;value&gt;</code></p>
 </section>
 
+<section class="card">
+	<h2 class="logs-toggle" onclick={() => showLogs = !showLogs}>{showLogs ? 'Logs \u25B2' : 'Logs \u25BC'}</h2>
+	{#if showLogs}<LogViewer />{/if}
+</section>
+
 <style>
-	h1 { margin-top: 0; }
-	h2 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.75em; }
+	.logs-toggle { cursor: pointer; margin: 0; }  .logs-toggle:hover { color: var(--text); }
+	h1 { margin-top: 0; }  h2 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.75em; }
 	.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1em 1.25em; margin-bottom: 1em; }
 	.grid { display: grid; grid-template-columns: 10em 1fr; gap: 0.35em 1em; font-size: 0.9em; }
 	.label { color: var(--text-muted); }  .value { color: var(--text); }  .mono { font-family: monospace; font-size: 0.9em; }
@@ -153,8 +182,10 @@
 	.restart-msg { font-size: 0.78em; color: var(--text-muted); }
 	.mcp-list { display: flex; flex-direction: column; gap: 0.4em; }
 	.mcp-row { display: flex; align-items: baseline; gap: 0.75em; font-size: 0.9em; padding: 0.3em 0.5em; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); }
-	.mcp-name { font-weight: 600; font-family: monospace; white-space: nowrap; }
-	.mcp-cmd { color: var(--text-muted); font-family: monospace; font-size: 0.85em; word-break: break-word; }
+	.mcp-name { font-weight: 600; font-family: monospace; white-space: nowrap; }  .mcp-cmd { color: var(--text-muted); font-family: monospace; font-size: 0.85em; word-break: break-word; }
+	.relay-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
+	.relay-btn { padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.8em; cursor: pointer; margin-left: auto; }
+	.relay-btn:hover:not(:disabled) { background: var(--code-bg); }  .relay-btn:disabled { opacity: 0.5; }
 	.empty { color: var(--text-muted); font-size: 0.88em; margin: 0; }
 	.check-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.check-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }

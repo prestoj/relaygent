@@ -7,15 +7,14 @@
 	let inputEl;
 
 	const pages = [
-		{ name: 'Dashboard', path: '/', keys: ['home', 'dash'] },
+		{ name: 'Activity', path: '/', keys: ['home', 'activity', 'feed', 'tools'] },
+		{ name: 'Chat', path: '/chat', keys: ['chat', 'message'] },
+		{ name: 'Screen', path: '/screen', keys: ['screen', 'vnc', 'remote'] },
 		{ name: 'Intent', path: '/intent', keys: ['intent', 'goal'] },
 		{ name: 'Knowledge Base', path: '/kb', keys: ['kb', 'knowledge', 'wiki'] },
 		{ name: 'Tasks', path: '/tasks', keys: ['tasks', 'todo'] },
-		{ name: 'Sessions', path: '/sessions', keys: ['sessions', 'history'] },
-		{ name: 'Logs', path: '/logs', keys: ['logs', 'debug'] },
 		{ name: 'Files', path: '/files', keys: ['files', 'browse'] },
-		{ name: 'Search', path: '/search', keys: ['search', 'find'] },
-		{ name: 'Notifications', path: '/notifications', keys: ['notifications', 'alerts'] },
+		{ name: 'Sessions', path: '/sessions', keys: ['sessions', 'history'] },
 		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
 	];

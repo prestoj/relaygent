@@ -17,6 +17,7 @@ data-*/
 /logs/
 harness/.last_run_timestamp
 harness/.relay.lock
+harness/runs/
 
 # Secrets and credentials
 .env
