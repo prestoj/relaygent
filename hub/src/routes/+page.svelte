@@ -83,7 +83,7 @@
 			{#each activities as a (itemKey(a))}
 				{@const expanded = expandedKey === itemKey(a)}
 				<div class="ai {a.type} {a.type === 'tool' ? cat(a.name) : 'text'}" class:new={a.isNew} class:expanded
-					onclick={() => a.type === 'tool' && (expandedKey = expanded ? null : itemKey(a))}>
+					onclick={() => a.type === 'tool' && (expandedKey = itemKey(a))}>
 					<span class="time">{relTime(now, a.time)}</span>
 					{#if a.type === 'tool'}
 						<div class="tc">
