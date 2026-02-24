@@ -44,7 +44,7 @@ function M.mouse_move(params)
         local evt = hs.eventtap.event.newMouseEvent(types.mouseMoved, pos)
         evt:setProperty(props.mouseEventDeltaX, x)
         evt:setProperty(props.mouseEventDeltaY, y)
-        evt:post(hs.application.frontmostApplication())
+        evt:post()
         return json.encode({moved_relative={dx=x, dy=y}}), 200
     end
     local pt = hs.geometry.point(x, y)
@@ -61,7 +61,7 @@ function M.mouse_down(params)
     if params.x and params.y then hs.mouse.absolutePosition(pt) end
     local evType = (btn == 2) and types.rightMouseDown or types.leftMouseDown
     local app = hs.application.frontmostApplication()
-    hs.eventtap.event.newMouseEvent(evType, pt):post(app or nil)
+    hs.eventtap.event.newMouseEvent(evType, pt):post()
     _G.__heldMouseButtons[btn] = {x=x, y=y}
     return json.encode({held="mouse" .. btn, x=x, y=y}), 200
 end
@@ -74,7 +74,7 @@ function M.mouse_up(params)
     local pt = hs.geometry.point(x, y)
     local evType = (btn == 2) and types.rightMouseUp or types.leftMouseUp
     local app = hs.application.frontmostApplication()
-    hs.eventtap.event.newMouseEvent(evType, pt):post(app or nil)
+    hs.eventtap.event.newMouseEvent(evType, pt):post()
     _G.__heldMouseButtons[btn] = nil
     return json.encode({released="mouse" .. btn, x=x, y=y}), 200
 end
@@ -94,7 +94,7 @@ function M.release_all(_params)
     for btn, info in pairs(_G.__heldMouseButtons) do
         local pt = hs.geometry.point(info.x, info.y)
         local evType = (btn == 2) and types.rightMouseUp or types.leftMouseUp
-        hs.eventtap.event.newMouseEvent(evType, pt):post(app or nil)
+        hs.eventtap.event.newMouseEvent(evType, pt):post()
         table.insert(released, "mouse" .. btn)
     end
     _G.__heldMouseButtons = {}
