@@ -74,7 +74,7 @@
 		<span class="activity-title">Activity</span>
 		{#if connected}<span class="live-badge">LIVE</span>{/if}
 	</div>
-	{#if contextPct > 0}<div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div>{/if}
+	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
 	<TodoWidget {activities} />
 	{#if activities.length === 0}
 		<div class="activity-empty">No activity yet</div>
@@ -112,8 +112,10 @@
 	.activity-title { font-weight: 700; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em; }
 	.live-badge { font-size: 0.6em; font-weight: 700; padding: 0.15em 0.4em; border-radius: 4px; background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent); color: var(--success, #22c55e); }
 	.activity-empty { padding: 3em 1em; text-align: center; color: var(--text-muted); font-size: 0.9em; }
-	.context-bar { height: 3px; background: var(--code-bg); flex-shrink: 0; }
+	.context-row { display: flex; align-items: center; gap: 0.5em; padding: 0.3em 1em; flex-shrink: 0; }
+	.context-bar { height: 3px; background: var(--code-bg); flex: 1; }
 	.context-fill { height: 100%; transition: width 1s ease; border-radius: 0 2px 2px 0; }
+	.context-pct { font-size: 0.7em; font-weight: 600; white-space: nowrap; }
 	.activity-feed { overflow-y: auto; flex: 1; }
 	.ai { display: grid; grid-template-columns: 2.5em 1fr; gap: 0 0.5em; padding: 0.5em 1em;
 		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
