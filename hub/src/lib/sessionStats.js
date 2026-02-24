@@ -64,9 +64,10 @@ export function parseSessionStats(jsonlPath) {
 		if (lines.length < 2) return null;
 
 		let startTs = null, endTs = null, totalTokens = 0, outputTokens = 0;
+		let inputTokens = 0, cacheWriteTokens = 0, cacheReadTokens = 0;
 		const tools = {};
 		let toolCalls = 0, textBlocks = 0, turns = 0, firstText = null, handoffGoal = null;
-		let gitCommits = 0; const prsCreated = [], prsMerged = [];
+		let gitCommits = 0; const prsCreated = [], prsMerged = []; let model = null;
 
 		for (const line of lines) {
 			try {
@@ -78,11 +79,14 @@ export function parseSessionStats(jsonlPath) {
 				}
 				if (entry.type === 'assistant') {
 					turns++;
+					if (!model) model = entry.message?.model || null;
 					const usage = entry.message?.usage;
 					if (usage) {
-						totalTokens += (usage.input_tokens || 0)
-							+ (usage.cache_creation_input_tokens || 0)
-							+ (usage.cache_read_input_tokens || 0);
+						const inp = usage.input_tokens || 0;
+						const cw = usage.cache_creation_input_tokens || 0;
+						const cr = usage.cache_read_input_tokens || 0;
+						inputTokens += inp; cacheWriteTokens += cw; cacheReadTokens += cr;
+						totalTokens += inp + cw + cr;
 						outputTokens += usage.output_tokens || 0;
 					}
 					const content = entry.message?.content;
@@ -121,6 +125,7 @@ export function parseSessionStats(jsonlPath) {
 
 		const result = {
 			start: startTs, durationMin, totalTokens, outputTokens,
+			inputTokens, cacheWriteTokens, cacheReadTokens, model,
 			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
 			contextPct: Math.round(totalTokens / 2000),
 			git_commits: gitCommits, prs_created: prsCreated, prs_merged: prsMerged,
