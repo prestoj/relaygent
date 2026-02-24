@@ -68,6 +68,25 @@ if ! pgrep -f "slack-socket-listener" &>/dev/null; then
     fi
 fi
 
+# --- Computer-use (linux-server.py on Linux with Xvfb) ---
+if [ "$(uname)" = "Linux" ] && pgrep -x Xvfb &>/dev/null; then
+    if ! curl -sf --max-time 1 "http://127.0.0.1:8097/health" >/dev/null 2>&1; then
+        CU_CRASH_FILE="/tmp/relaygent-cu-last-start"
+        cu_ok=true
+        if [[ -f "$CU_CRASH_FILE" ]]; then
+            cu_last=$(cat "$CU_CRASH_FILE" 2>/dev/null || echo 0)
+            (( $(date +%s) - cu_last < 30 )) && cu_ok=false
+        fi
+        if [[ "$cu_ok" = true ]]; then
+            date +%s > "$CU_CRASH_FILE"
+            mkdir -p "$REPO_DIR/logs"
+            DISPLAY=:99 nohup python3 "$REPO_DIR/computer-use/linux-server.py" \
+                >> "$REPO_DIR/logs/computer-use.log" 2>&1 &
+            disown
+        fi
+    fi
+fi
+
 # --- Hub auto-restart ---
 HP=$(python3 -c "import json; print(json.load(open('$CFG'))['hub']['port'])" 2>/dev/null || echo 8080)
 hub_alive=false
