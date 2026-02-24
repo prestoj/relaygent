@@ -48,6 +48,14 @@ Before you finish, you MUST do two things:
    - Delete stale entries
    - No length limit — this accumulates across sessions
 
+## Hub Features
+The hub at http://localhost:{HUB_PORT} provides:
+- **Chat** — real-time messaging with the user (MCP tools: `read_messages`, `send_message`)
+- **File share** — upload/download files at `/files` (stored in `data/shared/`). Use this to exchange files with the user — screenshots, exports, documents, etc.
+- **KB browser** — view and search knowledge base at `/kb`
+- **Sessions** — session history at `/sessions`
+- **Screen** — noVNC remote desktop at `/screen` (if computer-use is enabled)
+
 ## Knowledge Base
 The KB is long-term memory and documentation — write for a Claude 30 handoffs from now who has never seen your work. Topics should capture things that would be valuable across weeks and months: architectural decisions, how systems work, hard-won lessons, reference material.
 
