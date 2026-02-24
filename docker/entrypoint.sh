@@ -88,10 +88,10 @@ if [ -n "$BROWSER" ]; then
     mkdir -p "$CHROME_DATA/Default"
     DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 "$BROWSER" \
         --no-sandbox --no-first-run --disable-gpu --disable-default-apps \
-        --remote-debugging-port=9222 --user-data-dir="$CHROME_DATA" \
+        --remote-debugging-port=9223 --user-data-dir="$CHROME_DATA" \
         "http://localhost:8080" > "$LOGS/chrome.log" 2>&1 &
     echo $! > "$PID_DIR/chrome.pid"
-    echo "  Chrome: started (CDP port 9222)"
+    echo "  Chrome: started (CDP port 9223)"
 fi
 
 echo ""
@@ -180,7 +180,7 @@ watchdog() {
             echo "[watchdog] Restarting Chrome..."
             for f in SingletonLock SingletonSocket SingletonCookie; do rm -f "$CHROME_DATA/$f" 2>/dev/null; done
             DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 "$BROWSER" --no-sandbox --no-first-run --disable-gpu \
-                --remote-debugging-port=9222 --user-data-dir="$CHROME_DATA" \
+                --remote-debugging-port=9223 --user-data-dir="$CHROME_DATA" \
                 "http://localhost:8080" >> "$LOGS/chrome.log" 2>&1 &
             echo $! > "$PID_DIR/chrome.pid"
         fi
