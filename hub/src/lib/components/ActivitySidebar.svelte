@@ -57,7 +57,7 @@
 
 <button class="sidebar-toggle" class:open onclick={() => open = !open}
 	title={open ? 'Hide activity' : 'Show activity'}>
-	{open ? '\u25B6' : '\u25C0'}
+	{open ? '\u25C0' : '\u25B6'}
 	{#if !open}<span class="toggle-label">Activity</span>{/if}
 	{#if !open && connected}<span class="live-dot"></span>{/if}
 </button>
@@ -100,23 +100,23 @@
 
 <style>
 	.sidebar-toggle {
-		position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 200;
-		background: var(--bg-surface); border: 1px solid var(--border); border-right: none;
-		border-radius: 6px 0 0 6px; padding: 0.5em 0.35em; cursor: pointer;
+		position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 200;
+		background: var(--bg-surface); border: 1px solid var(--border); border-left: none;
+		border-radius: 0 6px 6px 0; padding: 0.5em 0.35em; cursor: pointer;
 		color: var(--text-muted); font-size: 0.7em; display: flex; flex-direction: column;
-		align-items: center; gap: 0.3em; writing-mode: vertical-lr; transition: right 0.2s ease;
+		align-items: center; gap: 0.3em; writing-mode: vertical-lr; transition: left 0.2s ease;
 	}
 	.sidebar-toggle:hover { color: var(--text); background: var(--code-bg); }
-	.sidebar-toggle.open { right: 320px; }
+	.sidebar-toggle.open { left: 320px; }
 	.toggle-label { font-size: 0.9em; letter-spacing: 0.05em; font-weight: 600; }
 	.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success, #22c55e); }
 
 	.sidebar {
 		width: 0; flex-shrink: 0; overflow: hidden;
-		background: var(--bg); border-left: 1px solid transparent;
+		background: var(--bg); border-right: 1px solid transparent;
 		display: flex; flex-direction: column; transition: width 0.2s ease;
 	}
-	.sidebar.open { width: 320px; border-left-color: var(--border); }
+	.sidebar.open { width: 320px; border-right-color: var(--border); }
 	.sidebar-header {
 		display: flex; align-items: center; gap: 0.5em; padding: 0.6em 0.8em;
 		border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -155,6 +155,6 @@
 
 	@media (max-width: 800px) {
 		.sidebar.open { width: 280px; }
-		.sidebar-toggle.open { right: 280px; }
+		.sidebar-toggle.open { left: 280px; }
 	}
 </style>

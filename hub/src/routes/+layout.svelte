@@ -67,10 +67,10 @@
 </nav>
 
 <div class="content-row">
+	<ActivitySidebar />
 	<main>
 		<div class="page-content">{@render children()}</div>
 	</main>
-	<ActivitySidebar />
 </div>
 <ChatBubble />
 <CommandPalette />
