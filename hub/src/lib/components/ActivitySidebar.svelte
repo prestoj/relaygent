@@ -8,6 +8,7 @@
 	let connected = $state(false);
 	let ws = null;
 	let expandedKey = $state(null);
+	let now = $state(Date.now());
 
 	function shortName(n) {
 		if (!n) return '?';
@@ -24,8 +25,10 @@
 		return 'other';
 	}
 
+	$effect(() => { const id = setInterval(() => { now = Date.now(); }, 1000); return () => clearInterval(id); });
+
 	function relTime(ts) {
-		const d = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+		const d = Math.floor((now - new Date(ts).getTime()) / 1000);
 		if (d < 5) return 'now'; if (d < 60) return `${d}s`; if (d < 3600) return `${Math.floor(d/60)}m`;
 		return `${Math.floor(d/3600)}h`;
 	}
