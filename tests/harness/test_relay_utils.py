@@ -195,9 +195,9 @@ class TestPullLatest:
 class TestCrashContext:
     def test_write_reads_log_and_clear_removes(self, tmp_path, monkeypatch):
         cf = tmp_path / "crash.json"
-        monkeypatch.setattr("relay_utils.CRASH_CONTEXT_FILE", cf)
+        monkeypatch.setattr("relay_crash.CRASH_CONTEXT_FILE", cf)
         lf = tmp_path / "test.log"; lf.write_text("line1\nline2\n")
-        monkeypatch.setattr("relay_utils.LOG_FILE", lf)
+        monkeypatch.setattr("relay_crash.LOG_FILE", lf)
         write_crash_context(1, 2, "sess-123")
         import json; d = json.loads(cf.read_text())
         assert d["exit_code"] == 1 and d["crash_count"] == 2
@@ -205,5 +205,5 @@ class TestCrashContext:
         clear_crash_context(); assert not cf.exists()
 
     def test_clear_noop_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("relay_utils.CRASH_CONTEXT_FILE", tmp_path / "no.json")
+        monkeypatch.setattr("relay_crash.CRASH_CONTEXT_FILE", tmp_path / "no.json")
         clear_crash_context()  # Should not raise
