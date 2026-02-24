@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -16,75 +15,8 @@ import linux_input as inp
 import linux_held_input as held
 import linux_display as display
 import linux_a11y as a11y
-
-
-def clipboard_read(_params: dict) -> tuple[dict, int]:
-    try:
-        text = subprocess.run(
-            ["xclip", "-selection", "clipboard", "-o"],
-            capture_output=True, text=True, timeout=5,
-        ).stdout
-        return {"text": text}, 200
-    except FileNotFoundError:
-        return {"error": "xclip not installed"}, 500
-
-
-def clipboard_write(params: dict) -> tuple[dict, int]:
-    text = params.get("text")
-    if text is None:
-        return {"error": "text required"}, 400
-    try:
-        subprocess.run(
-            ["xclip", "-selection", "clipboard"],
-            input=text, text=True, timeout=5, check=True,
-        )
-        return {"ok": True, "length": len(text)}, 200
-    except FileNotFoundError:
-        return {"error": "xclip not installed"}, 500
-
-def window_manage(params: dict) -> tuple[dict, int]:
-    action = params.get("action")
-    if not action:
-        return {"error": "action required"}, 400
-    app = params.get("app")
-    # Get target window ID
-    try:
-        if app:
-            wid = subprocess.run(
-                ["xdotool", "search", "--name", app],
-                capture_output=True, text=True, timeout=5,
-            ).stdout.strip().split("\n")[0]
-        else:
-            wid = subprocess.run(
-                ["xdotool", "getactivewindow"],
-                capture_output=True, text=True, timeout=5,
-            ).stdout.strip()
-        if not wid:
-            return {"error": "no window found"}, 404
-    except (FileNotFoundError, IndexError):
-        return {"error": "xdotool not installed or no window"}, 500
-    actions = {
-        "maximize": ["wmctrl", "-i", "-r", wid, "-b", "add,maximized_vert,maximized_horz"],
-        "minimize": ["xdotool", "windowminimize", wid],
-        "restore": ["wmctrl", "-i", "-r", wid, "-b", "remove,maximized_vert,maximized_horz"],
-        "fullscreen": ["wmctrl", "-i", "-r", wid, "-b", "toggle,fullscreen"],
-    }
-    if action in actions:
-        subprocess.run(actions[action], timeout=5)
-        return {"ok": True, "action": action, "window_id": wid}, 200
-    elif action == "resize":
-        w, h = params.get("w"), params.get("h")
-        if not w or not h:
-            return {"error": "w and h required"}, 400
-        subprocess.run(["xdotool", "windowsize", wid, str(w), str(h)], timeout=5)
-        return {"ok": True, "action": "resize", "w": w, "h": h}, 200
-    elif action == "move":
-        x, y = params.get("x"), params.get("y")
-        if x is None or y is None:
-            return {"error": "x and y required"}, 400
-        subprocess.run(["xdotool", "windowmove", wid, str(x), str(y)], timeout=5)
-        return {"ok": True, "action": "move", "x": x, "y": y}, 200
-    return {"error": f"unknown action: {action}"}, 400
+import linux_clipboard as clip
+import linux_window as win
 
 
 PORT = int(os.environ.get("HAMMERSPOON_PORT", "8097"))
@@ -116,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
             "/health": lambda _: ({"status": "ok", "platform": "linux"}, 200),
             "/windows": display.windows,
             "/apps": display.apps,
-            "/clipboard": clipboard_read,
+            "/clipboard": clip.clipboard_read,
         }
         handler = routes.get(self.path)
         if handler:
@@ -149,8 +81,8 @@ class Handler(BaseHTTPRequestHandler):
             "/element_at": a11y.element_at,
             "/accessibility": a11y.accessibility_tree,
             "/ax_press": a11y.ax_press,
-            "/clipboard": clipboard_write,
-            "/window_manage": window_manage,
+            "/clipboard": clip.clipboard_write,
+            "/window_manage": win.window_manage,
             "/reload": lambda _: ({"status": "ok", "note": "no-op on linux"}, 200),
         }
         handler = routes.get(self.path)
