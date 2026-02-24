@@ -10,10 +10,32 @@
 	let expandedKey = $state(null);
 	let now = $state(Date.now());
 	let contextPct = $state(0);
+	let hasMore = $state(true);
+	let loading = $state(false);
+	let historyOffset = 0;
+	let seenKeys = new Set();
 
 	async function fetchContext() {
 		try { const r = await fetch('/api/session/live'); if (r.ok) { const d = await r.json(); contextPct = d.contextPct || 0; } } catch {}
 	}
+
+	async function loadHistory() {
+		if (loading || !hasMore) return;
+		loading = true;
+		try {
+			const r = await fetch(`/api/session/activity?offset=${historyOffset}&limit=20`);
+			if (r.ok) {
+				const d = await r.json();
+				const fresh = d.items.filter(i => !seenKeys.has(itemKey(i)));
+				fresh.forEach(i => seenKeys.add(itemKey(i)));
+				activities = [...activities, ...fresh];
+				historyOffset += d.items.length; hasMore = d.hasMore !== false;
+			}
+		} catch {}
+		loading = false;
+	}
+
+	function onFeedScroll(e) { const el = e.target; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadHistory(); }
 
 	function shortName(n) {
 		if (!n) return '?';
@@ -49,7 +71,11 @@
 		ws.onmessage = (event) => {
 			let msg; try { msg = JSON.parse(event.data); } catch { return; }
 			if (msg.type === 'activity') {
-				activities = [{ ...msg.data, isNew: true }, ...activities].slice(0, 80);
+				const item = { ...msg.data, isNew: true };
+				const key = itemKey(item);
+				if (seenKeys.has(key)) return;
+				seenKeys.add(key);
+				activities = [item, ...activities];
 				setTimeout(() => { activities = activities.map((a, i) => i === 0 ? { ...a, isNew: false } : a); }, 400);
 			} else if (msg.type === 'result' && msg.toolUseId) {
 				activities = activities.map(a =>
@@ -59,7 +85,7 @@
 		};
 	}
 
-	onMount(() => { if (browser) { connect(); fetchContext(); setInterval(fetchContext, 8000); } });
+	onMount(() => { if (browser) { connect(); loadHistory(); fetchContext(); setInterval(fetchContext, 8000); } });
 	onDestroy(() => { if (ws) ws.close(); });
 </script>
 
@@ -79,7 +105,7 @@
 	{#if activities.length === 0}
 		<div class="sidebar-empty">No activity yet</div>
 	{:else}
-		<div class="sidebar-feed">
+		<div class="sidebar-feed" onscroll={onFeedScroll}>
 			{#each activities as a (itemKey(a))}
 				{@const expanded = expandedKey === itemKey(a)}
 				<div class="ai {a.type} {a.type === 'tool' ? cat(a.name) : 'text'}" class:new={a.isNew} class:expanded
@@ -103,6 +129,7 @@
 					{/if}
 				</div>
 			{/each}
+		{#if loading}<div class="load-more">Loading...</div>{/if}
 		</div>
 	{/if}
 </aside>
@@ -163,6 +190,7 @@
 	.detail-pre { font-size: 0.82em; background: var(--code-bg); padding: 0.4em 0.6em; border-radius: 4px;
 		white-space: pre-wrap; word-break: break-all; max-height: 12em; overflow-y: auto; margin: 0.2em 0; }
 	.detail-pre.result { color: var(--text-muted); }
+	.load-more { text-align: center; padding: 0.5em; color: var(--text-muted); font-size: 0.75em; }
 
 	@media (max-width: 800px) {
 		.sidebar.open { width: 280px; }
