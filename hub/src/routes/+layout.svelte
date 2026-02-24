@@ -66,12 +66,14 @@
 	</div>
 </nav>
 
-<main>
-	{@render children()}
-</main>
+<div class="content-row">
+	<main>
+		<div class="page-content">{@render children()}</div>
+	</main>
+	<ActivitySidebar />
+</div>
 <ChatBubble />
 <CommandPalette />
-<ActivitySidebar />
 </div>
 
 <style>
@@ -101,7 +103,9 @@
 	}
 	.logout-btn:hover { color: var(--text); }
 
-	main { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
+	.content-row { display: flex; flex: 1; min-height: 0; }
+	main { flex: 1; min-width: 0; overflow-y: auto; }
+	.page-content { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
 	@media (max-width: 800px) {
 		nav { padding: 0.5em 1em; }
@@ -131,6 +135,6 @@
 		.links a.active { background: var(--code-bg); border-bottom: none; border-left: 3px solid var(--link); font-weight: 600; }
 		.theme-toggle { padding: 0.6em 1.5em; text-align: center; border: none; }
 		.logout-btn { padding: 0.6em 1.5em; text-align: left; border: none; }
-		main { margin: 1em auto; padding: 0 1em; }
+		.page-content { margin: 1em auto; padding: 0 1em; }
 	}
 </style>
