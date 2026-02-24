@@ -81,7 +81,7 @@
 	function onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
 	function resize(e) { const el = e.target; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
 
-	onMount(() => { if (browser) { document.addEventListener('click', initAudio); loadHistory(); connect(); } });
+	onMount(() => { if (browser) { document.addEventListener('click', initAudio); loadHistory(); connect(); if (fullPage && textareaEl) textareaEl.focus(); } });
 	onDestroy(() => { if (ws) ws.close(); if (browser) document.removeEventListener('click', initAudio); });
 </script>
 
