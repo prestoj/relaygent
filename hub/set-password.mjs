@@ -5,6 +5,7 @@
  *        node hub/set-password.mjs --remove   (disable auth)
  */
 import { createInterface } from 'readline';
+import { Writable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,14 +23,18 @@ if (process.argv.includes('--remove')) {
 	process.exit(0);
 }
 
-const rl = createInterface({ input: process.stdin, output: process.stdout });
+const mutedOut = new Writable({ write(chunk, enc, cb) { if (!this.muted) process.stdout.write(chunk, enc); cb(); } });
+const rl = createInterface({ input: process.stdin, output: mutedOut, terminal: true });
 const ask = (q) => new Promise(r => rl.question(q, r));
+function askHidden(q) {
+	return new Promise(r => { rl.question(q, a => { mutedOut.muted = false; console.log(''); r(a); }); mutedOut.muted = true; });
+}
 
-const pw = await ask('New hub password: ');
+const pw = await askHidden('New hub password: ');
 if (!pw || pw.length < 4) {
 	console.log('Password must be at least 4 characters.'); rl.close(); process.exit(1);
 }
-const pw2 = await ask('Confirm password: ');
+const pw2 = await askHidden('Confirm password: ');
 if (pw !== pw2) {
 	console.log('Passwords do not match.'); rl.close(); process.exit(1);
 }
