@@ -4,6 +4,7 @@
 	import { marked } from 'marked';
 	import { sanitizeHtml } from '$lib/sanitize.js';
 	import { shortName, cat, relTime, itemKey } from '$lib/activityUtils.js';
+	import TodoWidget from '$lib/components/TodoWidget.svelte';
 	let activities = $state([]);
 	let connected = $state(false);
 	let ws = null;
@@ -74,6 +75,7 @@
 		{#if connected}<span class="live-badge">LIVE</span>{/if}
 	</div>
 	{#if contextPct > 0}<div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div>{/if}
+	<TodoWidget {activities} />
 	{#if activities.length === 0}
 		<div class="activity-empty">No activity yet</div>
 	{:else}

@@ -32,3 +32,12 @@ th, td { border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: lef
 th { background: var(--th-bg); }
 blockquote { border-left: 3px solid var(--border); margin-left: 0; padding-left: 1em; color: var(--text-muted); }
 h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+
+/* Hide scrollbars globally — keep scroll functionality */
+.sidebar-feed, .activity-feed, .cp-msgs, main {
+	scrollbar-width: none; /* Firefox */
+}
+.sidebar-feed::-webkit-scrollbar, .activity-feed::-webkit-scrollbar,
+.cp-msgs::-webkit-scrollbar, main::-webkit-scrollbar {
+	display: none; /* Chrome/Safari */
+}

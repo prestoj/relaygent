@@ -10,7 +10,6 @@
 	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
-	let deadKbLinks = $derived(data.deadKbLinks || 0);
 	// Sync dueTasks when layout data changes (e.g. navigation)
 	$effect(() => { dueTasks = data.dueTasks || 0; });
 
@@ -32,6 +31,7 @@
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
 	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',logs:'Logs',files:'Files',search:'Search',settings:'Settings',intent:'Intent',help:'Help',activity:'Activity'}[$page.url.pathname.split('/')[1]] || '');
+	let isActivityPage = $derived($page.url.pathname === '/activity');
 
 </script>
 
@@ -47,15 +47,15 @@
 	</button>
 	<div class="links" class:open={menuOpen}>
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Chat</a>
+		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
+		<a href="/activity" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
 		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
-		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB{#if deadKbLinks > 0}<span class="unread-badge">{deadKbLinks}</span>{/if}</a>
+		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
-		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
-		<a href="/activity" class="mobile-only" class:active={isActive('/activity')} onclick={closeMenu}>Activity</a>
-		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
+		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -66,9 +66,9 @@
 </nav>
 
 <div class="content-row">
-	<ActivitySidebar />
-	<main class:home={$page.url.pathname === '/'}>
-		{#if $page.url.pathname === '/'}
+	{#if !isActivityPage}<ActivitySidebar />{/if}
+	<main class:home={$page.url.pathname === '/' || isActivityPage}>
+		{#if $page.url.pathname === '/' || isActivityPage}
 			{@render children()}
 		{:else}
 			<div class="page-content">{@render children()}</div>
@@ -106,14 +106,12 @@
 	}
 	.logout-btn:hover { color: var(--text); }
 
-	.mobile-only { display: none; }
 	.content-row { display: flex; flex: 1; min-height: 0; }
 	main { flex: 1; min-width: 0; overflow-y: auto; }
 	main.home { display: flex; flex-direction: column; overflow: hidden; }
 	.page-content { max-width: 900px; margin: 2em auto; padding: 0 1.5em; }
 
 	@media (max-width: 800px) {
-		.mobile-only { display: inline; }
 		:global(.sidebar) { display: none !important; }
 		nav { padding: 0.5em 1em; }
 		.hamburger {

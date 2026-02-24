@@ -1,6 +1,6 @@
 /**
  * Tests for the layout server loader (+layout.server.js).
- * Returns dueTasks count and deadKbLinks count for nav badges.
+ * Returns dueTasks count for nav badges.
  *
  * Run: node --import=./tests/hub/helpers/kit-loader.mjs --test tests/hub/pages-layout.test.js
  */
@@ -20,7 +20,8 @@ after(() => fs.rmSync(tmpKb, { recursive: true, force: true }));
 test('layout load returns expected keys', async () => {
 	const data = await load();
 	assert.ok('dueTasks' in data);
-	assert.ok('deadKbLinks' in data);
+	assert.ok('authEnabled' in data);
+	assert.ok('hostname' in data);
 });
 
 test('layout load: dueTasks is 0 with no tasks file', async () => {
@@ -38,16 +39,4 @@ test('layout load: dueTasks counts due recurring tasks', async () => {
 	const data = await load();
 	assert.ok(data.dueTasks >= 1, `expected at least 1 due task, got ${data.dueTasks}`);
 	fs.unlinkSync(path.join(tmpKb, 'tasks.md'));
-});
-
-test('layout load: deadKbLinks is 0 with no topics', async () => {
-	const data = await load();
-	assert.equal(data.deadKbLinks, 0);
-});
-
-test('layout load: deadKbLinks detects broken wiki-links', async () => {
-	fs.writeFileSync(path.join(tmpKb, 'source.md'), '---\ntitle: Source\n---\nSee [[broken-link]]');
-	const data = await load();
-	assert.ok(data.deadKbLinks >= 1, `expected dead links, got ${data.deadKbLinks}`);
-	fs.unlinkSync(path.join(tmpKb, 'source.md'));
 });

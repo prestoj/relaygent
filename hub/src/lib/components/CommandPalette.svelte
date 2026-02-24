@@ -8,13 +8,13 @@
 
 	const pages = [
 		{ name: 'Chat', path: '/', keys: ['home', 'chat', 'message'] },
+		{ name: 'Screen', path: '/screen', keys: ['screen', 'vnc', 'remote'] },
+		{ name: 'Activity', path: '/activity', keys: ['activity', 'feed', 'tools'] },
 		{ name: 'Intent', path: '/intent', keys: ['intent', 'goal'] },
 		{ name: 'Knowledge Base', path: '/kb', keys: ['kb', 'knowledge', 'wiki'] },
 		{ name: 'Tasks', path: '/tasks', keys: ['tasks', 'todo'] },
-		{ name: 'Sessions', path: '/sessions', keys: ['sessions', 'history'] },
 		{ name: 'Files', path: '/files', keys: ['files', 'browse'] },
-		{ name: 'Activity', path: '/activity', keys: ['activity', 'feed', 'tools'] },
-		{ name: 'Screen', path: '/screen', keys: ['screen', 'vnc', 'remote'] },
+		{ name: 'Sessions', path: '/sessions', keys: ['sessions', 'history'] },
 		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
 	];
