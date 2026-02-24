@@ -6,37 +6,43 @@ SCRIPT_DIR="$(cd "$(dirname "$_SELF")/.." && pwd)"
 CYAN='\033[0;36m'; NC='\033[0m'; RED='\033[0;31m'
 
 show_help() {
+    local F="  %-19s %s\n"
     echo -e "${CYAN}Usage:${NC} relaygent <command>\n"
-    printf "  %-19s %s\n" \
-        "setup" "Interactive first-time setup wizard" \
+    echo -e "${CYAN}Core:${NC}"
+    printf "$F" "setup" "Interactive first-time setup wizard" \
         "start" "Launch agent, dashboard, and all services" \
         "stop" "Stop everything" \
         "restart" "Restart all services" \
         "status" "Show what's running" \
-        "stats" "Session history, errors, and context usage" \
-        "history" "Recent sessions timeline (-n NUM, --json)" \
-        "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
+        "chat <msg>" "Send a message to the agent (--read to view)" \
+        "open [page]" "Open hub dashboard in browser"
+    echo -e "\n${CYAN}Monitoring:${NC}"
+    printf "$F" "orient" "Quick system status snapshot" \
         "logs [service]" "View logs (-f follow, -n lines, --list)" \
-        "orient" "Quick system status snapshot" \
-        "check" "Diagnose configuration" \
+        "session" "Live session stats (--json, --watch)" \
+        "history" "Recent sessions timeline (-n NUM, --json)" \
+        "stats" "Session history, errors, and context usage" \
+        "recap" "Aggregate stats across sessions (-d DAYS, --json)" \
+        "search <query>" "Search KB, sessions, and chat"
+    echo -e "\n${CYAN}Diagnostics:${NC}"
+    printf "$F" "check" "Diagnose configuration" \
         "doctor" "Auto-fix common issues (--dry-run)" \
-        "health" "Ping all services and report status" \
-        "update" "Pull latest, rebuild, restart" \
-        "digest" "Daily summary of PRs, commits, and status" \
+        "health" "Ping all services and report status"
+    echo -e "\n${CYAN}Maintenance:${NC}"
+    printf "$F" "update" "Pull latest, rebuild, restart" \
         "cleanup" "Free disk: old sessions, caches, logs (--dry-run)" \
-        "changelog" "Show recent merged PRs and commits (--days N)" \
         "clean-logs" "Remove old/rotated logs (--dry-run, --days N)" \
-        "install-services" "Set up auto-restart services (macOS/Linux)" \
-        "setup-tls" "Configure HTTPS with Tailscale certs" \
+        "digest" "Daily summary of PRs, commits, and status" \
+        "changelog" "Show recent merged PRs and commits (--days N)"
+    echo -e "\n${CYAN}Configuration:${NC}"
+    printf "$F" "setup-tls" "Configure HTTPS with Tailscale certs" \
         "set-password" "Set/remove hub dashboard auth (--remove)" \
         "mcp" "Manage MCP servers (list, add, remove)" \
+        "install-services" "Set up auto-restart services (macOS/Linux)" \
+        "discover" "Detect languages, tools, repos — write machine.md"
+    echo -e "\n${CYAN}Other:${NC}"
+    printf "$F" "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
         "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
-        "discover" "Detect languages, tools, repos — write machine.md" \
-        "session" "Live session stats (--json, --watch)" \
-        "recap" "Aggregate stats across sessions (-d DAYS, --json)" \
-        "search <query>" "Search KB, sessions, and chat" \
-        "chat <msg>" "Send a message to the agent (--read to view)" \
-        "open [page]" "Open hub dashboard in browser" \
         "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
         "version" "Show version info"
 }
