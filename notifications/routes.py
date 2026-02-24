@@ -143,6 +143,7 @@ import slack_collector  # noqa: E402
 import email_collector  # noqa: E402
 import github_collector  # noqa: E402
 import linear_collector  # noqa: E402
+import linear_ack  # noqa: E402,F401 — registers Flask route on import
 
 _slow_collectors.append(("slack", slack_collector.collect))
 _slow_collectors.append(("email", email_collector.collect))
