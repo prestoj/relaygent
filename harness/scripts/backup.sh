@@ -71,4 +71,4 @@ SIZE=$(du -h "$OUTPUT" 2>/dev/null | awk '{print $1}')
 echo ""
 echo -e "  ${GREEN}✓ Backup saved:${NC} $OUTPUT ($SIZE)"
 echo ""
-echo "  Restore: tar xzf $OUTPUT -C /"
+echo "  Restore: relaygent restore $OUTPUT"
