@@ -10,11 +10,16 @@
 	let previewText = $state('');
 
 	const IMG_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+	const VIDEO_EXT = ['.mp4', '.webm', '.mov'];
+	const AUDIO_EXT = ['.mp3', '.wav', '.ogg'];
 	const TEXT_EXT = ['.md', '.txt', '.py', '.js', '.sh', '.json', '.yaml', '.yml', '.csv', '.toml'];
-	function isMd(name) { return ext(name) === '.md'; }
 
 	function ext(name) { return name.includes('.') ? '.' + name.split('.').pop().toLowerCase() : ''; }
 	function isImage(name) { return IMG_EXT.includes(ext(name)); }
+	function isVideo(name) { return VIDEO_EXT.includes(ext(name)); }
+	function isAudio(name) { return AUDIO_EXT.includes(ext(name)); }
+	function isPdf(name) { return ext(name) === '.pdf'; }
+	function isMd(name) { return ext(name) === '.md'; }
 	function isText(name) { return TEXT_EXT.includes(ext(name)); }
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
@@ -114,6 +119,12 @@
 		<div class="preview-body">
 			{#if isImage(preview.name)}
 				<img src="/api/files/view?name={encodeURIComponent(preview.name)}" alt={preview.name} />
+			{:else if isVideo(preview.name)}
+				<video controls playsinline src="/api/files/view?name={encodeURIComponent(preview.name)}"></video>
+			{:else if isAudio(preview.name)}
+				<audio controls src="/api/files/view?name={encodeURIComponent(preview.name)}"></audio>
+			{:else if isPdf(preview.name)}
+				<iframe src="/api/files/view?name={encodeURIComponent(preview.name)}" title={preview.name}></iframe>
 			{:else if isMd(preview.name)}
 				<MarkdownRenderer source={previewText} />
 			{:else if isText(preview.name)}
@@ -148,7 +159,9 @@
 	.preview { margin-top: 1em; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 	.preview-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5em 0.75em; background: var(--bg-surface); border-bottom: 1px solid var(--border); }
 	.preview-body { padding: 1em; max-height: 70vh; overflow: auto; }
-	.preview-body img { max-width: 100%; height: auto; border-radius: 4px; }
+	.preview-body img, .preview-body video { max-width: 100%; height: auto; border-radius: 4px; }
+	.preview-body audio { width: 100%; }
+	.preview-body iframe { width: 100%; height: 70vh; border: none; }
 	.preview-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.85em; line-height: 1.5; max-height: 60vh; overflow: auto; }
 	.no-preview { color: var(--text-muted); }
 </style>
