@@ -122,7 +122,7 @@
 
 	@media (max-width: 800px) {
 		:global(.sidebar) { display: none !important; }
-		nav { padding: 0.5em 1em; }
+		nav { padding: 0.5em 1em; position: sticky; top: 0; z-index: 100; }
 		.hamburger {
 			display: flex; flex-direction: column; gap: 4px;
 			background: none; border: none; cursor: pointer; padding: 0.4em; z-index: 101;
