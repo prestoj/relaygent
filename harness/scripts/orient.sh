@@ -58,6 +58,15 @@ if [ -f "$STATUS_FILE" ]; then
     echo -e "\n\033[0;34mRelay:\033[0m $RELAY_INFO"
 fi
 echo -e "\033[0;34mDisk:\033[0m $(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')"
+# Cost (24h)
+COST_JSON=$(python3 "$SCRIPT_DIR/cost.py" -d 1 --json 2>/dev/null || echo "")
+if [ -n "$COST_JSON" ]; then
+    echo "$COST_JSON" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+if d['sessions']>0: print(f'\033[0;34mCost (24h):\033[0m \${d[\"cost\"]:,.0f} ({d[\"sessions\"]} sessions)')
+" 2>/dev/null
+fi
 # Last session summary
 if [ -f "$DATA_DIR/last-session-summary.json" ]; then
     python3 - "$DATA_DIR/last-session-summary.json" <<'PYEOF' 2>/dev/null
