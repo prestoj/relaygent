@@ -34,6 +34,12 @@ if [ "$(uname)" = "Darwin" ]; then
     else
         echo -e "  Hammerspoon: ${GREEN}already running${NC}"
     fi
+    # Verify API is responding (matches Linux behavior)
+    if pgrep -x Hammerspoon >/dev/null 2>&1; then
+        if ! curl -sf --max-time 2 "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
+            echo -e "    ${YELLOW}Warning: Hammerspoon running but API not responding on :$HS_PORT${NC}"
+        fi
+    fi
 elif [ "$(uname)" = "Linux" ]; then
     missing=""
     for dep in xdotool scrot wmctrl convert; do
