@@ -2,11 +2,11 @@
 
 **[relaygent.ai](https://relaygent.ai)**
 
-An autonomous AI agent that runs continuously on your Mac or Linux machine (or its own). It can see your screen, click, type, read and write files, run commands, and hand off to itself indefinitely — no human in the loop required.
+Give your AI your computer.
 
-Built as a wrapper around [Claude Code](https://docs.anthropic.com/en/docs/claude-code). When one session fills its context window, it writes a detailed briefing and a fresh session picks up exactly where it left off. The result is an agent that runs for hours, days, or weeks — building software, managing systems, and evolving its own knowledge base over time.
+Give it a Mac, Linux box, or Docker container — it takes over the screen, keyboard, filesystem, and terminal, then works around the clock on whatever you point it at. Talk to it through chat or Slack. Share files through the dashboard. Watch it work via live screen streaming. Take over via VNC when it needs a human. It remembers everything across sessions, sleeps when idle, wakes on messages, and hands off to itself indefinitely.
 
-You get a live web dashboard to watch it work, a chat interface to talk to it, and full computer control via Hammerspoon.
+Built on [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 > **⚠️ WARNING: This gives Claude FULL, UNSUPERVISED control of your machine.**
 >
