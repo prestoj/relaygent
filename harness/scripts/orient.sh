@@ -102,7 +102,7 @@ fi
 
 # Open PRs
 if command -v gh &>/dev/null; then
-    PR_LIST=$(gh pr list --state open --json number,title,reviewDecision --jq '.[] | "  #\(.number): \(.title)\(if .reviewDecision == "APPROVED" then " ✓" elif .reviewDecision == "CHANGES_REQUESTED" then " ✗" else "" end)"' 2>/dev/null)
+    PR_LIST=$(gh pr list --state open --json number,title,reviewDecision,statusCheckRollup --jq '.[] | "  #\(.number): \(.title)\(if .reviewDecision == "APPROVED" then " ✓" elif .reviewDecision == "CHANGES_REQUESTED" then " ✗" else "" end)\(if (.statusCheckRollup | length) == 0 then "" elif (.statusCheckRollup | any(.conclusion == "FAILURE")) then " [CI ✗]" elif (.statusCheckRollup | all(.conclusion == "SUCCESS")) then "" else " [CI …]" end)"' 2>/dev/null)
     if [ -n "$PR_LIST" ]; then
         echo -e "\033[0;34mOpen PRs:\033[0m"; echo "$PR_LIST"
     fi
