@@ -11,6 +11,14 @@ if [[ -d "/Applications/Hammerspoon.app" ]] || [[ -d "$HOME/Applications/Hammers
         skip_msg "Hammerspoon running but server not responding on :${HS_PORT:-8097} — check config"
     else
         ok_msg "Hammerspoon running and responding"
+        # Verify screenshot permissions (Accessibility + Screen Recording)
+        _SS=$(curl -sf --max-time 5 -X POST "http://127.0.0.1:${HS_PORT:-8097}/screenshot" \
+            -H "Content-Type: application/json" -d '{}' 2>/dev/null || echo "")
+        if echo "$_SS" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('path')" 2>/dev/null; then
+            ok_msg "Screenshot permissions working"
+        else
+            skip_msg "Screenshot failed — grant Accessibility + Screen Recording in System Settings > Privacy & Security"
+        fi
     fi
 else
     skip_msg "Hammerspoon not installed — brew install --cask hammerspoon"
