@@ -52,10 +52,12 @@ class TestParseTasks:
     def test_parses_recurring_tasks(self, tasks_file):
         path = tasks_file()
         tasks = tasks_mod.parse_tasks(path)
-        assert len(tasks) == 3
-        assert tasks[0]["desc"] == "Review KB"
-        assert tasks[0]["freq"] == "3d"
-        assert tasks[0]["type"] == "recurring"
+        recurring = [t for t in tasks if t["type"] == "recurring"]
+        oneoff = [t for t in tasks if t["type"] == "one-off"]
+        assert len(recurring) == 3
+        assert len(oneoff) == 1
+        assert oneoff[0]["desc"] == "Fix the bug"
+        assert recurring[0]["freq"] == "3d"
 
     def test_parses_last_timestamp(self, tasks_file):
         path = tasks_file(kb_last="2026-02-20 10:00")

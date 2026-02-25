@@ -19,6 +19,7 @@ TASK_RE = re.compile(
     r"\s*\|\s*freq:\s*(\w+)"
     r"\s*\|\s*last:\s*(.+)$"
 )
+ONEOFF_RE = re.compile(r"^- \[ \] (.+?)\s*\|\s*type:\s*one-off\s*$")
 FREQ_MAP = {
     "6h": timedelta(hours=6), "12h": timedelta(hours=12),
     "daily": timedelta(days=1), "2d": timedelta(days=2),
@@ -31,8 +32,13 @@ def parse_tasks(path: str) -> list[dict]:
     tasks = []
     with open(path, errors="replace") as f:
         for i, line in enumerate(f):
-            m = TASK_RE.match(line.strip())
+            stripped = line.strip()
+            m = TASK_RE.match(stripped)
             if not m:
+                m_one = ONEOFF_RE.match(stripped)
+                if m_one:
+                    tasks.append({"desc": m_one.group(1), "type": "one-off",
+                                  "freq": "-", "last": None, "due": datetime.min, "line": i})
                 continue
             desc, ttype, freq, last_str = m.groups()
             last_str = last_str.strip()
@@ -54,13 +60,19 @@ def show_tasks(tasks: list[dict], only_due: bool = False):
     now = datetime.now()
     shown = 0
     for t in sorted(tasks, key=lambda x: x["due"] or datetime.min):
-        overdue = t["due"] and t["due"] <= now
-        if only_due and not overdue:
+        is_oneoff = t["type"] == "one-off"
+        overdue = (not is_oneoff) and t["due"] and t["due"] <= now
+        if only_due and not overdue and not is_oneoff:
             continue
         shown += 1
-        status = f"{RED}OVERDUE{NC}" if overdue else f"{GREEN}ok{NC}"
+        if is_oneoff:
+            status = f"{YELLOW}TODO{NC}"
+        elif overdue:
+            status = f"{RED}OVERDUE{NC}"
+        else:
+            status = f"{GREEN}ok{NC}"
         last_str = t["last"].strftime("%m-%d %H:%M") if t["last"] else "never"
-        due_str = t["due"].strftime("%m-%d %H:%M") if t["due"] else "?"
+        due_str = t["due"].strftime("%m-%d %H:%M") if (t["due"] and not is_oneoff) else "-"
         print(f"  [{status}] {t['desc']}")
         print(f"       {DIM}freq: {t['freq']}  last: {last_str}  due: {due_str}{NC}")
     if shown == 0:
