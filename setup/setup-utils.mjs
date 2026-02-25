@@ -40,8 +40,13 @@ export function printSetupComplete(hubPort, C, config = {}) {
 		console.log(`${C.green}│${C.reset}`);
 	}
 	console.log(`${C.green}│${C.reset}  ${C.yellow}Next steps:${C.reset}`);
-	console.log(`${C.green}│${C.reset}  1. Edit ${C.bold}knowledge/topics/INTENT.md${C.reset} with your priorities`);
-	console.log(`${C.green}│${C.reset}  2. Your agent will greet you in hub chat after launching`);
+	if (config._hasIntent) {
+		console.log(`${C.green}│${C.reset}  1. Your agent will greet you in hub chat after launching`);
+		console.log(`${C.green}│${C.reset}  2. Refine intent anytime: ${C.bold}knowledge/topics/INTENT.md${C.reset}`);
+	} else {
+		console.log(`${C.green}│${C.reset}  1. Edit ${C.bold}knowledge/topics/INTENT.md${C.reset} with your priorities`);
+		console.log(`${C.green}│${C.reset}  2. Your agent will greet you in hub chat after launching`);
+	}
 	console.log(`${C.green}│${C.reset}  3. If issues arise: ${C.bold}relaygent doctor${C.reset} to auto-fix`);
 	console.log(`${C.green}│${C.reset}`);
 	console.log(`${C.green}│${C.reset}  ${C.dim}Docs: https://relaygent.ai/docs.html${C.reset}`);
