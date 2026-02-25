@@ -135,8 +135,10 @@ source "$SCRIPT_DIR/doctor-services.sh"
 echo -e "\n${CYAN}CLAUDE.md:${NC}"
 if [[ -f "$HOME/CLAUDE.md" ]]; then
     ok_msg "~/CLAUDE.md exists"
+elif [[ -f "$REPO_DIR/templates/CLAUDE.md" ]]; then
+    do_fix "Generate ~/CLAUDE.md from template" "node '$REPO_DIR/scripts/generate-claudemd.mjs'"
 else
-    skip_msg "~/CLAUDE.md missing — run: relaygent setup (generates machine context for the agent)"
+    skip_msg "~/CLAUDE.md missing and no template found — run: relaygent setup"
 fi
 
 # --- 13. Updates ---
