@@ -130,13 +130,16 @@ class TestCheckIncompleteExit:
     def test_incomplete_tool_result_pending(self, tmp_jsonl):
         sid, ws, path, write = tmp_jsonl
         write([
+            {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": "Bash", "id": "tu_abc123", "input": {"command": "ls"}}
+            ]}},
             {"type": "user", "message": {"content": [
                 {"type": "tool_result", "tool_use_id": "tu_abc123"}
             ]}},
         ])
         incomplete, tool = check_incomplete_exit(sid, ws)
         assert incomplete
-        assert tool == "tu_abc123"
+        assert tool == "Bash"
 
     def test_incomplete_user_message_no_tool(self, tmp_jsonl):
         sid, ws, path, write = tmp_jsonl

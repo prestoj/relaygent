@@ -57,7 +57,7 @@ def _read_tail(jsonl: Path, bytes_count: int = 65536) -> list[str]:
 
 
 def check_incomplete_exit(session_id: str, workspace: Path) -> tuple[bool, str]:
-    """Check if Claude exited mid-conversation. Returns (incomplete, last_tool)."""
+    """Check if Claude exited mid-conversation. Returns (incomplete, last_tool_name)."""
     jsonl = find_jsonl_path(session_id, workspace)
     if not jsonl: return False, ""
     try:
@@ -66,11 +66,29 @@ def check_incomplete_exit(session_id: str, workspace: Path) -> tuple[bool, str]:
         last_entry = json.loads(lines[-1])
         if last_entry.get("type") == "user":
             content = last_entry.get("message", {}).get("content", [])
+            has_tool_result = False
             if content and isinstance(content, list):
                 for item in content:
                     if item.get("type") == "tool_result":
-                        return True, item.get("tool_use_id", "unknown tool")
-            return True, ""
+                        has_tool_result = True
+                        break
+            if not has_tool_result and not content:
+                return True, ""
+            if not has_tool_result:
+                return True, ""
+            # Find tool name from preceding assistant message
+            tool_name = "unknown"
+            for line in reversed(lines[:-1]):
+                try:
+                    entry = json.loads(line)
+                    if entry.get("type") == "assistant":
+                        for item in entry.get("message", {}).get("content", []):
+                            if isinstance(item, dict) and item.get("type") == "tool_use":
+                                tool_name = item.get("name", "unknown")
+                        break
+                except (json.JSONDecodeError, KeyError):
+                    continue
+            return True, tool_name
         return False, ""
     except (OSError, json.JSONDecodeError, KeyError): return False, ""
 

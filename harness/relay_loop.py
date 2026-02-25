@@ -103,6 +103,7 @@ def handle_error(result, state: LoopState) -> ErrorResult | None:
 
     if result.incomplete:
         state.incomplete_count += 1
+        tool_info = f", last_tool={result.last_tool}" if result.last_tool else ""
         if state.incomplete_count > MAX_INCOMPLETE_RETRIES:
             count = state.incomplete_count
             state.new_session()
@@ -114,7 +115,8 @@ def handle_error(result, state: LoopState) -> ErrorResult | None:
         state.resume_reason = "Continue where you left off."
         return ErrorResult(Action.CONTINUE, delay=delay,
                            log_msg=f"Exited mid-conversation ({state.incomplete_count}/"
-                                   f"{MAX_INCOMPLETE_RETRIES}), resuming in {delay}s...")
+                                   f"{MAX_INCOMPLETE_RETRIES}), exit={result.exit_code}"
+                                   f"{tool_info}, resuming in {delay}s...")
 
     if result.api_error and result.exit_code != 0:
         state.api_error_count += 1

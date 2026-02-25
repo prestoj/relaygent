@@ -15,6 +15,7 @@ class ClaudeResult:
     timed_out: bool = False
     no_output: bool = False
     incomplete: bool = False
+    last_tool: str = ""
     context_too_large: bool = False
     bad_image: bool = False
     rate_limited: bool = False
@@ -156,7 +157,7 @@ class ClaudeProcess:
                 try: self.process.wait(timeout=10)
                 except subprocess.TimeoutExpired: log("WARNING: Process did not die")
         no_output = get_jsonl_size(self.session_id, self.workspace) == initial_jsonl_size
-        incomplete, _ = check_incomplete_exit(self.session_id, self.workspace)
+        incomplete, last_tool = check_incomplete_exit(self.session_id, self.workspace)
         context_too_large = bad_image = rate_limited = api_error = False
         try:
             with open(LOG_FILE) as f: lines = f.readlines()[log_start:]
@@ -170,7 +171,7 @@ class ClaudeProcess:
                 api_error = True; log('API server error detected')
         except OSError: pass
         return ClaudeResult(exit_code=(self.process.returncode if self.process else 0) or 0, hung=hung,
-            timed_out=timed_out, no_output=no_output, incomplete=incomplete,
+            timed_out=timed_out, no_output=no_output, incomplete=incomplete, last_tool=last_tool,
             context_too_large=context_too_large, bad_image=bad_image, rate_limited=rate_limited,
             api_error=api_error,
             context_pct=self.get_context_fill())
