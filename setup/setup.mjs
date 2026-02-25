@@ -70,7 +70,7 @@ async function main() {
 	}
 
 	initKbGit(kbRoot, agentName, REPO_DIR, C);
-	installDeps(REPO_DIR, DATA_DIR, C);
+	await installDeps(REPO_DIR, DATA_DIR, C);
 	setupClaudeMd(HOME, config, REPO_DIR, C);
 	console.log(`${C.yellow}Discovering machine...${C.reset}`);
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'discover.sh')], { stdio: 'inherit' });

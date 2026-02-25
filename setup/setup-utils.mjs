@@ -1,7 +1,9 @@
 // Setup utility functions extracted from setup.mjs to stay under 200 lines.
-import { execSync, spawnSync } from 'child_process';
+import { exec as execCb, execSync, spawnSync } from 'child_process';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, copyFileSync, chmodSync, appendFileSync } from 'fs';
 import { join } from 'path';
+import { promisify } from 'util';
+const execAsync = promisify(execCb);
 
 export async function checkPortConflict(port, C) {
 	const { createServer } = await import('net');
@@ -90,12 +92,7 @@ export function checkPrerequisites(C) {
 		throw new Error(`Claude Code required. Install: npm install -g @anthropic-ai/claude-code`);
 	}
 	const ver = spawnSync('claude', ['--version'], { stdio: 'pipe' }).stdout.toString().trim();
-	console.log(`${C.green}Claude Code found: ${ver}${C.reset}`);
-	console.log(`  ${C.dim}Checking Claude auth (may take a few seconds)...${C.reset}`);
-	if (spawnSync('claude', ['-p', 'hi'], { stdio: 'pipe', timeout: 15000 }).status !== 0) {
-		throw new Error('Claude Code not logged in. Run claude first.');
-	}
-	console.log(`${C.green}Claude Code authenticated.${C.reset}\n`);
+	console.log(`${C.green}Claude Code found: ${ver}${C.reset}\n`);
 }
 
 export function copyKbTemplates(REPO_DIR, KB_DIR, C) {
@@ -128,21 +125,25 @@ export function initKbGit(kbRoot, agentName, REPO_DIR, C) {
 	try { execSync('git config core.hooksPath scripts', { cwd: REPO_DIR, stdio: 'pipe' }); console.log(`  Git hooks: ${C.green}200-line pre-commit enabled${C.reset}`); } catch { /* skip */ }
 }
 
-export function installDeps(REPO_DIR, DATA_DIR, C) {
-	for (const sub of ['hub', 'notifications', 'computer-use', 'email', 'slack', 'secrets']) {
-		console.log(`  Installing ${sub} dependencies...`);
-		try { execSync('npm install', { cwd: join(REPO_DIR, sub), stdio: 'pipe' }); console.log(`  ${sub}: ${C.green}deps installed${C.reset}`); }
-		catch (e) { throw new Error(`${sub}: npm install failed — ${e.stderr?.toString().trim() || e.message}`); }
-	}
+export async function installDeps(REPO_DIR, DATA_DIR, C) {
+	const subs = ['hub', 'notifications', 'computer-use', 'email', 'slack', 'secrets'];
+	let done = 0;
+	console.log(`  Installing dependencies (${subs.length} packages in parallel)...`);
+	await Promise.all(subs.map(async (sub) => {
+		try { await execAsync('npm install', { cwd: join(REPO_DIR, sub) }); }
+		catch (e) { throw new Error(`${sub}: npm install failed — ${e.stderr?.trim() || e.message}`); }
+		console.log(`  [${++done}/${subs.length}] ${sub}: ${C.green}done${C.reset}`);
+	}));
+	console.log(`  Building hub + setting up Python venv...`);
 	const nDir = join(REPO_DIR, 'notifications'), venv = join(nDir, '.venv');
-	console.log(`  Setting up notifications Python venv...`);
-	try { execSync(`python3 -m venv "${venv}" && "${venv}/bin/pip" install -q -r requirements.txt`, { cwd: nDir, stdio: 'pipe' }); console.log(`  notifications: ${C.green}venv ready${C.reset}`); }
-	catch { throw new Error('notifications: venv failed. Debian/Ubuntu: sudo apt install python3-venv'); }
-	console.log(`  Building hub...`);
-	try {
-		execSync('npm run build', { cwd: join(REPO_DIR, 'hub'), stdio: 'pipe' });
-		const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_DIR, stdio: 'pipe' }).stdout?.toString().trim() || '';
-		if (head) writeFileSync(join(DATA_DIR, 'hub-build-commit'), head);
-		console.log(`  Hub: ${C.green}built${C.reset}`);
-	} catch (e) { throw new Error(`Hub build failed — ${e.stderr?.toString().trim() || e.message}`); }
+	await Promise.all([
+		execAsync(`python3 -m venv "${venv}" && "${venv}/bin/pip" install -q -r requirements.txt`, { cwd: nDir })
+			.then(() => console.log(`  notifications: ${C.green}venv ready${C.reset}`))
+			.catch(() => { throw new Error('notifications: venv failed. Debian/Ubuntu: sudo apt install python3-venv'); }),
+		execAsync('npm run build', { cwd: join(REPO_DIR, 'hub') }).then(() => {
+			const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_DIR, stdio: 'pipe' }).stdout?.toString().trim() || '';
+			if (head) writeFileSync(join(DATA_DIR, 'hub-build-commit'), head);
+			console.log(`  Hub: ${C.green}built${C.reset}`);
+		}).catch(e => { throw new Error(`Hub build failed — ${e.stderr?.trim() || e.message}`); }),
+	]);
 }
