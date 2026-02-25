@@ -20,12 +20,15 @@ fi
 if [[ -d "$HOME/.hammerspoon" ]]; then
     _HS_OK=1
     for f in "$REPO_DIR"/hammerspoon/*.lua; do f="$(basename "$f")"
-        if [[ ! -f "$HOME/.hammerspoon/$f" ]] && [[ -f "$REPO_DIR/hammerspoon/$f" ]]; then
+        if [[ ! -f "$HOME/.hammerspoon/$f" ]]; then
             do_fix "Copy $f to ~/.hammerspoon/" "cp '$REPO_DIR/hammerspoon/$f' '$HOME/.hammerspoon/$f'"
+            _HS_OK=0
+        elif ! diff -q "$REPO_DIR/hammerspoon/$f" "$HOME/.hammerspoon/$f" >/dev/null 2>&1; then
+            do_fix "Update stale $f in ~/.hammerspoon/" "cp '$REPO_DIR/hammerspoon/$f' '$HOME/.hammerspoon/$f'"
             _HS_OK=0
         fi
     done
-    [[ "$_HS_OK" == 1 ]] && ok_msg "All Lua files present"
+    [[ "$_HS_OK" == 1 ]] && ok_msg "All Lua files up to date"
 fi
 
 # --- VNC server (Remote Management) ---
