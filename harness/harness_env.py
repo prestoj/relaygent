@@ -88,10 +88,22 @@ def _augmented_path() -> str:
     return f"{current}:{extra}" if extra and current else (current or extra)
 
 
+def _settings_env() -> dict:
+    """Read env vars from settings.json (belt-and-suspenders for older Claude Code versions)."""
+    try:
+        settings = json.loads((_HARNESS / "settings.json").read_text())
+        return settings.get("env", {})
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def clean_env() -> dict:
-    """Return env without Claude Code internals, with augmented PATH."""
+    """Return env without Claude Code internals, with augmented PATH and settings env."""
     env = {k: v for k, v in os.environ.items() if k not in _CLAUDE_INTERNAL}
     env["PATH"] = _augmented_path()
+    # Inject settings.json env vars so Claude Code inherits them via process env,
+    # even if its --settings env parsing doesn't apply them to itself.
+    env.update(_settings_env())
     return env
 
 

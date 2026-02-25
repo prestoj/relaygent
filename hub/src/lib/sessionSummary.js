@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from 'child_process';
-import { findLatestSession, parseSession } from './relayActivity.js';
+import { findCurrentSession, parseSession } from './relayActivity.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -63,7 +63,7 @@ function callHaiku(prompt) {
 
 /** Summarize the current live session. No caching — always fresh. */
 export async function summarizeCurrent() {
-	const sessionFile = findLatestSession();
+	const sessionFile = findCurrentSession();
 	if (!sessionFile) return null;
 	const activity = parseSession(sessionFile, 100);
 	if (activity.length < 3) return null;

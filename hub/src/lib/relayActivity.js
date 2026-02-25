@@ -19,6 +19,40 @@ export function getRunsPrefix() {
 	} catch { return null; }
 }
 
+const DATA_DIR = process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'projects', 'relaygent', 'data');
+const STATUS_FILE = process.env.RELAY_STATUS_FILE || path.join(DATA_DIR, 'relay-status.json');
+
+/** Find the JSONL for the current relay session using session_id from relay-status.json. */
+export function findCurrentSession() {
+	const sessionId = getActiveSessionId();
+	if (sessionId) {
+		const found = findSessionById(sessionId);
+		if (found) return found;
+	}
+	return findLatestSession();
+}
+
+function getActiveSessionId() {
+	try { return JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8')).session_id || null; }
+	catch { return null; }
+}
+
+function findSessionById(sessionId) {
+	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
+	const prefix = getRunsPrefix();
+	const fname = `${sessionId}.jsonl`;
+	try {
+		for (const dir of fs.readdirSync(claudeProjects)) {
+			if (prefix && !dir.startsWith(prefix)) continue;
+			const fullPath = path.join(claudeProjects, dir);
+			try { if (!fs.statSync(fullPath).isDirectory()) continue; } catch { continue; }
+			const fp = path.join(fullPath, fname);
+			try { if (fs.statSync(fp).size > 200) return fp; } catch { continue; }
+		}
+	} catch { /* ignore */ }
+	return null;
+}
+
 export function findLatestSession() {
 	const claudeProjects = path.join(process.env.HOME, '.claude', 'projects');
 	const prefix = getRunsPrefix();
@@ -99,7 +133,7 @@ export function parseSession(sessionFile, lastN = 150) {
 }
 
 export function getRelayActivity() {
-	const latestSession = findLatestSession();
+	const latestSession = findCurrentSession();
 	if (!latestSession) return null;
 
 	const activity = parseSession(latestSession, 100);
