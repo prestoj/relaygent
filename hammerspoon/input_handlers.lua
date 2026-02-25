@@ -14,6 +14,12 @@ local shiftChars = {
 
 local specialChars = {[" "]="space", ["\n"]="return", ["\t"]="tab"}
 
+-- Key name aliases: map common names to Hammerspoon keycode names
+local keyAliases = {
+    backspace="delete", enter="return", esc="escape",
+    arrowup="up", arrowdown="down", arrowleft="left", arrowright="right",
+}
+
 -- Type text using per-character keycodes (works in VMs unlike keyStrokes)
 local function typeWithKeycodes(text, targetApp)
     local map = hs.keycodes.map
@@ -118,7 +124,8 @@ function M.type_input(params)
         return json.encode({typed=#params.text, pid=params.pid}), 200
     elseif params.key then
         local mods = params.modifiers or {}
-        local k = params.keycode or params.key
+        local raw = params.keycode or params.key
+        local k = keyAliases[raw:lower()] or raw
         if #mods > 0 then
             for _, m in ipairs(mods) do hs.eventtap.event.newKeyEvent(m, true):post() end
         end
