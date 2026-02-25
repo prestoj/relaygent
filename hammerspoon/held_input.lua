@@ -4,13 +4,20 @@
 local json = hs.json
 local M = {}
 
+-- Match key aliases from input_handlers.lua
+local keyAliases = {
+    backspace="delete", enter="return", esc="escape",
+    arrowup="up", arrowdown="down", arrowleft="left", arrowright="right",
+}
+
 -- Track held state for safety release
 _G.__heldKeys = _G.__heldKeys or {}
 _G.__heldMouseButtons = _G.__heldMouseButtons or {}
 
 function M.key_down(params)
     if not params.key then return json.encode({error="key required"}), 400 end
-    local k = params.keycode or params.key
+    local raw = params.keycode or params.key
+    local k = keyAliases[raw:lower()] or raw
     local mods = params.modifiers or {}
     if #mods > 0 then
         for _, m in ipairs(mods) do hs.eventtap.event.newKeyEvent(m, true):post() end
@@ -23,7 +30,8 @@ end
 
 function M.key_up(params)
     if not params.key then return json.encode({error="key required"}), 400 end
-    local k = params.keycode or params.key
+    local raw = params.keycode or params.key
+    local k = keyAliases[raw:lower()] or raw
     local mods = params.modifiers or {}
     hs.eventtap.event.newKeyEvent(mods, k, false):post()
     if #mods > 0 then

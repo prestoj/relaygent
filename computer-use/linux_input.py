@@ -10,9 +10,11 @@ MOD_MAP = {"cmd": "ctrl", "alt": "alt", "ctrl": "ctrl", "shift": "shift"}
 # Key name mapping (macOS/Hammerspoon names -> xdotool names)
 KEY_MAP = {
     "return": "Return", "enter": "Return", "tab": "Tab",
-    "escape": "Escape", "space": "space", "delete": "BackSpace",
+    "escape": "Escape", "esc": "Escape", "space": "space",
+    "delete": "BackSpace", "backspace": "BackSpace",
     "forwarddelete": "Delete", "up": "Up", "down": "Down",
-    "left": "Left", "right": "Right", "home": "Home", "end": "End",
+    "left": "Left", "right": "Right", "arrowup": "Up", "arrowdown": "Down",
+    "arrowleft": "Left", "arrowright": "Right", "home": "Home", "end": "End",
     "pageup": "Prior", "pagedown": "Next",
 }
 for i in range(1, 13):

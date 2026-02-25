@@ -48,7 +48,7 @@ export function registerHeldInputTools(server) {
 		async () => { const r = await hsCall("POST", "/release_all", {}); return actionRes(JSON.stringify(r), 100); }
 	);
 
-	server.tool("input_sequence", "Execute a timed sequence of key/mouse actions in one call. Eliminates round-trip latency for gaming combos.",
+	server.tool("input_sequence", "Execute a timed sequence of key/mouse actions in one call. Eliminates round-trip latency for gaming combos. IMPORTANT: modifiers must be on each action (e.g. {action:'key_press', key:'a', modifiers:['cmd']}), not as separate key_down/key_up.",
 		{ actions: z.array(z.object({
 			action: z.enum(["key_down", "key_up", "key_press", "mouse_down", "mouse_up", "mouse_move", "release_all"]).describe("Action type"),
 			key: z.string().optional().describe("Key name (for key actions)"),
