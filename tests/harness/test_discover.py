@@ -5,7 +5,13 @@ import json
 import os
 import subprocess
 
+import pytest
+
 SCRIPT = os.path.join(os.path.dirname(__file__), '..', '..', 'harness', 'scripts', 'discover.sh')
+CONFIG = os.path.join(os.path.expanduser('~'), '.relaygent', 'config.json')
+
+pytestmark = pytest.mark.skipif(
+    not os.path.isfile(CONFIG), reason='no ~/.relaygent/config.json (CI)')
 
 
 def run_discover_json():
