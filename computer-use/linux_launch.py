@@ -69,19 +69,22 @@ def launch(params: dict) -> tuple[dict, int]:
     app = params.get("app")
     if not app:
         return {"error": "app required"}, 400
-    candidates = [app, app.lower(), app.lower().replace(" ", "-")]
-    base = app.lower().replace(" ", "-")
+    # Split "libreoffice --impress" into exe + user args
+    parts = app.split()
+    exe, user_args = parts[0], parts[1:]
+    candidates = [exe, exe.lower(), exe.lower().replace(" ", "-")]
+    base = exe.lower().replace(" ", "-")
     if base in _XVFB_PREFER and _on_xvfb():
         candidates = list(_XVFB_PREFER[base]) + candidates
     candidates.extend(_ALIASES.get(base, []))
     for name in dict.fromkeys(candidates):
         try:
-            extra = _CHROME_ARGS if name in _CHROME_NAMES else []
+            extra = _CHROME_ARGS if name in _CHROME_NAMES else user_args
             if name in _CHROME_NAMES:
                 _patch_chrome_prefs()
             subprocess.Popen([name] + extra, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, start_new_session=True)
+                             stderr=subprocess.DEVNULL, start_new_session=True, env=_ENV)
             return {"launched": name}, 200
         except FileNotFoundError:
             continue
-    return {"error": f"could not find executable for '{app}'"}, 404
+    return {"error": f"could not find executable for '{exe}'"}, 404
