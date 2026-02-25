@@ -25,7 +25,7 @@ export function setupHooks(config, REPO_DIR, HOME, C) {
 	const sessionStart = join(hooksDir, 'session-start');
 	const truncateBash = join(hooksDir, 'truncate-bash-output');
 	const settings = {
-		env: { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: "95" },
+		env: { DISABLE_AUTO_COMPACT: "1" },
 		hooks: {
 			SessionStart: [{ matcher: "startup", hooks: [{ type: "command", command: sessionStart, timeout: 30 }] }],
 			PostToolUse: [

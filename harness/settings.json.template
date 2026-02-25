@@ -34,6 +34,6 @@
     ]
   },
   "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95"
+    "DISABLE_AUTO_COMPACT": "1"
   }
 }
