@@ -43,8 +43,12 @@ export function registerBrowserQueryTools(server) {
     { selector: z.string().optional().describe("CSS selector (default: body)"),
       max_length: z.coerce.number().optional().describe("Max characters (default: 4000)") },
     async ({ selector, max_length = 4000 }) => {
-      const sel = selector ? `_dq(${JSON.stringify(selector)})` : `document.body`;
-      const expr = `(function(){${_deep}var el=${sel};return el?(el.innerText||'').substring(0,${max_length}):'not found'})()`;
+      // For selectors: find first element with non-empty visible text (skips CSS-hidden elements)
+      const expr = selector
+        ? `(function(){${_deep}var els=_dqa(${JSON.stringify(selector)});if(!els.length)return 'not found';` +
+          `for(var i=0;i<els.length;i++){var t=els[i].innerText||'';if(t.trim())return t.substring(0,${max_length})}` +
+          `return(els[0].innerText||'').substring(0,${max_length})})()`
+        : `(function(){return(document.body.innerText||'').substring(0,${max_length})})()`;
       const text = await cdpEval(expr);
       if (text === null) return jsonRes({ error: cdpErr(selector || 'body') });
       if (text === 'not found') return jsonRes({ error: `Element not found: ${selector}` });

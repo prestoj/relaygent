@@ -10,6 +10,15 @@ export async function cdpSwitchTab(tabId) {
 	return true;
 }
 
+export async function cdpNewTab(url) {
+	const tab = await cdpHttp(`/json/new?${url}`);
+	if (!tab || !tab.id) return false;
+	resetWs(); saveTabId(tab.id);
+	await cdpActivate(tab.id);
+	await getConnection();
+	return true;
+}
+
 export async function cdpSyncToVisibleTab(url) {
 	cdpDisconnect();
 	const urlBase = url.replace(/\/$/, "").replace(/^https?:\/\//, "");
