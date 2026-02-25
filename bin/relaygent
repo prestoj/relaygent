@@ -21,6 +21,7 @@ show_help() {
         "logs [service]" "View logs (-f follow, -n lines, --list)" \
         "session" "Live session stats (--json, --watch)" \
         "history" "Recent sessions timeline (-n NUM, --json)" \
+        "tasks" "View/manage recurring tasks (due, done <pattern>)" \
         "stats" "Session history, errors, and context usage" \
         "recap" "Aggregate stats across sessions (-d DAYS, --json)" \
         "search <query>" "Search KB, sessions, and chat"
@@ -65,6 +66,7 @@ case "${1:-help}" in
     status) bash "$SCRIPT_DIR/harness/scripts/status.sh" "${@:2}" ;;
     logs) bash "$SCRIPT_DIR/harness/scripts/logs.sh" "${@:2}" ;;
     stats) python3 "$SCRIPT_DIR/harness/scripts/stats.py" "${@:2}" ;;
+    tasks) python3 "$SCRIPT_DIR/harness/scripts/tasks.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
     config|mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup|restore|kb-lint) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
     archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;

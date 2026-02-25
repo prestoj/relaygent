@@ -4,7 +4,7 @@
 #   eval "$(relaygent completions)"        # add to ~/.bashrc or ~/.zshrc
 #   relaygent completions >> ~/.bashrc     # or append directly
 
-_relaygent_commands="setup start stop restart status stats history recap session test logs orient check doctor health kb-lint update backup restore cleanup clean-logs changelog digest discover install-services set-password config mcp archive-linear open search chat version help"
+_relaygent_commands="setup start stop restart status stats tasks history recap session test logs orient check doctor health kb-lint update backup restore cleanup clean-logs changelog digest discover install-services set-password config mcp archive-linear open search chat version help"
 _relaygent_mcp_commands="list add remove test"
 _relaygent_test_suites="harness hub notifications email slack setup secrets computer-use"
 _relaygent_logs_flags="--list -f -n"
@@ -39,6 +39,7 @@ if [ -n "$ZSH_VERSION" ]; then
             'install-services:Set up auto-restart services'
             'set-password:Set/remove hub auth (--remove)'
             'mcp:Manage MCP servers (list, add, remove, test)'
+            'tasks:View/manage recurring tasks (due, done)'
             'recap:Aggregate stats across sessions (-d DAYS, --json)'
             'session:Live session stats (--json)'
             'search:Search KB, sessions, and chat'
@@ -60,6 +61,7 @@ if [ -n "$ZSH_VERSION" ]; then
                 history) compadd -- -n --json ;;
                 recap) compadd -- -d --days --json ;;
                 session) compadd -- --json --watch ;;
+                tasks) compadd -- list due done ;;
                 doctor) compadd -- --dry-run ;;
                 restore) compadd -- --dry-run --yes ;;
                 cleanup|clean-logs) compadd -- --dry-run --days ;;
@@ -94,6 +96,8 @@ else
                 COMPREPLY=($(compgen -W "-d --days --json" -- "$cur")) ;;
             session)
                 COMPREPLY=($(compgen -W "--json --watch" -- "$cur")) ;;
+            tasks)
+                COMPREPLY=($(compgen -W "list due done" -- "$cur")) ;;
             doctor)
                 COMPREPLY=($(compgen -W "--dry-run" -- "$cur")) ;;
             restore)
