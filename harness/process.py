@@ -161,7 +161,7 @@ class ClaudeProcess:
         context_too_large = bad_image = rate_limited = api_error = False
         try:
             with open(LOG_FILE) as f: lines = f.readlines()[log_start:]
-            if any('Request too large' in l for l in lines):
+            if any('Request too large' in l or 'Prompt is too long' in l for l in lines):
                 context_too_large = True; log('Context too large — will start fresh')
             if any('Could not process image' in l for l in lines):
                 bad_image = True; log('Bad image detected — will strip images and resume')
