@@ -131,7 +131,15 @@ source "$SCRIPT_DIR/doctor-services.sh"
 # --- 10+11. macOS-specific checks (Hammerspoon, typing) ---
 [[ "$(uname)" == "Darwin" ]] && source "$SCRIPT_DIR/doctor-macos.sh"
 
-# --- 12. Updates ---
+# --- 12. CLAUDE.md ---
+echo -e "\n${CYAN}CLAUDE.md:${NC}"
+if [[ -f "$HOME/CLAUDE.md" ]]; then
+    ok_msg "~/CLAUDE.md exists"
+else
+    skip_msg "~/CLAUDE.md missing — run: relaygent setup (generates machine context for the agent)"
+fi
+
+# --- 13. Updates ---
 echo -e "\n${CYAN}Updates:${NC}"
 git -C "$REPO_DIR" fetch -q origin main 2>/dev/null || true
 BEHIND=$(git -C "$REPO_DIR" rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
