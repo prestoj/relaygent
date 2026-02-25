@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { hsCall, takeScreenshot } from "./hammerspoon.mjs";
 import { cdpEval, cdpEvalAsync, cdpNavigate, cdpConnected, cdpSendCommand } from "./cdp.mjs";
-import { cdpSyncToVisibleTab } from "./cdp-tabs.mjs";
+import { cdpNewTab, cdpSyncToVisibleTab } from "./cdp-tabs.mjs";
 import { patchChromePrefs, cdpChromePid, findLinuxBrowser } from "./cdp-chrome.mjs";
 import { CLICK_EXPR, HOVER_EXPR, TEXT_CLICK_EXPR, TYPE_EXPR, TYPE_SLOW_EXPR, _deep, frameRoot } from "./browser-exprs.mjs";
 
@@ -17,13 +17,18 @@ export function registerBrowserTools(server, IS_LINUX) {
     { url: z.string().describe("URL to navigate to"),
       new_tab: bool.describe("Open in new tab") },
     async ({ url, new_tab }) => {
-      if (!new_tab && await cdpNavigate(url)) {
-        // Focus the CDP Chrome's window by PID to avoid targeting stale Chrome instances
+      const focusBrowser = async () => {
         const pid = IS_LINUX ? cdpChromePid() : null;
         if (pid) await hsCall("POST", "/focus", { pid });
         else await hsCall("POST", IS_LINUX ? "/focus" : "/launch", { app: IS_LINUX ? findLinuxBrowser() : "Google Chrome" });
-        return actionRes(`Navigated to ${url}`, 800);
+      };
+      // CDP fast path: navigate current tab or create new tab
+      if (new_tab) {
+        if (await cdpNewTab(url)) { await focusBrowser(); return actionRes(`Navigated to ${url}`, 1500); }
+      } else if (await cdpNavigate(url)) {
+        await focusBrowser(); return actionRes(`Navigated to ${url}`, 800);
       }
+      // Keyboard fallback
       const mod = IS_LINUX ? "ctrl" : "cmd";
       const browser = IS_LINUX ? findLinuxBrowser() : "Google Chrome";
       if (!IS_LINUX) patchChromePrefs();
