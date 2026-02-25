@@ -18,6 +18,8 @@ Built on [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 ![Relaygent hub dashboard — live activity feed, chat, and agent monitoring](hub-dashboard.png)
 
+<video src="demo.mp4" autoplay muted loop playsinline></video>
+
 ## Quick Start
 
 ```bash
