@@ -2,7 +2,7 @@
 
 **[relaygent.ai](https://relaygent.ai)**
 
-Give Claude a computer.
+Give your AI your computer.
 
 Give it a Mac, Linux box, or Docker container — it takes over the screen, keyboard, filesystem, and terminal, then works around the clock on whatever you point it at. Talk to it through chat or Slack. Share files through the dashboard. Watch it work via live screen streaming. Take over via VNC when it needs a human. It remembers everything across sessions, sleeps when idle, wakes on messages, and hands off to itself indefinitely.
 
