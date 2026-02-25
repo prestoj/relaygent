@@ -96,6 +96,11 @@ fi
 # Clean up old logs
 bash "$REPO_DIR/harness/scripts/clean-logs.sh" 2>/dev/null || true
 
+# Return to original branch if we switched away
+if [ -n "${ORIG_BRANCH:-}" ] && [ "$ORIG_BRANCH" != "main" ]; then
+    git -C "$REPO_DIR" checkout "$ORIG_BRANCH" -q 2>/dev/null && echo -e "  Restored branch: ${GREEN}$ORIG_BRANCH${NC}" || true
+fi
+
 # Restore stashed changes if we stashed earlier
 if [ "$STASHED" = true ]; then
     if git -C "$REPO_DIR" stash pop -q 2>/dev/null; then
