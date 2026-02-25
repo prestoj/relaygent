@@ -2,6 +2,7 @@
 """KB lint — check knowledge base health (broken links, orphans, oversize)."""
 from __future__ import annotations
 
+import difflib
 import os
 import re
 import sys
@@ -72,7 +73,9 @@ def main():
                     found = True
                     break
             if not found:
-                broken_links.append(f"[[{link}]] in {os.path.basename(fpath)}")
+                suggest = difflib.get_close_matches(link.lower(), topics.keys(), n=1, cutoff=0.4)
+                hint = f" → did you mean [[{suggest[0]}]]?" if suggest else ""
+                broken_links.append(f"[[{link}]] in {os.path.basename(fpath)}{hint}")
 
     # Find orphans (no incoming links, excluding meta files)
     orphans = sorted(

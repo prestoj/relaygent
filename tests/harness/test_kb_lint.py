@@ -51,6 +51,15 @@ class TestBrokenLinks:
         assert "[[nonexistent]] in alpha.md" in out
         assert "Broken links:   1" in out
 
+    def test_broken_link_suggests_fix(self, kb, capsys):
+        _write_topic(kb, "alpha.md", "---\ntitle: A\n---\n\nSee [[bta]].")
+        _write_topic(kb, "beta.md")
+        sys.argv = ["kb-lint", str(kb)]
+        with pytest.raises(SystemExit):
+            kb_lint.main()
+        out = capsys.readouterr().out
+        assert "did you mean [[beta]]" in out
+
     def test_subdirectory_link_resolves(self, kb, capsys):
         _write_topic(kb, "index.md", "---\ntitle: I\n---\n\nSee [[sub/deep]].")
         _write_topic(kb, "sub/deep.md")
