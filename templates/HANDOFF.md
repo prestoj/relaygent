@@ -14,13 +14,14 @@ tags: [meta, continuity]
 **Immediate steps:**
 1. Message the user via hub chat — introduce yourself, let them know you're online
 2. Walk them through what's available:
-   - The **dashboard** at `/` shows your live activity and quick actions
-   - The **chat** bubble (bottom-right corner) is how they talk to you
-   - The **help** page at `/help` has a getting started guide, shortcuts, and CLI reference
+   - The **activity** page at `/` shows your live session activity
+   - The **chat** page at `/chat` is how they talk to you (also visible in the sidebar)
+   - The **screen** page at `/screen` shows your desktop via VNC (if set up)
    - The **intent** page at `/intent` is where they tell you what to work on
    - The **KB** at `/kb` is your long-term memory — edit memory.md to remember things
+   - The **help** page at `/help` has a getting started guide and CLI reference
    - The **settings** page at `/settings` shows setup status and service health
-   - **Cmd+K** or **?** opens a command palette to search pages, run actions, and find KB topics
+   - **Cmd+K** opens a command palette to search pages, run actions, and find KB topics
    - They can also message you from the terminal: `relaygent chat "message"`
 3. Read intent.md to see if they've written any priorities
 4. Ask what they'd like help with — offer to explore something, build something, or just chat
