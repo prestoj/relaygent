@@ -64,6 +64,7 @@ async function main() {
 			const intent = (await ask(`${C.cyan}Intent (Enter to skip): ${C.reset}`)).trim();
 			if (intent) {
 				writeFileSync(intentFile, `---\ntitle: Intent\ncreated: ${today}\nupdated: ${today}\ntags: [meta, intent]\n---\n\n${intent}\n`);
+				config._hasIntent = true;
 				console.log(`  ${C.green}Intent saved${C.reset}`);
 			} else console.log(`  ${C.dim}Skipped — edit INTENT.md later${C.reset}`);
 		}
@@ -107,9 +108,8 @@ async function main() {
 	const serviceLabel = process.platform === 'darwin' ? 'LaunchAgents' : 'systemd services';
 	const svc = (await ask(`\n${C.cyan}Install auto-restart services (${serviceLabel})? [Y/n]:${C.reset} `)).trim().toLowerCase();
 	if (svc !== 'n') { spawnSync('bash', [serviceScript], { stdio: 'inherit' }); servicesInstalled = true; }
-	printSetupComplete(hubPort, C, config);
 	if (!servicesInstalled) {
-		const launch = (await ask(`${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
+		const launch = (await ask(`\n${C.cyan}Launch now? [Y/n]:${C.reset} `)).trim().toLowerCase();
 		if (launch !== 'n') {
 			console.log(`\nStarting Relaygent...\n`);
 			spawnSync(join(REPO_DIR, 'bin', 'relaygent'), ['start'],
@@ -120,9 +120,10 @@ async function main() {
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'doctor.sh')], { stdio: 'inherit' });
 	console.log(`\n${C.cyan}Verifying installation...${C.reset}\n`);
 	spawnSync('bash', [join(REPO_DIR, 'harness', 'scripts', 'check.sh')], { stdio: 'inherit' });
+	printSetupComplete(hubPort, C, config);
 	const scheme = config.hub?.tls ? 'https' : 'http';
 	const hubUrl = `${scheme}://localhost:${hubPort}/`;
-	console.log(`\nOpening hub: ${hubUrl}`); openBrowser(hubUrl);
+	console.log(`Opening hub: ${hubUrl}`); openBrowser(hubUrl);
 	rl.close();
 }
 
