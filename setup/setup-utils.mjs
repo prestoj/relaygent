@@ -90,12 +90,7 @@ export function checkPrerequisites(C) {
 		throw new Error(`Claude Code required. Install: npm install -g @anthropic-ai/claude-code`);
 	}
 	const ver = spawnSync('claude', ['--version'], { stdio: 'pipe' }).stdout.toString().trim();
-	console.log(`${C.green}Claude Code found: ${ver}${C.reset}`);
-	console.log(`  ${C.dim}Checking Claude auth (may take a few seconds)...${C.reset}`);
-	if (spawnSync('claude', ['-p', 'hi'], { stdio: 'pipe', timeout: 15000 }).status !== 0) {
-		throw new Error('Claude Code not logged in. Run claude first.');
-	}
-	console.log(`${C.green}Claude Code authenticated.${C.reset}\n`);
+	console.log(`${C.green}Claude Code found: ${ver}${C.reset}\n`);
 }
 
 export function copyKbTemplates(REPO_DIR, KB_DIR, C) {
@@ -129,9 +124,11 @@ export function initKbGit(kbRoot, agentName, REPO_DIR, C) {
 }
 
 export function installDeps(REPO_DIR, DATA_DIR, C) {
-	for (const sub of ['hub', 'notifications', 'computer-use', 'email', 'slack', 'secrets']) {
-		console.log(`  Installing ${sub} dependencies...`);
-		try { execSync('npm install', { cwd: join(REPO_DIR, sub), stdio: 'pipe' }); console.log(`  ${sub}: ${C.green}deps installed${C.reset}`); }
+	const subs = ['hub', 'notifications', 'computer-use', 'email', 'slack', 'secrets'];
+	for (let i = 0; i < subs.length; i++) {
+		const sub = subs[i];
+		console.log(`  [${i + 1}/${subs.length}] Installing ${sub} dependencies...`);
+		try { execSync('npm install', { cwd: join(REPO_DIR, sub), stdio: 'pipe' }); console.log(`  ${sub}: ${C.green}done${C.reset}`); }
 		catch (e) { throw new Error(`${sub}: npm install failed — ${e.stderr?.toString().trim() || e.message}`); }
 	}
 	const nDir = join(REPO_DIR, 'notifications'), venv = join(nDir, '.venv');

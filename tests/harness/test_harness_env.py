@@ -68,8 +68,7 @@ class TestBuildPrompt:
         (config_dir / "config.json").write_text(json.dumps(cfg))
 
         monkeypatch.setenv("HOME", str(tmp_path))
-        with patch("harness_env.PROMPT_FILE", prompt_file), \
-             patch("harness_env._run_orient", return_value=""):
+        with patch("harness_env.PROMPT_FILE", prompt_file):
             result = build_prompt()
             assert isinstance(result, bytes)
             assert str(kb_dir).encode() in result
@@ -84,23 +83,9 @@ class TestBuildPrompt:
         prompt_file.write_text("plain prompt")
 
         monkeypatch.setenv("HOME", str(tmp_path))
-        with patch("harness_env.PROMPT_FILE", prompt_file), \
-             patch("harness_env._run_orient", return_value=""):
+        with patch("harness_env.PROMPT_FILE", prompt_file):
             result = build_prompt()
             assert result == b"plain prompt"
-
-    def test_prompt_with_orient_output(self, tmp_path, monkeypatch):
-        harness_dir = tmp_path / "harness"
-        harness_dir.mkdir()
-        prompt_file = harness_dir / "PROMPT.md"
-        prompt_file.write_text("base")
-
-        monkeypatch.setenv("HOME", str(tmp_path))
-        with patch("harness_env.PROMPT_FILE", prompt_file), \
-             patch("harness_env._run_orient", return_value="status: running"):
-            result = build_prompt()
-            assert b"<orient>" in result
-            assert b"status: running" in result
 
     def test_prompt_without_memory(self, tmp_path, monkeypatch):
         harness_dir = tmp_path / "harness"
@@ -118,7 +103,6 @@ class TestBuildPrompt:
         (config_dir / "config.json").write_text(json.dumps(cfg))
 
         monkeypatch.setenv("HOME", str(tmp_path))
-        with patch("harness_env.PROMPT_FILE", prompt_file), \
-             patch("harness_env._run_orient", return_value=""):
+        with patch("harness_env.PROMPT_FILE", prompt_file):
             result = build_prompt()
             assert b"<memory>" not in result

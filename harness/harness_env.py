@@ -1,12 +1,10 @@
 """Environment setup and prompt building for the relay harness."""
 import json
 import os
-import re
 import shutil
-import subprocess
 from pathlib import Path
 
-from config import PROMPT_FILE, log
+from config import PROMPT_FILE
 
 _HARNESS = Path(__file__).parent
 CONTEXT_PCT_FILE = Path("/tmp/relaygent-context-pct")
@@ -34,24 +32,6 @@ def configured_model() -> str | None:
         return None
 
 
-def _run_orient() -> str:
-    """Run orient.sh and return stripped output, or empty string on failure."""
-    orient = _HARNESS / "scripts" / "orient.sh"
-    if not orient.exists():
-        return ""
-    try:
-        result = subprocess.run(
-            ["bash", str(orient)], capture_output=True, text=True, timeout=15,
-            cwd=str(_HARNESS.parent),
-        )
-        if result.returncode != 0:
-            return ""
-        # Strip ANSI escape codes for clean prompt injection
-        return re.sub(r"\x1b\[[0-9;]*m", "", result.stdout).strip()
-    except (subprocess.SubprocessError, OSError) as e:
-        log(f"Orient pre-compute failed: {e}")
-        return ""
-
 
 def _read_kb_file(kb: Path, filename: str) -> str:
     """Read a KB file, returning stripped content or empty string."""
@@ -75,9 +55,8 @@ def build_prompt() -> bytes:
                 prompt += f"\n\n<{tag}>\n".encode() + content.encode() + f"\n</{tag}>\n".encode()
     except (OSError, json.JSONDecodeError, KeyError):
         pass
-    orient_output = _run_orient()
-    if orient_output:
-        prompt += b"\n\n<orient>\n" + orient_output.encode() + b"\n</orient>\n"
+    # Orient is injected by the session-start hook (hooks/session-start),
+    # not here — avoids running orient.sh twice on every session start.
     return prompt
 
 
