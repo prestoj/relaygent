@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 import { spawn, spawnSync } from 'child_process';
-import { parseSession, findLatestSession } from '$lib/relayActivity.js';
+import { parseSession, findCurrentSession } from '$lib/relayActivity.js';
 
 // Session IDs are UUIDs — reject anything else to prevent path traversal
 const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,7 +112,7 @@ export function GET({ url }) {
 	const limit = Math.max(1, Math.min(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 200));
 	const sessionId = url.searchParams.get('session');
 
-	const sessionFile = sessionId ? findSessionById(sessionId) : findLatestSession();
+	const sessionFile = sessionId ? findSessionById(sessionId) : findCurrentSession();
 	if (!sessionFile) return json({ activities: [], hasMore: false });
 
 	const activity = parseSession(sessionFile, 500);

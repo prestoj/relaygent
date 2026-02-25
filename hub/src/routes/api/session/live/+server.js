@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
-import { findLatestSession, parseSession } from '$lib/relayActivity.js';
+import { findCurrentSession, parseSession } from '$lib/relayActivity.js';
 
 const DATA_DIR = process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'projects', 'relaygent', 'data');
 const STATUS_FILE = process.env.RELAY_STATUS_FILE || path.join(DATA_DIR, 'relay-status.json');
@@ -68,7 +68,7 @@ function parseLiveStats(jsonlPath) {
 /** GET /api/session/live — current session stats (no caching). */
 export function GET() {
 	const relay = getRelayStatus();
-	const sessionFile = findLatestSession();
+	const sessionFile = findCurrentSession();
 	if (!sessionFile) return json({ active: false, status: relay.status || 'off' });
 
 	try {

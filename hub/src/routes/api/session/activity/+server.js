@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
-import { findLatestSession, parseSession } from '$lib/relayActivity.js';
+import { findCurrentSession, parseSession } from '$lib/relayActivity.js';
 
 /** GET /api/session/activity?offset=0&limit=20 — paginated activity for current session. */
 export function GET({ url }) {
 	const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 	const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 50);
-	const sessionFile = findLatestSession();
+	const sessionFile = findCurrentSession();
 	if (!sessionFile) return json({ items: [], total: 0 });
 
 	try {

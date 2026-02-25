@@ -14,7 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { wssVnc } from './vnc-proxy.mjs';
-import { summarizeInput, summarizeResult, extractResultText, findLatestSession } from './src/lib/relayActivity.js';
+import { summarizeInput, summarizeResult, extractResultText, findCurrentSession } from './src/lib/relayActivity.js';
 import { createSessionParser } from './src/lib/sessionParser.js';
 import { handleStreamUpload } from './src/lib/streamUpload.js';
 import { isAuthEnabled, validateSession, COOKIE_NAME } from './src/lib/auth.js';
@@ -82,7 +82,7 @@ const parseSessionLine = sessionParser.parseLine;
 let watchedFile = null, fileWatcher = null, lastSize = 0, incompleteLine = '';
 
 function startWatching() {
-	const sessionFile = findLatestSession();
+	const sessionFile = findCurrentSession();
 	if (!sessionFile || (watchedFile === sessionFile && fileWatcher)) return;
 	if (fileWatcher) fileWatcher.close();
 	watchedFile = sessionFile; lastSize = fs.statSync(sessionFile).size; sessionParser.clear(); incompleteLine = '';
