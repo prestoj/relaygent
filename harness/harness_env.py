@@ -103,7 +103,10 @@ def clean_env() -> dict:
     env["PATH"] = _augmented_path()
     # Inject settings.json env vars so Claude Code inherits them via process env,
     # even if its --settings env parsing doesn't apply them to itself.
-    env.update(_settings_env())
+    settings = _settings_env()
+    for k in _CLAUDE_INTERNAL:
+        settings.pop(k, None)
+    env.update(settings)
     return env
 
 
