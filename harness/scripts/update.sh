@@ -84,7 +84,7 @@ fi
 # Check if MCP server source files changed (agents need to restart their session)
 MCP_CHANGED=false
 if [ -n "$BEFORE" ] && [ -n "$AFTER" ] && [ "$BEFORE" != "$AFTER" ]; then
-    if git -C "$REPO_DIR" diff --name-only "${BEFORE}..${AFTER}" | grep -qE '(mcp-server|browser-tools|browser-exprs|cdp|hammerspoon)\.mjs$'; then
+    if git -C "$REPO_DIR" diff --name-only "${BEFORE}..${AFTER}" | grep -qE 'computer-use/.*\.mjs$'; then
         MCP_CHANGED=true
     fi
 fi
