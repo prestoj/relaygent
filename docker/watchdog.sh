@@ -53,6 +53,22 @@ while true; do
             "http://localhost:8080" >> "$LOGS/chrome.log" 2>&1 &
         echo $! > "$PID_DIR/chrome.pid"
     fi
+    # Xvfb
+    if ! pgrep -f "Xvfb" >/dev/null 2>&1; then
+        echo "[watchdog] Restarting Xvfb..."
+        Xvfb :99 -screen 0 1024x768x24 -nolisten tcp >> "$LOGS/xvfb.log" 2>&1 &
+        echo $! > "$PID_DIR/xvfb.pid"
+        sleep 2
+    fi
+    # Relay (only if auth exists and it wasn't intentionally stopped)
+    if [ -d "$HOME/.claude" ] && ! pgrep -f "relay.py" >/dev/null 2>&1; then
+        STATUS=$(python3 -c "import json; print(json.load(open('$DATA/relay-status.json')).get('status','?'))" 2>/dev/null || echo "?")
+        if [ "$STATUS" != "off" ]; then
+            echo "[watchdog] Restarting relay..."
+            python3 "$REPO/harness/relay.py" >> "$LOGS/relay.log" 2>&1 &
+            echo $! > "$PID_DIR/relay.pid"
+        fi
+    fi
     # Log rotation — truncate files over 10MB to last 1000 lines
     for logfile in "$LOGS"/*.log; do
         [ -f "$logfile" ] || continue
