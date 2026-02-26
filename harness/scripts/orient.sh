@@ -57,7 +57,15 @@ if [ -f "$STATUS_FILE" ]; then
     RELAY_INFO="$RELAY_ST"; [ -n "$CTX_PCT" ] && RELAY_INFO="$RELAY_INFO, context ${CTX_PCT}%"
     echo -e "\n\033[0;34mRelay:\033[0m $RELAY_INFO"
 fi
-echo -e "\033[0;34mDisk:\033[0m $(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')"
+DISK_PCT=$(df -h ~ 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $5}')
+DISK_USED=$(df -h ~ 2>/dev/null | awk 'NR==2{print $5}')
+if [ "${DISK_PCT:-0}" -gt 90 ] 2>/dev/null; then
+    echo -e "\033[0;31mDisk: ${DISK_USED} — critically low, run: relaygent cleanup\033[0m"
+elif [ "${DISK_PCT:-0}" -gt 80 ] 2>/dev/null; then
+    echo -e "\033[1;33mDisk:\033[0m ${DISK_USED} — consider: relaygent cleanup"
+else
+    echo -e "\033[0;34mDisk:\033[0m ${DISK_USED}"
+fi
 # Last session summary
 if [ -f "$DATA_DIR/last-session-summary.json" ]; then
     python3 - "$DATA_DIR/last-session-summary.json" <<'PYEOF' 2>/dev/null
