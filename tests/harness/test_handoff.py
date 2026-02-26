@@ -143,3 +143,30 @@ class TestValidateHandoff:
         warnings, goal = validate_handoff(f)
         assert len(warnings) > 0  # Missing sections
         assert goal == "Do things."
+
+    def test_thin_section_content_warning(self, tmp_path):
+        f = tmp_path / "HANDOFF.md"
+        f.write_text(
+            "## MAIN GOAL FOR NEXT CLAUDE\n\n**Build the widget.** Because it's needed.\n\n"
+            "## User State\n\nOK\n\n"
+            "## What Was Done\n\n- Fixed things and improved other stuff significantly\n"
+        )
+        warnings, goal = validate_handoff(f)
+        assert any("too thin" in w for w in warnings)
+        assert any("User State" in w for w in warnings)
+
+    def test_bloated_handoff_warning(self, tmp_path):
+        f = tmp_path / "HANDOFF.md"
+        lines = ["## MAIN GOAL FOR NEXT CLAUDE\n", "**Do things.** Important.\n\n",
+                 "## User State\n", "Preston is around and active.\n\n",
+                 "## What Was Done This Session\n"]
+        lines += [f"- Item {i}\n" for i in range(200)]
+        f.write_text("".join(lines))
+        warnings, goal = validate_handoff(f)
+        assert any("bloated" in w for w in warnings)
+
+    def test_sparse_handoff_warning(self, tmp_path):
+        f = tmp_path / "HANDOFF.md"
+        f.write_text("## MAIN GOAL\n\n**Do X.** Because Y.\n")
+        warnings, goal = validate_handoff(f)
+        assert any("sparse" in w for w in warnings)
