@@ -79,12 +79,37 @@ def pull_latest() -> None:
         log(f"Git pull failed: {e}")
 
 
+def check_disk_and_cleanup() -> None:
+    """If disk usage > 90%, run relaygent cleanup to free space."""
+    try:
+        import shutil
+        usage = shutil.disk_usage(Path.home())
+        pct = int(usage.used * 100 / usage.total)
+        if pct <= 90:
+            return
+        log(f"Disk at {pct}%, running automatic cleanup...")
+        cleanup_script = SCRIPT_DIR / "scripts" / "cleanup.sh"
+        if not cleanup_script.exists():
+            log("WARNING: cleanup.sh not found, skipping disk cleanup")
+            return
+        result = subprocess.run(
+            ["bash", str(cleanup_script)], capture_output=True, text=True, timeout=120)
+        for line in result.stdout.splitlines():
+            if "Freed" in line or "cleaned" in line.lower():
+                log(f"  {line.strip()}")
+        if result.returncode != 0:
+            log(f"WARNING: cleanup exited {result.returncode}")
+    except Exception as e:
+        log(f"WARNING: Disk cleanup failed: {e}")
+
+
 def startup_init() -> None:
     """Run all startup tasks: pid file, orphan cleanup, pull, hub check, Slack ack."""
     write_pid_file()
     kill_orphaned_claudes()
     pull_latest()
     check_and_rebuild_hub()
+    check_disk_and_cleanup()
     # Ack Slack so stale unreads from while we were offline don't re-trigger
     try:
         import urllib.request
