@@ -117,13 +117,39 @@ else
     echo -e "  ${DIM}No Chrome profile found${NC}"
 fi
 
-# --- 3. Clean old logs ---
+# --- 3. Clean system caches ---
+echo -e "\n${CYAN}System caches:${NC}"
+SYS_FREED=0
+for cache_name in pip Homebrew; do
+    case "$cache_name" in
+        pip) cache_dir="$HOME/Library/Caches/pip"; clean_cmd="pip cache purge" ;;
+        Homebrew) cache_dir="$HOME/Library/Caches/Homebrew"; clean_cmd="brew cleanup --prune=all -s" ;;
+    esac
+    [ -d "$cache_dir" ] || continue
+    SIZE=$(du -sk "$cache_dir" 2>/dev/null | cut -f1); SIZE=${SIZE:-0}
+    [ "$SIZE" -lt 10240 ] && continue  # skip if < 10MB
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "  ${YELLOW}would clean${NC}: $cache_name cache ($(( SIZE / 1024 ))MB)"
+    else
+        eval "$clean_cmd" >/dev/null 2>&1 || true
+        echo -e "  cleaned: $cache_name cache ($(( SIZE / 1024 ))MB)"
+    fi
+    SYS_FREED=$((SYS_FREED + SIZE))
+done
+if [ "$SYS_FREED" -gt 0 ]; then
+    TOTAL_FREED=$((TOTAL_FREED + SYS_FREED))
+    TOTAL_COUNT=$((TOTAL_COUNT + 1))
+else
+    echo -e "  ${DIM}Caches are small, nothing to clean${NC}"
+fi
+
+# --- 5. Clean old logs ---
 echo -e "\n${CYAN}Log files:${NC}"
 DRY_FLAG=""
 [ "$DRY_RUN" = true ] && DRY_FLAG="--dry-run"
 bash "$SCRIPT_DIR/harness/scripts/clean-logs.sh" --days "$DAYS" $DRY_FLAG 2>&1 | grep -E '(would |removed|truncated|freed|clean)' || echo -e "  ${DIM}No old logs${NC}"
 
-# --- 4. Prune stale git branches ---
+# --- 6. Prune stale git branches ---
 if [ -d "$REPO_DIR/.git" ]; then
     echo -e "\n${CYAN}Git branches:${NC}"
     git -C "$REPO_DIR" fetch --prune origin 2>/dev/null || true
