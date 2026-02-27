@@ -101,17 +101,26 @@ echo "  VNC:     vnc://localhost:5900"
 echo "  noVNC:   http://localhost:8080/screen"
 echo ""
 
-# 9. Watch for Claude auth and auto-start relay
-if [ -d "$HOME/.claude" ]; then
-    echo "  Claude auth found — starting relay..."
+# 9. Start relay (API key, existing auth, or wait for interactive auth)
+_start_relay() {
     python3 "$REPO/harness/relay.py" > "$LOGS/relay.log" 2>&1 &
     echo $! > "$PID_DIR/relay.pid"
     echo "  Relay: started"
+}
+
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    echo "  API key detected — starting relay (headless)..."
+    mkdir -p "$HOME/.claude"
+    export ANTHROPIC_API_KEY
+    _start_relay
+elif [ -d "$HOME/.claude" ]; then
+    echo "  Claude auth found — starting relay..."
+    _start_relay
 else
     echo "  Claude not authenticated yet."
-    echo "  Connect via noVNC → open terminal → run 'claude' to log in."
+    echo "  Option 1: Restart with -e ANTHROPIC_API_KEY=sk-ant-..."
+    echo "  Option 2: Connect via noVNC → run 'claude' to log in."
     echo "  Watching for auth..."
-    # Open terminal with setup instructions so user sees them via VNC
     gnome-terminal -- bash -c '
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "  Welcome to Relaygent!"
@@ -127,9 +136,7 @@ else
     (
         while [ ! -d "$HOME/.claude" ]; do sleep 5; done
         echo "  Claude auth detected — starting relay..."
-        python3 "$REPO/harness/relay.py" > "$LOGS/relay.log" 2>&1 &
-        echo $! > "$PID_DIR/relay.pid"
-        echo "  Relay: started"
+        _start_relay
     ) &
 fi
 
