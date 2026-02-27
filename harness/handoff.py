@@ -93,12 +93,21 @@ def validate_handoff(path: Path | None = None) -> tuple[list[str], str | None]:
     section_names = list(sections.keys())
 
     for label, keywords in REQUIRED_SECTIONS:
-        found = any(
-            any(kw in name.lower() for kw in keywords)
-            for name in section_names
-        )
-        if not found:
+        match = None
+        for name in section_names:
+            if any(kw in name.lower() for kw in keywords):
+                match = name
+                break
+        if not match:
             warnings.append(f"Missing section: {label}")
+        elif len(sections.get(match, "").strip()) < 20:
+            warnings.append(f"Section '{label}' is too thin (< 20 chars)")
+
+    line_count = len(body.strip().splitlines())
+    if line_count > 200:
+        warnings.append(f"Handoff is bloated ({line_count} lines, aim for <200)")
+    elif line_count < 10:
+        warnings.append(f"Handoff is too sparse ({line_count} lines)")
 
     goal = extract_goal(text)
     if goal is None:
