@@ -165,7 +165,8 @@ class ClaudeProcess:
                 context_too_large = True; log('Context too large — will start fresh')
             if any('Could not process image' in l for l in lines):
                 bad_image = True; log('Bad image detected — will strip images and resume')
-            if any('hit your limit' in l.lower() or 'usage limit' in l.lower() for l in lines):
+            if any('hit your limit' in l.lower() or 'usage limit' in l.lower()
+                   or 'rate limit' in l.lower() or 'overloaded' in l.lower() for l in lines):
                 rate_limited = True; log('API rate limit detected')
             if any('API Error: 5' in l for l in lines):
                 api_error = True; log('API server error detected')

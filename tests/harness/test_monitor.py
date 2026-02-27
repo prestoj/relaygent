@@ -135,6 +135,30 @@ class TestMonitorRateLimited:
             result = p.monitor(0)
         assert result.rate_limited is True
 
+    def test_detects_rate_limit_reached(self, tmp_path, monkeypatch):
+        import process as proc_mod
+        log_file = tmp_path / "test.log"
+        log_file.write_text("API Error: Rate limit reached\n")
+        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
+        p = _make_process(tmp_path)
+        p.process.poll.return_value = 0
+        with patch("process.get_jsonl_size", return_value=0), \
+             patch("process.check_incomplete_exit", return_value=(False, None)):
+            result = p.monitor(0)
+        assert result.rate_limited is True
+
+    def test_detects_overloaded_as_rate_limit(self, tmp_path, monkeypatch):
+        import process as proc_mod
+        log_file = tmp_path / "test.log"
+        log_file.write_text('API Error: 529 {"type":"error","error":{"type":"overloaded_error"}}\n')
+        monkeypatch.setattr(proc_mod, "LOG_FILE", log_file)
+        p = _make_process(tmp_path)
+        p.process.poll.return_value = 0
+        with patch("process.get_jsonl_size", return_value=0), \
+             patch("process.check_incomplete_exit", return_value=(False, None)):
+            result = p.monitor(0)
+        assert result.rate_limited is True
+
 
 class TestMonitorContextPct:
     def test_returns_context_pct(self, tmp_path):
