@@ -134,7 +134,7 @@ if [ -f "$HANDOFF_FILE" ]; then
     HANDOFF_LINES=$(wc -l < "$HANDOFF_FILE" | tr -d ' ')
     HANDOFF_MODIFIED=$(date -r "$HANDOFF_FILE" "+%H:%M" 2>/dev/null || stat -c "%y" "$HANDOFF_FILE" 2>/dev/null | awk '{print substr($2,1,5)}')
     # Staleness check: warn if handoff is >6 hours old
-    HANDOFF_EPOCH=$(stat -f %m "$HANDOFF_FILE" 2>/dev/null || stat -c %Y "$HANDOFF_FILE" 2>/dev/null || echo 0)
+    HANDOFF_EPOCH=$(stat -c %Y "$HANDOFF_FILE" 2>/dev/null || stat -f %m "$HANDOFF_FILE" 2>/dev/null || echo 0)
     HANDOFF_AGE_H=$(( ($(date +%s) - HANDOFF_EPOCH) / 3600 ))
     STALE_TAG=""
     if [ "$HANDOFF_AGE_H" -ge 12 ] 2>/dev/null; then
