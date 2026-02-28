@@ -52,6 +52,9 @@ source "$SCRIPT_DIR/orient-notify.sh"
 # GPU status (if nvidia-smi available)
 source "$SCRIPT_DIR/orient-gpu.sh"
 
+# Background tasks
+source "$SCRIPT_DIR/orient-bg.sh"
+
 # Relay status + context
 STATUS_FILE="$DATA_DIR/relay-status.json"
 if [ -f "$STATUS_FILE" ]; then
