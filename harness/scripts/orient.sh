@@ -49,6 +49,9 @@ fi
 # Notifications: unread chat, Slack, reminders
 source "$SCRIPT_DIR/orient-notify.sh"
 
+# GPU status (if nvidia-smi available)
+source "$SCRIPT_DIR/orient-gpu.sh"
+
 # Relay status + context
 STATUS_FILE="$DATA_DIR/relay-status.json"
 if [ -f "$STATUS_FILE" ]; then
