@@ -64,13 +64,28 @@ do_add() {
     local cmd
     cmd=$(ps -p "$pid" -o args= 2>/dev/null | head -c 120 || echo "")
     python3 - "$BG_FILE" "$pid" "$desc" "$cmd" <<'PYEOF'
-import json, sys
+import json, sys, os
 from datetime import datetime
 bg_file, pid, desc, cmd = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
 tasks = json.load(open(bg_file))
-# Remove existing entry for same PID
+# Get actual process start time from /proc (Linux) or fall back to now
+started = datetime.now()
+try:
+    stat_path = f"/proc/{pid}/stat"
+    if os.path.exists(stat_path):
+        with open("/proc/uptime") as f:
+            uptime = float(f.read().split()[0])
+        with open(stat_path) as f:
+            # starttime is field 22 (0-indexed: 21), in clock ticks
+            fields = f.read().rsplit(")", 1)[1].split()
+            start_ticks = int(fields[19])  # field 22, offset by name+state+)
+            hz = os.sysconf("SC_CLK_TCK")
+            boot = datetime.now().timestamp() - uptime
+            started = datetime.fromtimestamp(boot + start_ticks / hz)
+except Exception:
+    pass
 tasks = [t for t in tasks if t.get("pid") != pid]
-tasks.append({"pid": pid, "desc": desc, "started": datetime.now().isoformat(timespec="seconds"), "cmd": cmd})
+tasks.append({"pid": pid, "desc": desc, "started": started.isoformat(timespec="seconds"), "cmd": cmd})
 with open(bg_file, "w") as f: json.dump(tasks, f, indent=2)
 print(f"Registered: pid={pid} — {desc}")
 PYEOF
