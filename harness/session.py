@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    SLEEP_POLL_INTERVAL, Timer, log, set_status,
+    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, Timer, log, set_status,
 )
 from notify_format import format_notifications
 
@@ -97,8 +97,16 @@ class SleepManager:
                 if not real:
                     log("Sleep timeout reminder(s) fired — staying asleep")
                     continue
-                log(f"Notification: {real[0].get('type', '?')}")
-                return True, real
+                # Debounce: collect additional notifications before waking
+                debounce_end = time.time() + SLEEP_DEBOUNCE
+                all_real = list(real)
+                while time.time() < debounce_end:
+                    time.sleep(SLEEP_POLL_INTERVAL)
+                    more = self._check_notifications()
+                    more_real = [n for n in more if not _is_sleep_timeout_reminder(n)]
+                    all_real.extend(more_real)
+                log(f"Waking with {len(all_real)} notification(s)")
+                return True, all_real
 
             # Force-wake if cache file is stale or missing (poller may have died)
             try:
