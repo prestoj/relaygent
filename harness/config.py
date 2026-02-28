@@ -8,6 +8,7 @@ from pathlib import Path
 
 # Timing constants
 SLEEP_POLL_INTERVAL = 1         # Local file check frequency while sleeping
+SLEEP_DEBOUNCE = 3              # Seconds to collect additional notifications before waking
 HANG_CHECK_DELAY = 90           # Seconds before checking for hang patterns
 SILENCE_TIMEOUT = 300           # Seconds of no output before considering hung
 MAX_RETRIES = 2                 # 3 total attempts

@@ -121,8 +121,8 @@ class TestWaitForWake:
         responses = iter([[{"type": "reminder", "id": 99, "message": "Sleep timeout (30 min)"}],
                           [{"type": "message", "messages": [{"timestamp": "t2", "content": "hi"}]}]])
         def fake_check(self):
-            r = next(responses)
-            if r[0]["type"] == "reminder": self._seen_timestamps.add("reminder-99")
+            r = next(responses, [])
+            if r and r[0]["type"] == "reminder": self._seen_timestamps.add("reminder-99")
             return r
         cache_file.write_text("[]")
         with patch.object(SleepManager, "_check_notifications", fake_check), \
