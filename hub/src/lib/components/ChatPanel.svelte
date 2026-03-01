@@ -76,6 +76,7 @@
 		if (textareaEl) textareaEl.style.height = 'auto';
 		try { await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: text, role: 'human' }) }); } catch {}
 		sending = false;
+		if (textareaEl) textareaEl.focus();
 	}
 
 	function onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
