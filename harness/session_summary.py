@@ -29,6 +29,7 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
     git_commits = 0
     prs_created = []
     prs_merged = []
+    recent_activity = []
     turns = 0
     total_tokens = 0
     context_pct = 0.0
@@ -67,6 +68,9 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
                         files_modified.add(inp["file_path"])
                     if name == "Bash":
                         cmd = inp.get("command", "")
+                        desc = inp.get("description", "")
+                        if desc:
+                            recent_activity.append(desc[:80])
                         if "git commit" in cmd:
                             git_commits += 1
                         if "gh pr create" in cmd:
@@ -86,6 +90,7 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
             "git_commits": git_commits,
             "prs_created": prs_created,
             "prs_merged": prs_merged,
+            "recent_activity": recent_activity[-10:],
             "context_pct": round(context_pct, 1),
             "total_tokens": total_tokens,
         }

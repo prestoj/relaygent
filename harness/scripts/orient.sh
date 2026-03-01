@@ -84,6 +84,9 @@ if d.get('prs_created'): git.append(f'{len(d["prs_created"])} PRs created')
 if d.get('prs_merged'): git.append(f'{len(d["prs_merged"])} PRs merged')
 gs = f' | {", ".join(git)}' if git else ''
 print(f'\033[0;34mLast Session:\033[0m {d["turns"]} turns, {d["context_pct"]:.0f}% ctx{gs} | {top}')
+acts = d.get('recent_activity', [])
+if acts:
+    print(f'  Recent: {" → ".join(acts[-5:])}')
 PYEOF
 fi
 
