@@ -16,13 +16,16 @@ show_help() {
     printf "  %-22s %s\n" \
         "list" "Show registered tasks with status (default)" \
         "add <pid> <desc>" "Register a background task" \
+        "  --log <path>" "  Log file to tail for status" \
+        "  --log-pattern <re>" "  Regex to filter log lines (e.g. 'step')" \
+        "log <pid> <path> [re]" "Set/update log file for a task" \
         "rm <pid>" "Unregister a task" \
         "clean" "Remove dead (finished) tasks"
 }
 
 do_list() {
     python3 - "$BG_FILE" <<'PYEOF'
-import json, sys, os, time
+import json, sys, os, time, re
 from datetime import datetime
 
 tasks = json.load(open(sys.argv[1]))
@@ -32,6 +35,7 @@ if not tasks:
 for t in tasks:
     pid, desc = t.get("pid", 0), t.get("desc", "?")
     started, cmd = t.get("started", ""), t.get("cmd", "")
+    log_file, log_pat = t.get("log", ""), t.get("log_pattern", "")
     alive = False
     try: os.kill(pid, 0); alive = True
     except (OSError, TypeError): pass
@@ -48,27 +52,45 @@ for t in tasks:
     status = f"\033[0;32m● running\033[0m" if alive else f"\033[0;31m○ stopped\033[0m"
     print(f"  {status}  pid={pid}  {dur:>6s}  {desc}")
     if cmd: print(f"         cmd: {cmd[:70]}")
+    # Show last matching log line
+    if log_file and os.path.exists(log_file):
+        try:
+            with open(log_file, "rb") as f:
+                f.seek(0, 2); end = f.tell()
+                pos = max(0, end - 8192); f.seek(pos)
+                lines = f.read().decode("utf-8", errors="replace").splitlines()
+            if log_pat:
+                lines = [l for l in lines if re.search(log_pat, l)]
+            if lines:
+                print(f"         log: {lines[-1].strip()[:80]}")
+        except Exception:
+            pass
 PYEOF
 }
 
 do_add() {
-    local pid="${1:-}" desc="${2:-}"
+    local pid="" desc="" log_file="" log_pattern=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --log) log_file="$2"; shift 2 ;;
+            --log-pattern) log_pattern="$2"; shift 2 ;;
+            *) if [ -z "$pid" ]; then pid="$1"; else desc="${desc:+$desc }$1"; fi; shift ;;
+        esac
+    done
     if [ -z "$pid" ] || [ -z "$desc" ]; then
-        echo -e "${RED}Usage: relaygent bg add <pid> <description>${NC}"; exit 1
+        echo -e "${RED}Usage: relaygent bg add <pid> <desc> [--log <path>] [--log-pattern <re>]${NC}"; exit 1
     fi
-    # Verify PID exists
     if ! kill -0 "$pid" 2>/dev/null; then
         echo -e "${YELLOW}Warning: PID $pid is not running${NC}"
     fi
-    # Get command line for the PID
     local cmd
     cmd=$(ps -p "$pid" -o args= 2>/dev/null | head -c 120 || echo "")
-    python3 - "$BG_FILE" "$pid" "$desc" "$cmd" <<'PYEOF'
+    python3 - "$BG_FILE" "$pid" "$desc" "$cmd" "$log_file" "$log_pattern" <<'PYEOF'
 import json, sys, os
 from datetime import datetime
 bg_file, pid, desc, cmd = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+log_file, log_pattern = sys.argv[5], sys.argv[6]
 tasks = json.load(open(bg_file))
-# Get actual process start time from /proc (Linux) or fall back to now
 started = datetime.now()
 try:
     stat_path = f"/proc/{pid}/stat"
@@ -76,18 +98,42 @@ try:
         with open("/proc/uptime") as f:
             uptime = float(f.read().split()[0])
         with open(stat_path) as f:
-            # starttime is field 22 (0-indexed: 21), in clock ticks
             fields = f.read().rsplit(")", 1)[1].split()
-            start_ticks = int(fields[19])  # field 22, offset by name+state+)
+            start_ticks = int(fields[19])
             hz = os.sysconf("SC_CLK_TCK")
             boot = datetime.now().timestamp() - uptime
             started = datetime.fromtimestamp(boot + start_ticks / hz)
 except Exception:
     pass
 tasks = [t for t in tasks if t.get("pid") != pid]
-tasks.append({"pid": pid, "desc": desc, "started": started.isoformat(timespec="seconds"), "cmd": cmd})
+entry = {"pid": pid, "desc": desc, "started": started.isoformat(timespec="seconds"), "cmd": cmd}
+if log_file: entry["log"] = log_file
+if log_pattern: entry["log_pattern"] = log_pattern
+tasks.append(entry)
 with open(bg_file, "w") as f: json.dump(tasks, f, indent=2)
 print(f"Registered: pid={pid} — {desc}")
+PYEOF
+}
+
+do_log() {
+    local pid="${1:-}" log_file="${2:-}" log_pattern="${3:-}"
+    if [ -z "$pid" ] || [ -z "$log_file" ]; then
+        echo -e "${RED}Usage: relaygent bg log <pid> <log-path> [pattern]${NC}"; exit 1
+    fi
+    python3 - "$BG_FILE" "$pid" "$log_file" "$log_pattern" <<'PYEOF'
+import json, sys
+bg_file, pid = sys.argv[1], int(sys.argv[2])
+log_file, log_pattern = sys.argv[3], sys.argv[4]
+tasks = json.load(open(bg_file))
+found = False
+for t in tasks:
+    if t.get("pid") == pid:
+        t["log"] = log_file
+        if log_pattern: t["log_pattern"] = log_pattern
+        found = True; break
+with open(bg_file, "w") as f: json.dump(tasks, f, indent=2)
+if found: print(f"Log set for pid={pid}: {log_file}")
+else: print(f"No task with pid={pid}")
 PYEOF
 }
 
@@ -125,7 +171,8 @@ PYEOF
 
 case "${1:-list}" in
     list)  do_list ;;
-    add)   do_add "${2:-}" "${*:3}" ;;
+    add)   shift; do_add "$@" ;;
+    log)   do_log "${2:-}" "${3:-}" "${4:-}" ;;
     rm)    do_rm "${2:-}" ;;
     clean) do_clean ;;
     help|--help|-h) show_help ;;

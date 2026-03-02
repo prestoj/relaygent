@@ -38,12 +38,13 @@ if dead:
         json.dump(running, f)
 
 if running:
+    import re as _re
     print(f"\n\033[0;34mBackground:\033[0m {len(running)} task(s)")
     for t in running:
         started = t.get("started", "")
         desc = t.get("desc", "unknown")
         pid = t.get("pid", "?")
-        # Duration
+        log_file, log_pat = t.get("log", ""), t.get("log_pattern", "")
         dur = ""
         if started:
             try:
@@ -58,6 +59,18 @@ if running:
             except (ValueError, TypeError):
                 pass
         print(f"  \033[0;32m●\033[0m {desc} (pid {pid}){dur}")
+        if log_file and os.path.exists(log_file):
+            try:
+                with open(log_file, "rb") as f:
+                    f.seek(0, 2); end = f.tell()
+                    pos = max(0, end - 8192); f.seek(pos)
+                    lines = f.read().decode("utf-8", errors="replace").splitlines()
+                if log_pat:
+                    lines = [l for l in lines if _re.search(log_pat, l)]
+                if lines:
+                    print(f"    \033[0;36m→\033[0m {lines[-1].strip()[:80]}")
+            except Exception:
+                pass
 
 if dead:
     print(f"  \033[0;33m○\033[0m {len(dead)} task(s) finished (cleaned)")

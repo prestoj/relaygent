@@ -40,7 +40,22 @@ fi
 
 # Pending reminders
 PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/upcoming" 2>/dev/null)
-PENDING_COUNT=$(echo "$PENDING" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
-if [ "$PENDING_COUNT" -gt 0 ] 2>/dev/null; then
-    echo -e "\033[1;33mReminders:\033[0m $PENDING_COUNT due"
+if [ -n "$PENDING" ] && [ "$PENDING" != "[]" ]; then
+    echo "$PENDING" | python3 -c "
+import sys, json
+from datetime import datetime, timezone
+reminders = json.load(sys.stdin)
+now = datetime.now(timezone.utc)
+due, upcoming = [], []
+for r in reminders:
+    try:
+        t = datetime.fromisoformat(r['trigger_time']).replace(tzinfo=timezone.utc)
+        (due if t <= now else upcoming).append(r)
+    except: upcoming.append(r)
+parts = []
+if due: parts.append(f'{len(due)} due')
+if upcoming: parts.append(f'{len(upcoming)} upcoming')
+if parts:
+    print(f'\033[1;33mReminders:\033[0m ' + ', '.join(parts))
+" 2>/dev/null
 fi
