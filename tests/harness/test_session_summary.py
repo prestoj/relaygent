@@ -69,7 +69,7 @@ class TestGenerateSummary:
         assert result["tools"]["Edit"] == 1
         assert result["tools"]["Bash"] == 1
         assert "/foo.py" in result["files_modified"]
-        assert "/bar.js" in result["files_modified"]
+        assert "/bar.js" not in result["files_modified"]  # Read doesn't count as modified
         assert result["context_pct"] > 0
         assert result["session_id"] == sid
 

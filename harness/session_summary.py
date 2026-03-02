@@ -64,7 +64,7 @@ def generate_summary(session_id: str, workspace: Path) -> dict | None:
                     name = item.get("name", "unknown")
                     tools[name] += 1
                     inp = item.get("input", {})
-                    if name in ("Edit", "Write", "Read") and "file_path" in inp:
+                    if name in ("Edit", "Write") and "file_path" in inp:
                         files_modified.add(inp["file_path"])
                     if name == "Bash":
                         cmd = inp.get("command", "")
