@@ -24,9 +24,11 @@ after(() => {
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function writeStatus(status, updatedSecondsAgo = 5) {
+function writeStatus(status, updatedSecondsAgo = 5, pid) {
 	const updated = new Date(Date.now() - updatedSecondsAgo * 1000).toISOString();
-	fs.writeFileSync(statusFile, JSON.stringify({ status, updated }));
+	const data = { status, updated };
+	if (pid !== undefined) data.pid = pid;
+	fs.writeFileSync(statusFile, JSON.stringify(data));
 }
 
 test('relay status: working shows as ok', async () => {
@@ -198,4 +200,38 @@ test('MCP: no entry when mcpServers is empty', async () => {
 	const results = await withHome(tmpDir, () => getServiceHealth());
 	const mcp = results.find(s => s.name.startsWith('MCP'));
 	assert.equal(mcp, undefined, 'no MCP entry for empty config');
+});
+
+// --- Relay PID crash detection tests ---
+
+test('relay status: working with alive PID shows as ok', async () => {
+	writeStatus('working', 2, process.pid);
+	const results = await getServiceHealth();
+	const relay = results.find(s => s.name === 'Relay');
+	assert.equal(relay.ok, true);
+	assert.ok(relay.detail.startsWith('working'));
+});
+
+test('relay status: working with dead PID shows as crashed', async () => {
+	writeStatus('working', 2, 99999999);
+	const results = await getServiceHealth();
+	const relay = results.find(s => s.name === 'Relay');
+	assert.equal(relay.ok, false);
+	assert.ok(relay.detail.startsWith('crashed'), `expected crashed: ${relay.detail}`);
+});
+
+test('relay status: sleeping with dead PID shows as crashed', async () => {
+	writeStatus('sleeping', 2, 99999999);
+	const results = await getServiceHealth();
+	const relay = results.find(s => s.name === 'Relay');
+	assert.equal(relay.ok, false);
+	assert.ok(relay.detail.startsWith('crashed'), `expected crashed: ${relay.detail}`);
+});
+
+test('relay status: off with dead PID still shows off (not crashed)', async () => {
+	writeStatus('off', 2, 99999999);
+	const results = await getServiceHealth();
+	const relay = results.find(s => s.name === 'Relay');
+	assert.equal(relay.ok, false);
+	assert.ok(relay.detail.startsWith('off'), `expected off: ${relay.detail}`);
 });

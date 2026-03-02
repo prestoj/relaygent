@@ -46,13 +46,19 @@ async function checkService(svc) {
 function checkRelayStatus() {
 	try {
 		const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
-		const { status, updated, session_id, goal } = data;
-		const ok = status === 'working' || status === 'sleeping';
+		const { status, updated, session_id, goal, pid } = data;
+		let ok = status === 'working' || status === 'sleeping';
+		// Verify relay process is alive when status claims it's running
+		if (ok && pid) {
+			try { process.kill(pid, 0); } catch { ok = false; }
+		}
 		const labels = { rate_limited: 'rate limited', crashed: 'crashed' };
 		let detail = labels[status] || status;
+		// Override if status said working/sleeping but process is dead
+		if (!ok && (status === 'working' || status === 'sleeping')) detail = 'crashed';
 		if (updated) {
 			const ageMin = Math.round((Date.now() - new Date(updated).getTime()) / 60000);
-			if (ageMin >= 1) detail = `${status} (${ageMin}m)`;
+			if (ageMin >= 1) detail = `${detail} (${ageMin}m)`;
 		}
 		return { name: 'Relay', ok, detail, sessionId: session_id || null, goal: goal || null };
 	} catch {
