@@ -46,7 +46,7 @@ def set_status(status: str, **extra) -> None:
     import json
     try:
         STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"status": status, "updated": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **extra}
+        payload = {"status": status, "updated": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pid": os.getpid(), **extra}
         tmp = STATUS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload))
         tmp.rename(STATUS_FILE)
