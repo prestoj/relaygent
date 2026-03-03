@@ -1,11 +1,14 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
-	const FILES = [
+	const FALLBACK = [
 		{ id: 'relaygent', label: 'Relay' },
 		{ id: 'relaygent-hub', label: 'Hub' },
 		{ id: 'relaygent-notifications', label: 'Notifications' },
 		{ id: 'slack-socket', label: 'Slack Socket' },
 	];
+	let sources = $state(FALLBACK);
+	let serviceSources = $derived(sources.filter(s => !s.bg));
+	let bgSources = $derived(sources.filter(s => s.bg));
 	let selectedFile = $state('relaygent');
 	let rawLines = $state('');
 	let loading = $state(false);
@@ -44,10 +47,17 @@
 		return s;
 	}
 
+	async function fetchSources() {
+		try {
+			const r = await fetch('/api/logs?sources=true');
+			if (r.ok) { const d = await r.json(); if (d.sources?.length) sources = d.sources; }
+		} catch { /* keep fallback */ }
+	}
+
 	async function fetchLogs() {
 		loading = true; error = '';
 		try {
-			const res = await fetch(`/api/logs?file=${selectedFile}&lines=${lineCount}`);
+			const res = await fetch(`/api/logs?file=${encodeURIComponent(selectedFile)}&lines=${lineCount}`);
 			const d = await res.json();
 			if (d.error) { error = d.error; rawLines = ''; }
 			else { rawLines = d.lines || ''; }
@@ -57,13 +67,20 @@
 	}
 
 	function scrollBottom() { if (preEl) preEl.scrollTop = preEl.scrollHeight; }
-	onMount(() => { fetchLogs(); pollInterval = setInterval(fetchLogs, 10000); });
+	onMount(() => { fetchSources(); fetchLogs(); pollInterval = setInterval(fetchLogs, 10000); });
 	onDestroy(() => clearInterval(pollInterval));
 </script>
 
 <div class="log-controls">
 	<select bind:value={selectedFile} onchange={() => fetchLogs()}>
-		{#each FILES as f}<option value={f.id}>{f.label}</option>{/each}
+		<optgroup label="Services">
+			{#each serviceSources as f}<option value={f.id}>{f.label}</option>{/each}
+		</optgroup>
+		{#if bgSources.length > 0}
+			<optgroup label="Background Tasks">
+				{#each bgSources as f}<option value={f.id}>{f.label}</option>{/each}
+			</optgroup>
+		{/if}
 	</select>
 	<select bind:value={lineCount} onchange={fetchLogs}>
 		<option value={100}>100</option><option value={200}>200</option>
