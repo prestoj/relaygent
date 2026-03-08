@@ -13,11 +13,12 @@ CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC
 
 show_help() {
     echo -e "${CYAN}Usage:${NC} relaygent bg <command>\n"
-    printf "  %-22s %s\n" \
+    printf "  %-28s %s\n" \
         "list" "Show registered tasks with status (default)" \
-        "add <pid> <desc>" "Register a background task" \
+        "run <desc> [--log p] -- cmd" "Start, background, and register a task" \
+        "add <pid> <desc>" "Register an existing background task" \
         "  --log <path>" "  Log file to tail for status" \
-        "  --log-pattern <re>" "  Regex to filter log lines (e.g. 'step')" \
+        "  --log-pattern <re>" "  Regex to filter log lines" \
         "log <pid> <path> [re]" "Set/update log file for a task" \
         "rm <pid>" "Unregister a task" \
         "clean" "Remove dead (finished) tasks"
@@ -41,13 +42,10 @@ for t in tasks:
     except (OSError, TypeError): pass
 
     dur = ""
-    if started:
-        try:
-            secs = int(time.time() - datetime.fromisoformat(started).timestamp())
-            if secs >= 3600: dur = f"{secs//3600}h{(secs%3600)//60}m"
-            elif secs >= 60: dur = f"{secs//60}m"
-            else: dur = f"{secs}s"
-        except (ValueError, TypeError): pass
+    try:
+        secs = int(time.time() - datetime.fromisoformat(started).timestamp())
+        dur = f"{secs//3600}h{(secs%3600)//60}m" if secs >= 3600 else f"{secs//60}m" if secs >= 60 else f"{secs}s"
+    except Exception: pass
 
     status = f"\033[0;32m● running\033[0m" if alive else f"\033[0;31m○ stopped\033[0m"
     print(f"  {status}  pid={pid}  {dur:>6s}  {desc}")
@@ -66,6 +64,26 @@ for t in tasks:
         except Exception:
             pass
 PYEOF
+}
+
+do_run() {
+    local desc="" log_file="" log_pattern=""
+    local -a cmd=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --log) log_file="$2"; shift 2 ;;
+            --log-pattern) log_pattern="$2"; shift 2 ;;
+            --) shift; cmd=("$@"); break ;;
+            *) desc="${desc:+$desc }$1"; shift ;;
+        esac
+    done
+    if [ -z "$desc" ] || [ ${#cmd[@]} -eq 0 ]; then
+        echo -e "${RED}Usage: relaygent bg run <desc> [--log <path>] [--log-pattern <re>] -- <command...>${NC}"; exit 1
+    fi
+    [ -z "$log_file" ] && log_file="/tmp/bg-$(echo "$desc" | tr ' ' '-' | tr -cd 'a-zA-Z0-9-' | head -c 30).log"
+    nohup "${cmd[@]}" > "$log_file" 2>&1 & local pid=$!
+    echo -e "${GREEN}Started${NC} pid=$pid → $log_file"
+    do_add "$pid" "$desc" --log "$log_file" ${log_pattern:+--log-pattern "$log_pattern"}
 }
 
 do_add() {
@@ -171,6 +189,7 @@ PYEOF
 
 case "${1:-list}" in
     list)  do_list ;;
+    run)   shift; do_run "$@" ;;
     add)   shift; do_add "$@" ;;
     log)   do_log "${2:-}" "${3:-}" "${4:-}" ;;
     rm)    do_rm "${2:-}" ;;
