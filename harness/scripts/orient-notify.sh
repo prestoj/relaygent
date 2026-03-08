@@ -43,13 +43,13 @@ PENDING=$(curl -s --max-time 2 "http://127.0.0.1:${NOTIF_PORT}/upcoming" 2>/dev/
 if [ -n "$PENDING" ] && [ "$PENDING" != "[]" ]; then
     echo "$PENDING" | python3 -c "
 import sys, json
-from datetime import datetime, timezone
+from datetime import datetime
 reminders = json.load(sys.stdin)
-now = datetime.now(timezone.utc)
+now = datetime.now()
 due, upcoming = [], []
 for r in reminders:
     try:
-        t = datetime.fromisoformat(r['trigger_time']).replace(tzinfo=timezone.utc)
+        t = datetime.fromisoformat(r['trigger_time'])
         (due if t <= now else upcoming).append(r)
     except: upcoming.append(r)
 parts = []
