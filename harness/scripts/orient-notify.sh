@@ -57,5 +57,10 @@ if due: parts.append(f'{len(due)} due')
 if upcoming: parts.append(f'{len(upcoming)} upcoming')
 if parts:
     print(f'\033[1;33mReminders:\033[0m ' + ', '.join(parts))
+    for r in (due + upcoming)[:3]:
+        msg = (r.get('message') or '?')[:60]
+        tt = r.get('trigger_time', '?')
+        tag = 'DUE' if r in due else tt
+        print(f'  [{tag}] {msg}')
 " 2>/dev/null
 fi
