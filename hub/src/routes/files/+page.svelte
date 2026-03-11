@@ -11,11 +11,19 @@
 
 	const IMG_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 	const TEXT_EXT = ['.md', '.txt', '.py', '.js', '.sh', '.json', '.yaml', '.yml', '.csv', '.toml'];
-	function isMd(name) { return ext(name) === '.md'; }
+	const VID_EXT = ['.mp4', '.webm', '.mov', '.mkv', '.avi'];
+	const AUD_EXT = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
+	let filter = $state('all');
+	let search = $state('');
 
 	function ext(name) { return name.includes('.') ? '.' + name.split('.').pop().toLowerCase() : ''; }
+	function isMd(name) { return ext(name) === '.md'; }
 	function isImage(name) { return IMG_EXT.includes(ext(name)); }
 	function isText(name) { return TEXT_EXT.includes(ext(name)); }
+	function isVideo(name) { return VID_EXT.includes(ext(name)); }
+	function isAudio(name) { return AUD_EXT.includes(ext(name)); }
+	function typeOf(name) { return isVideo(name) ? 'video' : isAudio(name) ? 'audio' : isImage(name) ? 'image' : 'other'; }
+	let filtered = $derived(files.filter(f => (filter === 'all' || typeOf(f.name) === filter) && (!search || f.name.toLowerCase().includes(search.toLowerCase()))));
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -36,6 +44,13 @@
 				previewText = await res.text();
 			} catch { previewText = 'Failed to load file'; }
 		}
+	}
+	function navPreview(delta) {
+		if (!preview) return;
+		const list = filtered;
+		const idx = list.findIndex(f => f.name === preview.name);
+		const next = list[idx + delta];
+		if (next) openPreview(next);
 	}
 
 	function uploadOne(file) {
@@ -74,6 +89,7 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => { if (preview && e.key === 'ArrowLeft') navPreview(-1); if (preview && e.key === 'ArrowRight') navPreview(1); if (preview && e.key === 'Escape') preview = null; }} />
 <svelte:head><title>Files — Relaygent</title></svelte:head>
 
 <h1>Shared Files</h1>
@@ -92,8 +108,14 @@
 {#if files.length === 0}
 	<p class="empty">No shared files yet.</p>
 {:else}
+	<div class="filters">
+		{#each ['all', 'video', 'audio', 'image', 'other'] as t}
+			<button class="filter-btn" class:active={filter === t} onclick={() => filter = t}>{t} {t === 'all' ? `(${files.length})` : `(${files.filter(f => typeOf(f.name) === t).length})`}</button>
+		{/each}
+		<input class="search" type="text" placeholder="Search files..." bind:value={search} />
+	</div>
 	<div class="file-list">
-		{#each files as f}
+		{#each filtered as f}
 			<div class="file-row" class:active={preview?.name === f.name}>
 				<button class="fname" onclick={() => openPreview(f)}>{f.name}</button>
 				<span class="fmeta">{fmtSize(f.size)}</span>
@@ -108,11 +130,20 @@
 {#if preview}
 	<div class="preview">
 		<div class="preview-header">
+			<button class="fbtn" onclick={() => navPreview(-1)} title="Previous">&#8592;</button>
 			<strong>{preview.name}</strong>
-			<button class="fbtn" onclick={() => preview = null}>×</button>
+			<div>
+				<button class="fbtn" onclick={() => navPreview(1)} title="Next">&#8594;</button>
+				<button class="fbtn" onclick={() => preview = null}>×</button>
+			</div>
 		</div>
 		<div class="preview-body">
-			{#if isImage(preview.name)}
+			{#if isVideo(preview.name)}
+				<!-- svelte-ignore a11y_media_has_caption -->
+				<video src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay onended={() => navPreview(1)} style="max-width:100%;max-height:70vh;border-radius:4px"></video>
+			{:else if isAudio(preview.name)}
+				<audio src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay style="width:100%"></audio>
+			{:else if isImage(preview.name)}
 				<img src="/api/files/view?name={encodeURIComponent(preview.name)}" alt={preview.name} />
 			{:else if isMd(preview.name)}
 				<MarkdownRenderer source={previewText} />
@@ -151,4 +182,10 @@
 	.preview-body img { max-width: 100%; height: auto; border-radius: 4px; }
 	.preview-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.85em; line-height: 1.5; max-height: 60vh; overflow: auto; }
 	.no-preview { color: var(--text-muted); }
+	.filters { display: flex; gap: 0.4em; margin-bottom: 0.75em; flex-wrap: wrap; }
+	.filter-btn { padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.8em; text-transform: capitalize; }
+	.filter-btn.active { border-color: var(--link); color: var(--link); background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); }
+	.filter-btn:hover { border-color: var(--link); }
+	.search { flex: 1; padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text); font-size: 0.8em; min-width: 120px; }
+	.search:focus { outline: none; border-color: var(--link); }
 </style>
