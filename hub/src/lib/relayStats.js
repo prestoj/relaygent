@@ -62,7 +62,7 @@ export function getRelayStats() {
 	for (let i = 13; i >= 0; i--) {
 		const d = new Date(today);
 		d.setDate(d.getDate() - i);
-		const key = d.toISOString().slice(0, 10);
+		const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 		dailySeries.push({ date: key, count: daily[key] || 0 });
 	}
 
