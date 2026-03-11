@@ -44,6 +44,13 @@
 			} catch { previewText = 'Failed to load file'; }
 		}
 	}
+	function navPreview(delta) {
+		if (!preview) return;
+		const list = filtered;
+		const idx = list.findIndex(f => f.name === preview.name);
+		const next = list[idx + delta];
+		if (next) openPreview(next);
+	}
 
 	function uploadOne(file) {
 		return new Promise((resolve) => {
@@ -81,6 +88,7 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => { if (preview && e.key === 'ArrowLeft') navPreview(-1); if (preview && e.key === 'ArrowRight') navPreview(1); if (preview && e.key === 'Escape') preview = null; }} />
 <svelte:head><title>Files — Relaygent</title></svelte:head>
 
 <h1>Shared Files</h1>
@@ -120,8 +128,12 @@
 {#if preview}
 	<div class="preview">
 		<div class="preview-header">
+			<button class="fbtn" onclick={() => navPreview(-1)} title="Previous">&#8592;</button>
 			<strong>{preview.name}</strong>
-			<button class="fbtn" onclick={() => preview = null}>×</button>
+			<div>
+				<button class="fbtn" onclick={() => navPreview(1)} title="Next">&#8594;</button>
+				<button class="fbtn" onclick={() => preview = null}>×</button>
+			</div>
 		</div>
 		<div class="preview-body">
 			{#if isVideo(preview.name)}
