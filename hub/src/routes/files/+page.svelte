@@ -117,7 +117,7 @@
 	<div class="file-list">
 		{#each filtered as f}
 			<div class="file-row" class:active={preview?.name === f.name}>
-				<button class="fname" onclick={() => openPreview(f)}>{f.name}</button>
+				<button class="fname" onclick={() => openPreview(f)}>{#if isVideo(f.name)}<img class="thumb" src="/api/files/thumbnail?name={encodeURIComponent(f.name)}" alt="" loading="lazy" />{/if}{f.name}</button>
 				<span class="fmeta">{fmtSize(f.size)}</span>
 				<span class="fmeta">{fmtDate(f.modified)}</span>
 				<a href="/api/files/download?name={encodeURIComponent(f.name)}" class="fbtn" download title="Download">↓</a>
@@ -172,6 +172,7 @@
 	.file-row.active { border-color: var(--link); background: color-mix(in srgb, var(--link) 5%, var(--bg-surface)); }
 	.fname { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: none; border: none; color: var(--link); cursor: pointer; text-align: left; padding: 0; font-size: inherit; }
 	.fname:hover { text-decoration: underline; }
+	.thumb { width: 40px; height: 24px; object-fit: cover; border-radius: 3px; margin-right: 0.4em; vertical-align: middle; }
 	.fmeta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
 	.fbtn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.95em; padding: 0.15em 0.35em; text-decoration: none; }
 	.fbtn:hover { color: var(--link); }
