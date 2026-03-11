@@ -11,6 +11,10 @@ const MIME = {
 	'.py': 'text/plain; charset=utf-8', '.js': 'text/plain; charset=utf-8',
 	'.sh': 'text/plain; charset=utf-8', '.yaml': 'text/plain; charset=utf-8',
 	'.yml': 'text/plain; charset=utf-8', '.toml': 'text/plain; charset=utf-8',
+	'.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+	'.mkv': 'video/x-matroska', '.avi': 'video/x-msvideo',
+	'.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+	'.m4a': 'audio/mp4', '.flac': 'audio/flac',
 };
 
 /** GET /api/files/view?name=filename — serve file inline with proper Content-Type */
