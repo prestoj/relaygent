@@ -14,6 +14,7 @@
 	const VID_EXT = ['.mp4', '.webm', '.mov', '.mkv', '.avi'];
 	const AUD_EXT = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
 	let filter = $state('all');
+	let search = $state('');
 
 	function ext(name) { return name.includes('.') ? '.' + name.split('.').pop().toLowerCase() : ''; }
 	function isMd(name) { return ext(name) === '.md'; }
@@ -22,7 +23,7 @@
 	function isVideo(name) { return VID_EXT.includes(ext(name)); }
 	function isAudio(name) { return AUD_EXT.includes(ext(name)); }
 	function typeOf(name) { return isVideo(name) ? 'video' : isAudio(name) ? 'audio' : isImage(name) ? 'image' : 'other'; }
-	let filtered = $derived(filter === 'all' ? files : files.filter(f => typeOf(f.name) === filter));
+	let filtered = $derived(files.filter(f => (filter === 'all' || typeOf(f.name) === filter) && (!search || f.name.toLowerCase().includes(search.toLowerCase()))));
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -111,6 +112,7 @@
 		{#each ['all', 'video', 'audio', 'image', 'other'] as t}
 			<button class="filter-btn" class:active={filter === t} onclick={() => filter = t}>{t} {t === 'all' ? `(${files.length})` : `(${files.filter(f => typeOf(f.name) === t).length})`}</button>
 		{/each}
+		<input class="search" type="text" placeholder="Search files..." bind:value={search} />
 	</div>
 	<div class="file-list">
 		{#each filtered as f}
@@ -184,4 +186,6 @@
 	.filter-btn { padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.8em; text-transform: capitalize; }
 	.filter-btn.active { border-color: var(--link); color: var(--link); background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); }
 	.filter-btn:hover { border-color: var(--link); }
+	.search { flex: 1; padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text); font-size: 0.8em; min-width: 120px; }
+	.search:focus { outline: none; border-color: var(--link); }
 </style>
