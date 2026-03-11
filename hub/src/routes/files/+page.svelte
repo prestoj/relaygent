@@ -44,6 +44,7 @@
 				previewText = await res.text();
 			} catch { previewText = 'Failed to load file'; }
 		}
+		setTimeout(() => document.querySelector('.preview')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
 	}
 	function navPreview(delta) {
 		if (!preview) return;
