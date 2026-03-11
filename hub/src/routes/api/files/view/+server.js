@@ -17,20 +17,51 @@ const MIME = {
 	'.m4a': 'audio/mp4', '.flac': 'audio/flac',
 };
 
-/** GET /api/files/view?name=filename — serve file inline with proper Content-Type */
-export function GET({ url }) {
+/** GET /api/files/view?name=filename — serve file inline with range support for streaming */
+export function GET({ request, url }) {
 	const name = url.searchParams.get('name');
 	const result = getFilePath(name);
 	if (result.error) return new Response(result.error, { status: 400 });
 
 	try {
-		const buffer = fs.readFileSync(result.path);
+		const stat = fs.statSync(result.path);
+		const size = stat.size;
 		const ext = path.extname(name).toLowerCase();
 		const contentType = MIME[ext] || 'application/octet-stream';
+		const range = request.headers.get('range');
+
+		if (range) {
+			const match = range.match(/bytes=(\d+)-(\d*)/);
+			if (!match) return new Response('Invalid range', { status: 416 });
+			const start = parseInt(match[1]);
+			const end = match[2] ? parseInt(match[2]) : size - 1;
+			if (start >= size) {
+				return new Response('Range not satisfiable', {
+					status: 416, headers: { 'Content-Range': `bytes */${size}` },
+				});
+			}
+			const len = end - start + 1;
+			const buf = Buffer.alloc(len);
+			const fd = fs.openSync(result.path, 'r');
+			fs.readSync(fd, buf, 0, len, start);
+			fs.closeSync(fd);
+			return new Response(buf, {
+				status: 206,
+				headers: {
+					'Content-Type': contentType,
+					'Content-Range': `bytes ${start}-${end}/${size}`,
+					'Content-Length': len.toString(),
+					'Accept-Ranges': 'bytes',
+				},
+			});
+		}
+
+		const buffer = fs.readFileSync(result.path);
 		return new Response(buffer, {
 			headers: {
 				'Content-Type': contentType,
-				'Content-Length': buffer.length.toString(),
+				'Content-Length': size.toString(),
+				'Accept-Ranges': 'bytes',
 				'Cache-Control': 'no-cache',
 			},
 		});

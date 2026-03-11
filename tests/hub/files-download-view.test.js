@@ -23,10 +23,10 @@ fs.writeFileSync(path.join(sharedDir, 'image.png'), Buffer.from([0x89, 0x50, 0x4
 const { GET: download } = await import('../../hub/src/routes/api/files/download/+server.js');
 const { GET: view } = await import('../../hub/src/routes/api/files/view/+server.js');
 
-function makeUrl(endpoint, params = {}) {
+function makeUrl(endpoint, params = {}, headers = {}) {
 	const u = new URL(`http://localhost/api/files/${endpoint}`);
 	for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-	return { url: u };
+	return { url: u, request: { headers: new Headers(headers) } };
 }
 
 // --- Download endpoint ---
@@ -114,4 +114,41 @@ test('view: unknown extension falls back to octet-stream', async () => {
 	const res = view(makeUrl('view', { name: 'data.xyz' }));
 	assert.equal(res.status, 200);
 	assert.equal(res.headers.get('content-type'), 'application/octet-stream');
+});
+
+// --- Range request tests ---
+
+test('view: advertises Accept-Ranges', async () => {
+	const res = view(makeUrl('view', { name: 'hello.txt' }));
+	assert.equal(res.headers.get('accept-ranges'), 'bytes');
+});
+
+test('view: range request returns 206 with correct bytes', async () => {
+	const res = view(makeUrl('view', { name: 'hello.txt' }, { range: 'bytes=0-4' }));
+	assert.equal(res.status, 206);
+	assert.equal(res.headers.get('content-range'), 'bytes 0-4/11');
+	assert.equal(res.headers.get('content-length'), '5');
+	const body = await res.text();
+	assert.equal(body, 'Hello');
+});
+
+test('view: range request middle of file', async () => {
+	const res = view(makeUrl('view', { name: 'hello.txt' }, { range: 'bytes=6-10' }));
+	assert.equal(res.status, 206);
+	const body = await res.text();
+	assert.equal(body, 'world');
+});
+
+test('view: open-ended range returns rest of file', async () => {
+	const res = view(makeUrl('view', { name: 'hello.txt' }, { range: 'bytes=6-' }));
+	assert.equal(res.status, 206);
+	assert.equal(res.headers.get('content-range'), 'bytes 6-10/11');
+	const body = await res.text();
+	assert.equal(body, 'world');
+});
+
+test('view: range past end returns 416', async () => {
+	const res = view(makeUrl('view', { name: 'hello.txt' }, { range: 'bytes=100-' }));
+	assert.equal(res.status, 416);
+	assert.ok(res.headers.get('content-range').includes('*/11'));
 });
