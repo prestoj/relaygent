@@ -138,7 +138,7 @@
 		<div class="preview-body">
 			{#if isVideo(preview.name)}
 				<!-- svelte-ignore a11y_media_has_caption -->
-				<video src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:4px"></video>
+				<video src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay onended={() => navPreview(1)} style="max-width:100%;max-height:70vh;border-radius:4px"></video>
 			{:else if isAudio(preview.name)}
 				<audio src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay style="width:100%"></audio>
 			{:else if isImage(preview.name)}
