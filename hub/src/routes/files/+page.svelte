@@ -1,5 +1,6 @@
 <script>
-	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import FilePreview from '$lib/components/FilePreview.svelte';
+	import { typeOf, isVideo } from '$lib/fileTypes.js';
 	let { data } = $props();
 	let files = $state(data.files || []);
 	let uploading = $state(false);
@@ -7,22 +8,9 @@
 	let error = $state('');
 	let uploadProgress = $state('');
 	let preview = $state(null);
-	let previewText = $state('');
-
-	const IMG_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
-	const TEXT_EXT = ['.md', '.txt', '.py', '.js', '.sh', '.json', '.yaml', '.yml', '.csv', '.toml'];
-	const VID_EXT = ['.mp4', '.webm', '.mov', '.mkv', '.avi'];
-	const AUD_EXT = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
 	let filter = $state('all');
 	let search = $state('');
 
-	function ext(name) { return name.includes('.') ? '.' + name.split('.').pop().toLowerCase() : ''; }
-	function isMd(name) { return ext(name) === '.md'; }
-	function isImage(name) { return IMG_EXT.includes(ext(name)); }
-	function isText(name) { return TEXT_EXT.includes(ext(name)); }
-	function isVideo(name) { return VID_EXT.includes(ext(name)); }
-	function isAudio(name) { return AUD_EXT.includes(ext(name)); }
-	function typeOf(name) { return isVideo(name) ? 'video' : isAudio(name) ? 'audio' : isImage(name) ? 'image' : 'other'; }
 	let filtered = $derived(files.filter(f => (filter === 'all' || typeOf(f.name) === filter) && (!search || f.name.toLowerCase().includes(search.toLowerCase()))));
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
@@ -33,25 +21,6 @@
 		const d = new Date(iso);
 		if (d.toDateString() === new Date().toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 		return d.toLocaleDateString();
-	}
-
-	async function openPreview(f) {
-		preview = f;
-		previewText = '';
-		if (isText(f.name)) {
-			try {
-				const res = await fetch(`/api/files/view?name=${encodeURIComponent(f.name)}`);
-				previewText = await res.text();
-			} catch { previewText = 'Failed to load file'; }
-		}
-		setTimeout(() => document.querySelector('.preview')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-	}
-	function navPreview(delta) {
-		if (!preview) return;
-		const list = filtered;
-		const idx = list.findIndex(f => f.name === preview.name);
-		const next = list[idx + delta];
-		if (next) openPreview(next);
 	}
 
 	function uploadOne(file) {
@@ -90,7 +59,6 @@
 	}
 </script>
 
-<svelte:window onkeydown={(e) => { if (preview && e.key === 'ArrowLeft') navPreview(-1); if (preview && e.key === 'ArrowRight') navPreview(1); if (preview && e.key === 'Escape') preview = null; }} />
 <svelte:head><title>Files — Relaygent</title></svelte:head>
 
 <h1>Shared Files</h1>
@@ -118,7 +86,7 @@
 	<div class="file-list">
 		{#each filtered as f}
 			<div class="file-row" class:active={preview?.name === f.name}>
-				<button class="fname" onclick={() => openPreview(f)}>{#if isVideo(f.name)}<img class="thumb" src="/api/files/thumbnail?name={encodeURIComponent(f.name)}" alt="" loading="lazy" />{/if}{f.name}</button>
+				<button class="fname" onclick={() => preview = f}>{#if isVideo(f.name)}<img class="thumb" src="/api/files/thumbnail?name={encodeURIComponent(f.name)}" alt="" loading="lazy" />{/if}{f.name}</button>
 				<span class="fmeta">{fmtSize(f.size)}</span>
 				<span class="fmeta">{fmtDate(f.modified)}</span>
 				<a href="/api/files/download?name={encodeURIComponent(f.name)}" class="fbtn" download title="Download">↓</a>
@@ -129,32 +97,7 @@
 {/if}
 
 {#if preview}
-	<div class="preview">
-		<div class="preview-header">
-			<button class="fbtn" onclick={() => navPreview(-1)} title="Previous">&#8592;</button>
-			<strong>{preview.name}</strong>
-			<div>
-				<button class="fbtn" onclick={() => navPreview(1)} title="Next">&#8594;</button>
-				<button class="fbtn" onclick={() => preview = null}>×</button>
-			</div>
-		</div>
-		<div class="preview-body">
-			{#if isVideo(preview.name)}
-				<!-- svelte-ignore a11y_media_has_caption -->
-				<video src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay onended={() => navPreview(1)} style="max-width:100%;max-height:70vh;border-radius:4px"></video>
-			{:else if isAudio(preview.name)}
-				<audio src="/api/files/view?name={encodeURIComponent(preview.name)}" controls autoplay style="width:100%"></audio>
-			{:else if isImage(preview.name)}
-				<img src="/api/files/view?name={encodeURIComponent(preview.name)}" alt={preview.name} />
-			{:else if isMd(preview.name)}
-				<MarkdownRenderer source={previewText} />
-			{:else if isText(preview.name)}
-				<pre>{previewText}</pre>
-			{:else}
-				<p class="no-preview">No preview available. <a href="/api/files/download?name={encodeURIComponent(preview.name)}" download>Download</a></p>
-			{/if}
-		</div>
-	</div>
+	<FilePreview file={preview} filtered={filtered} onclose={() => preview = null} onnavigate={(f) => preview = f} />
 {/if}
 
 <style>
@@ -178,12 +121,6 @@
 	.fbtn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.95em; padding: 0.15em 0.35em; text-decoration: none; }
 	.fbtn:hover { color: var(--link); }
 	.fbtn.del:hover { color: var(--error); }
-	.preview { margin-top: 1em; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-	.preview-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5em 0.75em; background: var(--bg-surface); border-bottom: 1px solid var(--border); }
-	.preview-body { padding: 1em; max-height: 70vh; overflow: auto; }
-	.preview-body img { max-width: 100%; height: auto; border-radius: 4px; }
-	.preview-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.85em; line-height: 1.5; max-height: 60vh; overflow: auto; }
-	.no-preview { color: var(--text-muted); }
 	.filters { display: flex; gap: 0.4em; margin-bottom: 0.75em; flex-wrap: wrap; }
 	.filter-btn { padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 0.8em; text-transform: capitalize; }
 	.filter-btn.active { border-color: var(--link); color: var(--link); background: color-mix(in srgb, var(--link) 8%, var(--bg-surface)); }
