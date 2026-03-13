@@ -16,6 +16,10 @@
 		const slug = toSlug(newTitle);
 		if (slug) window.location.href = `/kb/${slug}`;
 	}
+	function goRandom() {
+		const t = data.topics[Math.floor(Math.random() * data.topics.length)];
+		if (t) window.location.href = `/kb/${t.slug}`;
+	}
 
 	let filtered = $derived(
 		search
@@ -39,6 +43,7 @@
 		</form>
 	{:else}
 		<div class="heading-actions">
+			<button class="view-toggle" onclick={goRandom} title="Random topic">⚄</button>
 			<button class="view-toggle" onclick={() => viewMode = viewMode === 'list' ? 'graph' : 'list'}
 				title={viewMode === 'list' ? 'Graph view' : 'List view'}>
 				{viewMode === 'list' ? '◉' : '☰'}
