@@ -24,7 +24,15 @@ export function load({ params }) {
 
 	const raw = fs.readFileSync(path.join(KB_DIR, `${params.slug}.md`), 'utf-8');
 	const { content } = matter(raw);
-	return { topic, rawContent: content, slug: params.slug };
+	// Extract forward wiki-links for local graph
+	const linkSet = new Set();
+	const re = /\[\[([^\]]+)\]\]/g; let m;
+	while ((m = re.exec(raw)) !== null) {
+		const target = m[1].split('|')[0].toLowerCase().replace(/\s+/g, '-');
+		if (target !== params.slug) linkSet.add(target);
+	}
+	const links = [...linkSet].map(slug => ({ slug, title: slug }));
+	return { topic, rawContent: content, slug: params.slug, links };
 }
 
 export const actions = {
