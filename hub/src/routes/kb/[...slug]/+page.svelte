@@ -1,6 +1,7 @@
 <script>
 	import { marked } from 'marked';
 	import { sanitizeHtml } from '$lib/sanitize.js';
+	import LocalGraph from '$lib/components/LocalGraph.svelte';
 	let { data, form } = $props();
 	let editing = $state(false);
 	let editContent = $state('');
@@ -88,6 +89,9 @@
 			{@html data.topic.html}
 		</article>
 	{/if}
+
+	<LocalGraph slug={data.slug} title={data.topic.title || data.slug}
+		links={data.links || []} backlinks={data.topic.backlinks || []} />
 
 	{#if data.topic.backlinks?.length}
 		<section class="backlinks">
