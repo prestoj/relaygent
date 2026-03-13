@@ -152,5 +152,34 @@ export function saveTopic(slug, frontmatter, content) {
 	fs.renameSync(tmp, filepath);
 }
 
+/** Get graph data: nodes (topics) + edges (wiki-links between them) */
+export function getGraphData() {
+	if (!fs.existsSync(KB_DIR)) return { nodes: [], edges: [] };
+	const files = findMarkdownFiles(KB_DIR);
+	const slugSet = new Set(files.map(f => f.slug.toLowerCase()));
+	const slugIdx = {};
+	const nodes = files.map(({ filepath, slug }, i) => {
+		slugIdx[slug] = i;
+		try {
+			const { meta } = parseFile(filepath);
+			return { slug, title: meta.title || slug, tags: meta.tags || [] };
+		} catch { return { slug, title: slug, tags: [] }; }
+	});
+	const edges = [], seen = new Set();
+	for (const { filepath, slug } of files) {
+		let raw; try { raw = fs.readFileSync(filepath, 'utf-8'); } catch { continue; }
+		const re = /\[\[([^\]]+)\]\]/g; let m;
+		while ((m = re.exec(raw)) !== null) {
+			const target = m[1].split('|')[0].toLowerCase().replace(/\s+/g, '-');
+			const key = `${slug}→${target}`;
+			if (slugSet.has(target) && slug !== target && !seen.has(key)) {
+				seen.add(key);
+				edges.push({ source: slug, target });
+			}
+		}
+	}
+	return { nodes, edges };
+}
+
 export { searchTopics } from './kbSearch.js';
 

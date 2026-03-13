@@ -1,10 +1,12 @@
 <script>
 	import DeadLinksNotice from '$lib/components/DeadLinksNotice.svelte';
+	import KBGraph from '$lib/components/KBGraph.svelte';
 	let { data } = $props();
 	let search = $state('');
 	let showTags = $state(false);
 	let newTitle = $state('');
 	let showNewForm = $state(false);
+	let viewMode = $state('list');
 	function toSlug(s) {
 		return s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 	}
@@ -36,10 +38,19 @@
 			<button type="button" class="new-cancel" onclick={() => { showNewForm = false; newTitle = ''; }}>✕</button>
 		</form>
 	{:else}
-		<button class="new-btn" onclick={() => showNewForm = true}>+ New</button>
+		<div class="heading-actions">
+			<button class="view-toggle" onclick={() => viewMode = viewMode === 'list' ? 'graph' : 'list'}
+				title={viewMode === 'list' ? 'Graph view' : 'List view'}>
+				{viewMode === 'list' ? '◉' : '☰'}
+			</button>
+			<button class="new-btn" onclick={() => showNewForm = true}>+ New</button>
+		</div>
 	{/if}
 </div>
 
+{#if viewMode === 'graph'}
+	<KBGraph />
+{:else}
 <input type="search" placeholder="Filter topics or tags..." bind:value={search} class="search" />
 
 <DeadLinksNotice deadLinks={data.deadLinks} />
@@ -83,8 +94,15 @@
 		{/each}
 	</ul>
 {/if}
+{/if}
 
 <style>
+	.heading-actions { display: flex; gap: 0.4em; align-items: center; }
+	.view-toggle {
+		background: none; border: 1px solid var(--border); color: var(--text-muted);
+		border-radius: 6px; padding: 0.3em 0.55em; font-size: 0.85em; cursor: pointer;
+	}
+	.view-toggle:hover { border-color: var(--link); color: var(--link); }
 	.heading-row { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
 	.heading-row h1 { margin: 0; }
 	.new-btn {
