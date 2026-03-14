@@ -47,7 +47,7 @@ class TestGetContextFill:
             }},
         ])
         fill = get_context_fill_from_jsonl(sid, ws)
-        assert fill == 75.0  # 150000 / 200000 * 100
+        assert fill == 15.0  # 150000 / 1000000 * 100
 
     def test_includes_cache_tokens(self, tmp_jsonl):
         sid, ws, path, write = tmp_jsonl
@@ -62,7 +62,7 @@ class TestGetContextFill:
             }},
         ])
         fill = get_context_fill_from_jsonl(sid, ws)
-        assert fill == 75.0  # 150000 / 200000 * 100
+        assert fill == 15.0  # 150000 / 1000000 * 100
 
     def test_returns_zero_for_missing_file(self, tmp_jsonl):
         sid, ws, path, write = tmp_jsonl
@@ -95,7 +95,7 @@ class TestGetContextFill:
             }},
         ])
         fill = get_context_fill_from_jsonl(sid, ws)
-        assert fill == 85.0  # 170000 / 200000 * 100
+        assert fill == 17.0  # 170000 / 1000000 * 100
 
     def test_skips_malformed_lines(self, tmp_jsonl):
         sid, ws, path, write = tmp_jsonl
@@ -109,4 +109,4 @@ class TestGetContextFill:
             + "THIS IS NOT JSON\n"
         )
         fill = get_context_fill_from_jsonl(sid, ws)
-        assert fill == 50.0  # Skips bad line, finds valid one
+        assert fill == 10.0  # Skips bad line, finds valid one (100000 / 1000000)
