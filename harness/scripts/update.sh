@@ -41,7 +41,8 @@ fi
 # Update Claude Code CLI (fast no-op when already latest)
 if command -v npm >/dev/null 2>&1; then
     PREV_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
-    if npm install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null; then
+    NPM_CMD="npm"; [ "$(uname)" = "Linux" ] && command -v sudo >/dev/null 2>&1 && NPM_CMD="sudo npm"
+    if $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null; then
         NEW_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
         if [ "$PREV_VER" != "$NEW_VER" ]; then
             echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
