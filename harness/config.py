@@ -18,7 +18,7 @@ MAX_IDLE_CONTINUATIONS = 3      # Max times to resume due to short/idle output b
 INCOMPLETE_BASE_DELAY = 5       # Base delay for incomplete exit backoff (seconds)
 CONTEXT_THRESHOLD = 85          # % context fill to trigger wrap-up warning
 MIN_SUCCESSOR_TIME = 10 * 60    # Don't spawn successor with <10 min remaining
-CONTEXT_WINDOW = 200000         # Opus 4.6 context window size
+CONTEXT_WINDOW = 1000000        # Opus 4.6 context window size (1M as of CLI 2.1.76)
 
 # Log settings
 LOG_MAX_SIZE = 512000           # 500KB

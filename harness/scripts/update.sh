@@ -38,6 +38,19 @@ else
     fi
 fi
 
+# Update Claude Code CLI (fast no-op when already latest)
+if command -v npm >/dev/null 2>&1; then
+    PREV_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
+    if npm install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null; then
+        NEW_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
+        if [ "$PREV_VER" != "$NEW_VER" ]; then
+            echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
+        else
+            echo -e "  Claude Code: ${GREEN}$PREV_VER (latest)${NC}"
+        fi
+    fi
+fi
+
 # Install deps for all services (fast no-op when already up to date)
 for svc in hub notifications computer-use email slack secrets; do
     [ -f "$REPO_DIR/$svc/package.json" ] && npm install -q --prefix "$REPO_DIR/$svc" 2>/dev/null
