@@ -38,10 +38,9 @@
 		return best;
 	}
 
+	const ETC_M = 10; // explore each arm M times, then commit
 	function pickETC(a, t) {
-		const m = Math.ceil(Math.max(1, Math.pow(t / K, 2/3)));
-		const phase = Math.floor(t / K);
-		if (phase < m) return t % K;
+		if (t <= ETC_M * K) return (t - 1) % K;
 		let best = 0;
 		for (let i = 1; i < K; i++) if (mean(a, i) > mean(a, best)) best = i;
 		return best;
@@ -150,7 +149,7 @@
 			{/each}</tbody>
 		</table>
 	</div>
-	<p class="hint">Bernoulli arms. Eps-Greedy uses decaying epsilon (5K/t). UCB1 with ln(t) exploration. ETC explores ceil(t/K)^(2/3) rounds per arm then commits.</p>
+	<p class="hint">Bernoulli arms. Eps-Greedy uses decaying epsilon (5K/t). UCB1 with ln(t) exploration. ETC explores each arm 10 times then commits to the best.</p>
 </div>
 
 <style>
