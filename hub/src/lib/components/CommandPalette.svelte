@@ -17,7 +17,6 @@
 		{ name: 'Sessions', path: '/sessions', keys: ['sessions', 'history'] },
 		{ name: 'Settings', path: '/settings', keys: ['settings', 'config'] },
 		{ name: 'Help', path: '/help', keys: ['help', 'guide', 'shortcuts', 'getting started'] },
-		{ name: 'Game of Life', path: '/life', keys: ['life', 'game', 'conway', 'cellular', 'automaton'] },
 	];
 
 	let statusMsg = $state('');
