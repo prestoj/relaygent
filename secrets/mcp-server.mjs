@@ -19,7 +19,8 @@ server.tool("secrets_get", "Get a secret by name.",
 	async ({ name }) => {
 		try {
 			const val = getSecret(name);
-			return val !== null ? txt(val) : txt(`Secret "${name}" not found.`);
+			if (val === null) return txt(`Secret "${name}" not found.`);
+			return txt(typeof val === "string" ? val : JSON.stringify(val));
 		} catch (e) { return txt(`Error: ${e.message}`); }
 	}
 );
