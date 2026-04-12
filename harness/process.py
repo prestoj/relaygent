@@ -1,6 +1,6 @@
 """Claude subprocess management with hang detection."""
 from __future__ import annotations
-import subprocess, time
+import os, signal, subprocess, time
 from dataclasses import dataclass
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, SILENCE_TIMEOUT, Timer, log
 from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings, find_claude_binary
@@ -61,7 +61,9 @@ class ClaudeProcess:
         self.process.terminate()
         try: self.process.wait(timeout=5); return
         except subprocess.TimeoutExpired: pass
-        self.process.kill()
+        # Kill entire process group (Claude + MCP servers) since start_new_session=True
+        try: os.killpg(self.process.pid, signal.SIGKILL)
+        except (OSError, ProcessLookupError): self.process.kill()
         try: self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             log("WARNING: Process did not die")
@@ -90,7 +92,8 @@ class ClaudeProcess:
                  "--settings", settings_file, "--session-id", self.session_id,
                  *self._model_args()],
                 stdin=subprocess.PIPE, stdout=self._log_file,
-                stderr=subprocess.STDOUT, cwd=str(self.workspace), env=clean_env())
+                stderr=subprocess.STDOUT, cwd=str(self.workspace), env=clean_env(),
+                start_new_session=True)
             self.process.stdin.write(build_prompt()); self.process.stdin.flush(); self.process.stdin.close()
         except OSError:
             self._close_log(); raise
@@ -110,7 +113,7 @@ class ClaudeProcess:
             self.process = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=self._log_file,
                 stderr=subprocess.STDOUT, cwd=str(self.workspace),
-                env=clean_env())
+                env=clean_env(), start_new_session=True)
         except OSError:
             self._close_log(); raise
         try:
