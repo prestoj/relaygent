@@ -23,12 +23,32 @@ jobs:
       - name: Collect tests (sanity check)
         run: pytest tests/harness/ tests/computer-use/ --collect-only -q
         timeout-minutes: 1
-      - name: Run harness tests
-        run: pytest tests/harness/ -v --timeout=30 --timeout-method=signal
-        timeout-minutes: 3
-      - name: Run computer-use tests
-        run: pytest tests/computer-use/ -v --timeout=30 --timeout-method=signal
-        timeout-minutes: 3
+      - name: Run harness tests (per-file)
+        run: |
+          failed=0
+          for f in tests/harness/test_*.py; do
+            echo "::group::$f"
+            timeout 30 pytest "$f" -v --timeout=10 --tb=short 2>&1 || {
+              echo "FAILED or TIMED OUT: $f"
+              failed=1
+            }
+            echo "::endgroup::"
+          done
+          exit $failed
+        timeout-minutes: 4
+      - name: Run computer-use tests (per-file)
+        run: |
+          failed=0
+          for f in tests/computer-use/test_*.py; do
+            echo "::group::$f"
+            timeout 30 pytest "$f" -v --timeout=10 --tb=short 2>&1 || {
+              echo "FAILED or TIMED OUT: $f"
+              failed=1
+            }
+            echo "::endgroup::"
+          done
+          exit $failed
+        timeout-minutes: 4
 
   test-notifications:
     name: Notifications tests (Python)
