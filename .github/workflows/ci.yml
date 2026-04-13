@@ -18,14 +18,9 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install pytest pytest-timeout
-      - name: Run single test file
-        run: python -u -m pytest tests/harness/test_config.py -v --timeout=30 -s 2>&1; echo "EXIT CODE: $?"
-        env:
-          PYTHONUNBUFFERED: "1"
       - name: Run harness + computer-use tests
-        run: python -u -m pytest tests/harness/ tests/computer-use/ -v --timeout=60 -x 2>&1 || true
-        env:
-          PYTHONUNBUFFERED: "1"
+        run: pytest tests/harness/ tests/computer-use/ -v --timeout=60
+        timeout-minutes: 5
 
   test-notifications:
     name: Notifications tests (Python)
