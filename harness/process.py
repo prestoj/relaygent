@@ -63,7 +63,7 @@ class ClaudeProcess:
         except subprocess.TimeoutExpired: pass
         # Kill entire process group (Claude + MCP servers) since start_new_session=True
         try: os.killpg(self.process.pid, signal.SIGKILL)
-        except (OSError, ProcessLookupError): self.process.kill()
+        except (OSError, ProcessLookupError, TypeError): self.process.kill()
         try: self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             log("WARNING: Process did not die")
