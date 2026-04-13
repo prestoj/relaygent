@@ -11,6 +11,8 @@ jobs:
     name: Harness tests (Python)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,9 +20,15 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install pytest pytest-timeout
-      - name: Run harness + computer-use tests
-        run: pytest tests/harness/ tests/computer-use/ -v --timeout=60
-        timeout-minutes: 5
+      - name: Collect tests (sanity check)
+        run: pytest tests/harness/ tests/computer-use/ --collect-only -q
+        timeout-minutes: 1
+      - name: Run harness tests
+        run: pytest tests/harness/ -v --timeout=30 --timeout-method=signal
+        timeout-minutes: 3
+      - name: Run computer-use tests
+        run: pytest tests/computer-use/ -v --timeout=30 --timeout-method=signal
+        timeout-minutes: 3
 
   test-notifications:
     name: Notifications tests (Python)
