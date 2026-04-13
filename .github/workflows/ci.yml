@@ -19,7 +19,9 @@ jobs:
       - name: Install dependencies
         run: pip install pytest pytest-timeout
       - name: Run harness + computer-use tests
-        run: pytest tests/harness/ tests/computer-use/ -v --timeout=60
+        run: python -u -m pytest tests/harness/ tests/computer-use/ -v --timeout=60 -s
+        env:
+          PYTHONUNBUFFERED: "1"
 
   test-notifications:
     name: Notifications tests (Python)
