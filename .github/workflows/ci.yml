@@ -17,9 +17,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install pytest
+        run: pip install pytest pytest-timeout
       - name: Run harness + computer-use tests
-        run: pytest tests/harness/ tests/computer-use/ -v
+        run: pytest tests/harness/ tests/computer-use/ -v --timeout=60
 
   test-notifications:
     name: Notifications tests (Python)
