@@ -10,15 +10,45 @@ jobs:
   test-harness:
     name: Harness tests (Python)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install pytest
-      - name: Run harness + computer-use tests
-        run: pytest tests/harness/ tests/computer-use/ -v
+        run: pip install pytest pytest-timeout
+      - name: Collect tests (sanity check)
+        run: pytest tests/harness/ tests/computer-use/ --collect-only -q
+        timeout-minutes: 1
+      - name: Run harness tests (per-file)
+        run: |
+          failed=0
+          for f in tests/harness/test_*.py; do
+            echo "::group::$f"
+            timeout 30 pytest "$f" -v --timeout=10 --tb=short 2>&1 || {
+              echo "FAILED or TIMED OUT: $f"
+              failed=1
+            }
+            echo "::endgroup::"
+          done
+          exit $failed
+        timeout-minutes: 4
+      - name: Run computer-use tests (per-file)
+        run: |
+          failed=0
+          for f in tests/computer-use/test_*.py; do
+            echo "::group::$f"
+            timeout 30 pytest "$f" -v --timeout=10 --tb=short 2>&1 || {
+              echo "FAILED or TIMED OUT: $f"
+              failed=1
+            }
+            echo "::endgroup::"
+          done
+          exit $failed
+        timeout-minutes: 4
 
   test-notifications:
     name: Notifications tests (Python)

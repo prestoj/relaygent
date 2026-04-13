@@ -1,7 +1,7 @@
 """Tests for process.py — Claude subprocess management."""
 from __future__ import annotations
 
-import subprocess
+import os, signal, subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -143,12 +143,27 @@ class TestTerminate:
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
+        mock_proc.pid = 99999
         mock_proc.wait.side_effect = [
             subprocess.TimeoutExpired("claude", 5), None
         ]
         p.process = mock_proc
-        p._terminate()
-        mock_proc.kill.assert_called_once()
+        with patch("os.killpg") as mock_killpg:
+            p._terminate()
+            mock_killpg.assert_called_once_with(99999, signal.SIGKILL)
+
+    def test_falls_back_to_kill_on_killpg_error(self, tmp_path):
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.pid = 99999
+        mock_proc.wait.side_effect = [
+            subprocess.TimeoutExpired("claude", 5), None
+        ]
+        p.process = mock_proc
+        with patch("os.killpg", side_effect=OSError("no such group")):
+            p._terminate()
+            mock_proc.kill.assert_called_once()
 
 
 class TestConfiguredModel:
