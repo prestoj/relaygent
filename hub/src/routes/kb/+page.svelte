@@ -81,8 +81,11 @@
 <ul class="topic-list">
 	{#each filtered as topic}
 		<li>
-			<a href="/kb/{topic.slug}">{topic.title || topic.slug}</a>
-			{#if topic.updated}<span class="date">{topic.updated}</span>{/if}
+			<div class="topic-row">
+				<a href="/kb/{topic.slug}">{topic.title || topic.slug}</a>
+				{#if topic.updated}<span class="date">{topic.updated}</span>{/if}
+			</div>
+			{#if topic.summary}<div class="summary">{topic.summary}</div>{/if}
 		</li>
 	{:else}
 		<li class="empty">No topics found.</li>
@@ -164,12 +167,12 @@
 	.tag.active { background: var(--link); color: #fff; }
 	.topic-list { list-style: none; padding: 0; }
 	.topic-list li {
-		display: flex;
-		justify-content: space-between;
-		padding: 0.4em 0;
+		padding: 0.5em 0;
 		border-bottom: 1px solid var(--border);
 	}
+	.topic-row { display: flex; justify-content: space-between; align-items: baseline; }
 	.date { color: var(--text-muted); font-size: 0.85em; }
+	.summary { font-size: 0.78em; color: var(--text-muted); margin-top: 0.15em; line-height: 1.3; }
 	.empty { color: var(--text-muted); }
 	.section-label { font-size: 1em; color: var(--text-muted); margin-top: 2em; }
 </style>

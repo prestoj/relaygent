@@ -60,17 +60,32 @@ function findMarkdownFiles(dir, base = dir) {
 	return results;
 }
 
-/** Get all KB topics (metadata only) */
+/** Extract first meaningful content line as summary */
+function extractSummary(content, maxLen = 120) {
+	let inComment = false;
+	for (const line of content.split('\n')) {
+		const t = line.trim();
+		if (t.includes('<!--')) inComment = true;
+		if (inComment) { if (t.includes('-->')) inComment = false; continue; }
+		if (!t || t.startsWith('#') || t.startsWith('---') || t.startsWith('|') || t.startsWith('```')) continue;
+		let clean = t.replace(/\[\[([^\]|]+)\|?[^\]]*\]\]/g, '$1').replace(/[*_`]/g, '');
+		clean = clean.replace(/^[-*]\s+/, '');
+		return clean.length > maxLen ? clean.slice(0, maxLen) + '...' : clean;
+	}
+	return '';
+}
+
+/** Get all KB topics (metadata only + summary) */
 export function listTopics() {
 	if (!fs.existsSync(KB_DIR)) return [];
 	return findMarkdownFiles(KB_DIR)
 		.map(({ filepath, slug }) => {
 			try {
-				const { meta } = parseFile(filepath);
+				const { meta, content } = parseFile(filepath);
 				const mtime = fs.statSync(filepath).mtimeMs;
-				return { slug, mtime, ...meta };
+				return { slug, mtime, summary: extractSummary(content), ...meta };
 			} catch {
-				return { slug, mtime: 0, title: slug };
+				return { slug, mtime: 0, title: slug, summary: '' };
 			}
 		})
 		.sort((a, b) => {
