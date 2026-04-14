@@ -35,7 +35,7 @@
 	<div class="ref-grid">
 		<div class="ref-key"><a href="/">Chat</a></div><div>Send messages to the agent, with activity sidebar</div>
 		<div class="ref-key"><a href="/intent">Intent</a></div><div>Set and edit the agent's priorities and direction</div>
-		<div class="ref-key"><a href="/kb">KB</a></div><div>Knowledge base with wiki-linked topics and search</div>
+		<div class="ref-key"><a href="/kb">KB</a></div><div>Knowledge base with wiki-linked topics, search, and interactive graph view</div>
 		<div class="ref-key"><a href="/tasks">Tasks</a></div><div>Create one-off or recurring reminders and todos</div>
 		<div class="ref-key"><a href="/sessions">Sessions</a></div><div>Browse past session history with exportable logs</div>
 		<div class="ref-key"><a href="/files">Files</a></div><div>Upload, download, and preview shared files</div>
@@ -48,7 +48,7 @@
 <section class="card">
 	<h2>Keyboard Shortcuts</h2>
 	<div class="ref-grid">
-		<div class="ref-key"><kbd>Cmd+K</kbd> or <kbd>?</kbd></div><div>Open command palette (search pages and KB)</div>
+		<div class="ref-key"><kbd>Cmd+K</kbd> or <kbd>?</kbd></div><div>Open command palette (search pages, KB, chat, and sessions)</div>
 		<div class="ref-key"><kbd>Esc</kbd></div><div>Close dialogs, overlays, and the command palette</div>
 		<div class="ref-key"><kbd>Up</kbd> / <kbd>Down</kbd></div><div>Navigate results in command palette</div>
 		<div class="ref-key"><kbd>Enter</kbd></div><div>Open the selected result</div>
