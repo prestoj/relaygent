@@ -25,7 +25,8 @@
 		search
 			? data.topics.filter(t =>
 				(t.title || t.slug).toLowerCase().includes(search.toLowerCase()) ||
-				(t.tags || []).some(tag => tag.toLowerCase().includes(search.toLowerCase()))
+				(t.tags || []).some(tag => tag.toLowerCase().includes(search.toLowerCase())) ||
+				(t.summary || '').toLowerCase().includes(search.toLowerCase())
 			)
 			: data.topics
 	);
