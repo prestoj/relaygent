@@ -35,13 +35,15 @@
 	let kbResults = $state([]);
 	let debounceTimer;
 
-	async function searchKb(q) {
+	async function searchAll(q) {
 		if (q.length < 2) { kbResults = []; return; }
 		try {
-			const d = await (await fetch(`/api/search?q=${encodeURIComponent(q)}`)).json();
-			kbResults = (d.results || []).slice(0, 5).map(t => ({
-				name: t.title || t.slug, path: `/kb/${t.slug}`, type: 'kb',
-			}));
+			const d = await (await fetch(`/api/search?q=${encodeURIComponent(q)}&full=1`)).json();
+			kbResults = (d.results || []).slice(0, 8).map(r => {
+				if (r.type === 'session') return { name: r.title || r.id, path: `/sessions/${r.id}`, type: 'session', hint: r.snippet };
+				if (r.type === 'chat') return { name: r.snippet, path: '/chat', type: 'chat', hint: r.role };
+				return { name: r.title || r.slug, path: `/kb/${r.slug}`, type: 'kb' };
+			});
 		} catch { kbResults = []; }
 	}
 
@@ -79,7 +81,7 @@
 
 	function onInput() {
 		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => searchKb(query), 200);
+		debounceTimer = setTimeout(() => searchAll(query), 200);
 	}
 </script>
 
@@ -94,7 +96,7 @@
 			{#each results as item, i}
 				<li class:selected={i === selectedIdx}>
 					<button onclick={() => navigate(item)} onmouseenter={() => selectedIdx = i}>
-						<span class="item-type" class:action-type={item.type === 'action'}>{item.type === 'kb' ? 'KB' : item.type === 'action' ? 'Run' : 'Page'}</span>
+						<span class="item-type" class:action-type={item.type === 'action'}>{{ kb: 'KB', action: 'Run', session: '⏱', chat: '💬' }[item.type] || 'Page'}</span>
 						<span class="item-name">{item.name}</span>
 						<span class="item-path">{item.hint || item.path}</span>
 					</button>
