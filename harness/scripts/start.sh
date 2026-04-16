@@ -122,6 +122,18 @@ if [ -f "$HOME/.relaygent/gmail/credentials.json" ]; then
     fi
 fi
 
+# Auto-update Claude Code CLI (blocking — must finish before relay starts)
+if command -v claude &>/dev/null; then
+    current=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1)
+    sudo npm update -g @anthropic-ai/claude-code >/dev/null 2>&1
+    updated=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1)
+    if [ "$current" != "$updated" ]; then
+        echo -e "  Claude Code: ${GREEN}updated $current → $updated${NC}"
+    else
+        echo -e "  Claude Code: ${GREEN}$current (up to date)${NC}"
+    fi
+fi
+
 # Relay — fast auth check (no API call, instant)
 if ! command -v claude &>/dev/null; then
     echo -e "  Relay: ${RED}Claude Code not installed. Run: npm install -g @anthropic-ai/claude-code${NC}"

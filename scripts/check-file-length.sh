@@ -36,7 +36,7 @@ for dir in harness hub/src hooks notifications computer-use hammerspoon bin setu
     [ -d "$full_path" ] || continue
     while IFS= read -r file; do
         is_source_file "$file" && check_file "$file"
-    done < <(find "$full_path" -type f ! -path '*/node_modules/*' ! -path '*/.svelte-kit/*' ! -path '*/build/*' ! -path '*/.venv/*')
+    done < <(find "$full_path" -type f ! -path '*/node_modules/*' ! -path '*/.svelte-kit/*' ! -path '*/build/*' ! -path '*/.venv/*' ! -path '*/venv/*')
 done
 
 # Also check top-level scripts
