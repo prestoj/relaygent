@@ -62,7 +62,8 @@ except: pass
 sources = {n.get('source','') for n in fast if n.get('type')=='message'}
 if os.path.exists(os.environ['SOCK_FILE']): sources.add('slack')
 merged = fast + sock_notifs
-merged += [n for n in slow if (n.get('type')=='message' and n.get('source','') not in sources) or n.get('type')=='email']
+# Forward all slow notifications except slack messages already covered by socket mode
+merged += [n for n in slow if not (n.get('type')=='message' and n.get('source','') in sources)]
 print(json.dumps(merged))
 " 2>/dev/null)
     if [[ -n "$RESULT" ]]; then
