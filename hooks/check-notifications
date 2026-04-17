@@ -41,7 +41,12 @@ try:
             if msgs:
                 m = msgs[-1]
                 body = (m.get('body','') or '')[:80].replace('\n',' ')
-                parts.append(f'{count} new {noun} from {m.get(\"from\",\"?\")}: {body}')
+                sender = m.get('sender_name') or m.get('from','?')
+                line = f'{count} new {noun} from {sender}: {body}'
+                ctx = m.get('sender_context')
+                if ctx:
+                    line += f' [context: {ctx[:160]}]'
+                parts.append(line)
             else:
                 parts.append(f'{count} new {noun}')
         elif n.get('type') == 'message':
