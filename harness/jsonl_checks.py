@@ -160,6 +160,18 @@ def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) 
     return False
 
 
+def retire_requested(session_id: str, workspace: Path) -> bool:
+    """True if Claude's last assistant message called the retire MCP tool."""
+    jsonl = find_jsonl_path(session_id, workspace)
+    if not jsonl or not jsonl.exists(): return False
+    for line in reversed(_read_tail(jsonl)):
+        try: e = json.loads(line)
+        except json.JSONDecodeError: continue
+        if e.get("type") != "assistant": continue
+        return any(isinstance(x, dict) and x.get("type") == "tool_use" and (x.get("name") or "").endswith("retire") for x in e.get("message", {}).get("content") or [])
+    return False
+
+
 def get_context_fill_from_jsonl(session_id: str, workspace: Path) -> float:
     """Get context fill percentage by parsing JSONL usage data."""
     jsonl = find_jsonl_path(session_id, workspace)

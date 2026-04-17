@@ -50,6 +50,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           "(chat message, reminder, Slack, etc). Finish your turn now to enter sleep."
         );
       }
+      case "retire": {
+        return text(
+          "Retire requested. After your turn ends, the harness will commit KB changes " +
+          "and spawn a fresh successor session that reads your HANDOFF.md. Make sure " +
+          "HANDOFF.md is already written before finishing your turn."
+        );
+      }
       default:
         return text(`Unknown tool: ${name}`);
     }

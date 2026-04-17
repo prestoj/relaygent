@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from handoff import validate_and_log
-from jsonl_checks import should_sleep, last_output_is_idle
+from jsonl_checks import should_sleep, last_output_is_idle, retire_requested
 from jsonl_images import strip_all_images
 from harness_env import find_claude_binary
 from process import ClaudeProcess
@@ -125,6 +125,11 @@ class RelayRunner:
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
                 self._spawn_successor(workspace, state,
                     f"Context at {result.context_pct:.0f}%, spawning successor")
+                continue
+
+            if (retire_requested(self.claude.session_id, self.claude.workspace)
+                    and self.timer.has_successor_time()):
+                self._spawn_successor(workspace, state, "Retire requested by Claude")
                 continue
 
             if (result.context_pct < CONTEXT_THRESHOLD
