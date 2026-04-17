@@ -29,6 +29,21 @@ try:
                 parts.append(f'{count} new {noun}: From: {prev.get(\"from\",\"?\")} Subject: {prev.get(\"subject\",\"\")}')
             else:
                 parts.append(f'{count} new {noun}')
+        elif n.get('type') == 'call_speech':
+            msgs = n.get('messages', [])
+            for m in msgs:
+                txt = (m.get('text','') or '').replace('\n',' ')[:300]
+                parts.append(f'CALLER: {txt}')
+        elif n.get('type') == 'sms':
+            count = n.get('count', 0)
+            noun = 'SMS' if count == 1 else 'SMS messages'
+            msgs = n.get('messages', [])
+            if msgs:
+                m = msgs[-1]
+                body = (m.get('body','') or '')[:80].replace('\n',' ')
+                parts.append(f'{count} new {noun} from {m.get(\"from\",\"?\")}: {body}')
+            else:
+                parts.append(f'{count} new {noun}')
         elif n.get('type') == 'message':
             count = n.get('count', 0)
             src = n.get('source', 'chat')
