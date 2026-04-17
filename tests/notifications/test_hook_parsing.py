@@ -27,10 +27,15 @@ try:
         elif n.get('type') == 'email':
             count = n.get('count', 0)
             noun = 'email' if count == 1 else 'emails'
-            previews = n.get('previews', [])
-            if previews:
-                prev = previews[0]
-                parts.append(f'{count} new {noun}: From: {prev.get("from","?")} Subject: {prev.get("subject","")}')
+            msgs = n.get('messages') or n.get('previews') or []
+            if msgs:
+                m = msgs[0]
+                sender = m.get('sender_name') or m.get('from','?')
+                line = f'{count} new {noun}: From: {sender} Subject: {m.get("subject","")}'
+                ctx = m.get('sender_context')
+                if ctx:
+                    line += f' [context: {ctx[:160]}]'
+                parts.append(line)
             else:
                 parts.append(f'{count} new {noun}')
         elif n.get('type') == 'message':
@@ -134,6 +139,24 @@ class TestEmail:
         assert "1 new email" in stdout
         assert "From: ?" in stdout
         assert stderr == ""
+
+    def test_email_with_messages_prefers_sender_name(self):
+        data = [{"type": "email", "count": 1, "messages": [
+            {"from": "Preston <preston@example.com>", "subject": "Lunch?",
+             "sender_name": "Preston Jensen", "sender_context": "Creator of relaygent"}
+        ]}]
+        stdout, _ = _run_parser(data)
+        assert "From: Preston Jensen" in stdout
+        assert "Subject: Lunch?" in stdout
+        assert "[context: Creator of relaygent]" in stdout
+
+    def test_email_messages_wins_over_previews(self):
+        """When both exist (backwards-compat), use the richer `messages`."""
+        data = [{"type": "email", "count": 1,
+                 "messages": [{"from": "a", "subject": "msg", "sender_name": "Alice"}],
+                 "previews": [{"from": "a", "subject": "msg"}]}]
+        stdout, _ = _run_parser(data)
+        assert "From: Alice" in stdout
 
 
 class TestSlack:
