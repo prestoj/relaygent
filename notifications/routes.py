@@ -13,6 +13,7 @@ from flask import jsonify, request
 from reminders import is_recurring_reminder_due
 from notif_logger import log_notifications
 import tasks_collector
+import collector_registry
 
 logger = logging.getLogger(__name__)
 
@@ -52,21 +53,15 @@ def get_notifications():
         tasks_collector.collect(notifications)
     except Exception:
         logger.exception("Failed to collect due tasks")
-    if not fast_mode:
-        for name, collector in _slow_collectors:
-            if name in skip_sources:
-                continue
-            try:
-                collector(notifications)
-            except Exception:
-                logger.exception(f"Failed in {name}")
+    for c in _COLLECTORS:
+        if c.name in skip_sources or (fast_mode and not c.fast):
+            continue
+        try:
+            c.fn(notifications)
+        except Exception:
+            logger.exception("Failed in collector %s (%s)", c.name, c.source)
     log_notifications(notifications)
     return jsonify(notifications)
-
-
-# Slow collectors — external API calls, skipped in fast mode.
-# Each entry is (name, function). Use ?skip=name to skip specific collectors.
-_slow_collectors = []
 
 
 def _collect_due_reminders(notifications):
@@ -139,16 +134,14 @@ def _collect_chat_messages(notifications):
         logger.warning("Failed to check hub chat for unread messages", exc_info=True)
 
 
-import slack_collector  # noqa: E402
-import email_collector  # noqa: E402
-import github_collector  # noqa: E402
-import linear_collector  # noqa: E402
 import linear_ack  # noqa: E402,F401 — registers Flask route on import
 
-_slow_collectors.append(("slack", slack_collector.collect))
-_slow_collectors.append(("email", email_collector.collect))
-_slow_collectors.append(("github", github_collector.collect))
-_slow_collectors.append(("linear", linear_collector.collect))
+_COLLECTORS = collector_registry.discover()
+logger.info(
+    "Loaded %d notification collectors: %s",
+    len(_COLLECTORS),
+    ", ".join(f"{c.name}({'fast' if c.fast else 'slow'})" for c in _COLLECTORS),
+)
 
 
 @app.route("/notifications/history", methods=["GET"])

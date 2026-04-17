@@ -15,6 +15,11 @@ import pytest
 import notif_config as config
 import db as notif_db
 import routes as routes_mod
+from collector_registry import Collector
+
+
+def _mk(name, fn, fast=False):
+    return Collector(name=name, fast=fast, fn=fn, source="test")
 
 
 @pytest.fixture(autouse=True)
@@ -33,16 +38,24 @@ def client():
 class TestFastMode:
     def test_fast_skips_slow_collectors(self, client, monkeypatch):
         called = []
-        monkeypatch.setattr(routes_mod, "_slow_collectors",
-                            [("test_src", lambda n: called.append("called"))])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS",
+                            [_mk("test_src", lambda n: called.append("called"))])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         client.get("/notifications/pending?fast=1")
         assert called == []
 
+    def test_fast_runs_fast_collectors(self, client, monkeypatch):
+        called = []
+        monkeypatch.setattr(routes_mod, "_COLLECTORS",
+                            [_mk("fast_src", lambda n: called.append("fast"), fast=True)])
+        monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
+        client.get("/notifications/pending?fast=1")
+        assert called == ["fast"]
+
     def test_non_fast_runs_slow_collectors(self, client, monkeypatch):
         called = []
-        monkeypatch.setattr(routes_mod, "_slow_collectors",
-                            [("test_src", lambda n: called.append("called"))])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS",
+                            [_mk("test_src", lambda n: called.append("called"))])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         client.get("/notifications/pending")
         assert called == ["called"]
@@ -51,9 +64,9 @@ class TestFastMode:
 class TestSkipParam:
     def test_skip_excludes_named_source(self, client, monkeypatch):
         called = []
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [
-            ("slack", lambda n: called.append("slack")),
-            ("email", lambda n: called.append("email")),
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [
+            _mk("slack", lambda n: called.append("slack")),
+            _mk("email", lambda n: called.append("email")),
         ])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         client.get("/notifications/pending?skip=slack")
@@ -62,9 +75,9 @@ class TestSkipParam:
 
     def test_skip_multiple_sources(self, client, monkeypatch):
         called = []
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [
-            ("slack", lambda n: called.append("slack")),
-            ("email", lambda n: called.append("email")),
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [
+            _mk("slack", lambda n: called.append("slack")),
+            _mk("email", lambda n: called.append("email")),
         ])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         client.get("/notifications/pending?skip=slack,email")
@@ -72,8 +85,8 @@ class TestSkipParam:
 
     def test_skip_empty_string_ignored(self, client, monkeypatch):
         called = []
-        monkeypatch.setattr(routes_mod, "_slow_collectors",
-                            [("email", lambda n: called.append("email"))])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS",
+                            [_mk("email", lambda n: called.append("email"))])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         client.get("/notifications/pending?skip=")
         assert "email" in called
@@ -81,13 +94,13 @@ class TestSkipParam:
 
 class TestChatCollection:
     def test_chat_unreachable_does_not_crash(self, client, monkeypatch):
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [])
         monkeypatch.setenv("RELAYGENT_HUB_PORT", "19999")
         resp = client.get("/notifications/pending?fast=1")
         assert resp.status_code == 200
 
     def test_chat_messages_added_when_unread(self, client, monkeypatch):
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [])
 
         chat_data = {"count": 2, "messages": [
             {"created_at": "2026-01-01T12:00:00", "content": "hello"},
@@ -116,6 +129,7 @@ class TestChatCollection:
         # Reload the URL constants in routes_mod
         monkeypatch.setattr(routes_mod, "HUB_PORT", str(port))
         monkeypatch.setattr(routes_mod, "HUB_HOST", "127.0.0.1")
+        monkeypatch.setattr(routes_mod, "_HUB_PROTO", "http")
 
         resp = client.get("/notifications/pending?fast=1")
         data = resp.get_json()
@@ -125,7 +139,7 @@ class TestChatCollection:
         assert len(chat_notifs[0]["messages"]) == 2
 
     def test_chat_zero_count_not_added(self, client, monkeypatch):
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [])
 
         class FakeHandler(BaseHTTPRequestHandler):
             def do_GET(self):
@@ -145,6 +159,7 @@ class TestChatCollection:
 
         monkeypatch.setattr(routes_mod, "HUB_PORT", str(port))
         monkeypatch.setattr(routes_mod, "HUB_HOST", "127.0.0.1")
+        monkeypatch.setattr(routes_mod, "_HUB_PROTO", "http")
 
         resp = client.get("/notifications/pending?fast=1")
         data = resp.get_json()
@@ -156,7 +171,7 @@ class TestCollectorException:
         def boom(n):
             raise RuntimeError("collector exploded")
 
-        monkeypatch.setattr(routes_mod, "_slow_collectors", [("boom", boom)])
+        monkeypatch.setattr(routes_mod, "_COLLECTORS", [_mk("boom", boom)])
         monkeypatch.setattr(routes_mod, "_collect_chat_messages", lambda n: None)
         resp = client.get("/notifications/pending")
         assert resp.status_code == 200

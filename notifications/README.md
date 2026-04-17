@@ -13,6 +13,7 @@ The notifications service wakes the sleeping agent when something needs its atte
 | `slack_collector.py` | Python | HTTP fallback: polls Slack channels for unread messages |
 | `email_collector.py` | Python | Polls Gmail for unread messages |
 | `tasks_collector.py` | Python | Checks KB tasks.md for due items |
+| `collector_registry.py` | Python | Auto-discovers `*_collector.py` from this dir + `~/.relaygent/collectors/` |
 | `notif_config.py` | Python | Shared config (ports, paths) |
 | `slack-socket-listener.mjs` | Node.js | Long-running Socket Mode WebSocket — receives Slack events in real-time, writes to `/tmp/relaygent-slack-socket-cache.json` |
 | `mcp-server.mjs` | Node.js | MCP server exposing reminder tools to Claude (`set_reminder`, `list_reminders`, etc.) |
@@ -28,3 +29,25 @@ The two runtimes don't share memory — they communicate via the HTTP server (Py
 ## Starting
 
 The notifications service is started by `relaygent start` and runs on port 8083 by default. The Slack socket listener is started separately by the `check-notifications` hook.
+
+## Adding a new collector
+
+Collectors are auto-discovered. To add one:
+
+1. Create `<name>_collector.py` either in `notifications/` (built-in) or `~/.relaygent/collectors/` (agent-local, no relaygent edits required).
+2. Export `def collect(notifications: list) -> None:` — append `dict` entries to the list.
+3. Optionally declare module constants:
+   ```python
+   NAME = "myname"   # default: filename minus _collector
+   FAST = False      # if True, runs in ?fast=1 mode too
+   ENABLED = True    # set False to disable without removing the file
+   ```
+4. Restart the service. Look for `Loaded N notification collectors: …` in `logs/relaygent-notifications.log`.
+
+Disable a collector via config without editing code:
+```json
+// ~/.relaygent/config.json
+{ "notifications": { "collectors": { "slack": { "enabled": false } } } }
+```
+
+Each collector should manage its own state (e.g., a JSON ack file under `~/.relaygent/<name>/`) so a notification fires exactly once. See `email_collector.py` for the canonical pattern.
