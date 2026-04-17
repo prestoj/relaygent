@@ -54,6 +54,18 @@ try:
                 parts.append(line)
             else:
                 parts.append(f'{count} new {noun}')
+        elif n.get('type') == 'message_read':
+            count = n.get('count', 0)
+            reads = n.get('reads', [])
+            if reads:
+                r = reads[-1]
+                body = (r.get('body','') or '')[:80].replace('\n',' ')
+                rcpt = r.get('recipient','?')
+                when = r.get('read_at','')
+                noun = 'read receipt' if count == 1 else 'read receipts'
+                parts.append(f'{count} {noun}: {rcpt} read \"{body}\" @ {when}')
+            else:
+                parts.append(f'{count} read receipt(s)')
         elif n.get('type') == 'message':
             count = n.get('count', 0)
             src = n.get('source', 'chat')
