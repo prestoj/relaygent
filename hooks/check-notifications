@@ -73,6 +73,22 @@ try:
                         previews.append(prefix + txt)
                 summary = str(count) + ' unread Slack' + (': ' + ' | '.join(previews) if previews else ' message(s)')
                 parts.append(summary)
+            elif src in ('imessage', 'sms'):
+                noun = 'iMessage' if src == 'imessage' else 'SMS'
+                if count != 1:
+                    noun += 's' if src == 'imessage' else ' messages'
+                msgs = n.get('messages', [])
+                if msgs:
+                    m = msgs[-1]
+                    body = (m.get('body','') or '')[:80].replace('\n',' ')
+                    sender = m.get('sender_name') or m.get('from','?')
+                    line = f'{count} new {noun} from {sender}: {body}'
+                    ctx = m.get('sender_context')
+                    if ctx:
+                        line += f' [context: {ctx[:160]}]'
+                    parts.append(line)
+                else:
+                    parts.append(f'{count} new {noun}')
             else:
                 parts.append(f'{count} unread chat message(s) — check with read_messages')
     if parts:
