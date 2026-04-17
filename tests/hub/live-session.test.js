@@ -51,8 +51,8 @@ test('returns active session with stats', async () => {
 	assert.equal(data.turns, 3);
 	assert.equal(data.toolCalls, 3);
 	assert.equal(data.durationMin, 15);
-	// contextPct based on last turn's input_tokens (12000 / 2000 = 6)
-	assert.equal(data.contextPct, 6);
+	// contextPct based on last turn's input_tokens (12000 / 10000 = 1.2 → round → 1)
+	assert.equal(data.contextPct, 1);
 	assert.ok(data.topTools.Read >= 1);
 	assert.ok(data.topTools.Edit >= 1);
 	assert.ok(data.topTools.Bash >= 1);

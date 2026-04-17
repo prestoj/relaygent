@@ -139,14 +139,14 @@ test('parseSessionStats: returns cached result on second call', () => {
 
 // ── contextPct ─────────────────────────────────────────────────────────────
 
-test('parseSessionStats: contextPct is totalTokens / 2000 rounded', () => {
+test('parseSessionStats: contextPct is totalTokens / (1M/100) rounded', () => {
 	const lines = [
 		makeEntry('assistant', [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'x'.repeat(200) } }], TS1, USAGE),
 		makeEntry('assistant', [{ type: 'text', text: 'More context pct content here.' }], TS2, USAGE),
 	];
 	const p = writeFixture('ctx-pct.jsonl', lines);
 	const s = parseSessionStats(p);
-	assert.equal(s.contextPct, Math.round(s.totalTokens / 2000));
+	assert.equal(s.contextPct, Math.round(s.totalTokens / 10000));
 });
 
 // ── Git activity tracking ─────────────────────────────────────────────────
