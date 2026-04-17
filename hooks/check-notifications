@@ -23,10 +23,15 @@ try:
         elif n.get('type') == 'email':
             count = n.get('count', 0)
             noun = 'email' if count == 1 else 'emails'
-            previews = n.get('previews', [])
-            if previews:
-                prev = previews[0]
-                parts.append(f'{count} new {noun}: From: {prev.get(\"from\",\"?\")} Subject: {prev.get(\"subject\",\"\")}')
+            msgs = n.get('messages') or n.get('previews') or []
+            if msgs:
+                m = msgs[0]
+                sender = m.get('sender_name') or m.get('from','?')
+                line = f'{count} new {noun}: From: {sender} Subject: {m.get(\"subject\",\"\")}'
+                ctx = m.get('sender_context')
+                if ctx:
+                    line += f' [context: {ctx[:160]}]'
+                parts.append(line)
             else:
                 parts.append(f'{count} new {noun}')
         elif n.get('type') == 'call_speech':
