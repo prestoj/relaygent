@@ -8,8 +8,8 @@
 NOTIFICATIONS_PORT="${RELAYGENT_NOTIFICATIONS_PORT:-$(python3 -c "import json,os; print(json.load(open(os.path.expanduser('~/.relaygent/config.json')))['services']['notifications']['port'])" 2>/dev/null || echo 8083)}"
 CACHE_FILE="/tmp/relaygent-notifications-cache.json"
 NOTIFY_API="http://localhost:${NOTIFICATIONS_PORT}/notifications/pending"
-POLL_INTERVAL=1
-SLOW_POLL_EVERY=10  # Full poll (including Slack, email) every N seconds
+POLL_INTERVAL=0.2
+SLOW_POLL_EVERY=50  # Full poll (incl. Slack, email) every N fast iterations (~10s)
 slow_counter=0
 SLOW_CACHE="/tmp/relaygent-slow-cache.json"
 SOCKET_CACHE="/tmp/relaygent-slack-socket-cache.json"

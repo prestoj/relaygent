@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, Timer, log, set_status,
+    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, URGENT_NOTIFICATION_TYPES,
+    Timer, log, set_status,
 )
 from notify_format import format_notifications
 
@@ -97,14 +98,20 @@ class SleepManager:
                 if not real:
                     log("Sleep timeout reminder(s) fired — staying asleep")
                     continue
-                # Debounce: collect additional notifications before waking
-                debounce_end = time.time() + SLEEP_DEBOUNCE
+                # Debounce: collect additional notifications before waking,
+                # unless any notification is real-time-urgent (e.g. in-call speech).
                 all_real = list(real)
+                if any(n.get("type") in URGENT_NOTIFICATION_TYPES for n in real):
+                    log(f"Waking immediately on urgent notification ({len(all_real)})")
+                    return True, all_real
+                debounce_end = time.time() + SLEEP_DEBOUNCE
                 while time.time() < debounce_end:
                     time.sleep(SLEEP_POLL_INTERVAL)
                     more = self._check_notifications()
                     more_real = [n for n in more if not _is_sleep_timeout_reminder(n)]
                     all_real.extend(more_real)
+                    if any(n.get("type") in URGENT_NOTIFICATION_TYPES for n in more_real):
+                        break  # Urgent arrived during debounce — wake now
                 log(f"Waking with {len(all_real)} notification(s)")
                 return True, all_real
 
