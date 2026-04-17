@@ -5,6 +5,8 @@ import { findCurrentSession, parseSession } from '$lib/relayActivity.js';
 
 const DATA_DIR = process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'projects', 'relaygent', 'data');
 const STATUS_FILE = process.env.RELAY_STATUS_FILE || path.join(DATA_DIR, 'relay-status.json');
+// Matches harness/config.py CONTEXT_WINDOW. Opus 4.7 = 1M tokens (CLI 2.1.76+).
+const CONTEXT_WINDOW = 1000000;
 
 function getRelayStatus() {
 	try { return JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8')); }
@@ -58,7 +60,7 @@ function parseLiveStats(jsonlPath) {
 
 	return {
 		startTime: startTs, durationMin, turns, toolCalls,
-		contextPct: Math.round(lastInputTokens / 2000),
+		contextPct: Math.round(lastInputTokens / (CONTEXT_WINDOW / 100)),
 		topTools: Object.fromEntries(topTools),
 		filesModified: [...filesModified].slice(0, 15),
 		filesRead: [...filesRead].filter(f => !filesModified.has(f)).slice(0, 15),

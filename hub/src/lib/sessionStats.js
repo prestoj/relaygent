@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
+// Matches harness/config.py CONTEXT_WINDOW. Opus 4.7 = 1M tokens (CLI 2.1.76+).
+const CONTEXT_WINDOW = 1000000;
+
 // Per-file stats cache: avoids re-parsing unchanged JSONL files
 const _statsCache = new Map(); // path → { mtimeMs, size, stats }
 const MAX_STATS_CACHE = 500;
@@ -122,7 +125,7 @@ export function parseSessionStats(jsonlPath) {
 		const result = {
 			start: startTs, durationMin, totalTokens, outputTokens,
 			toolCalls, textBlocks, turns, tools, firstText, handoffGoal,
-			contextPct: Math.round(totalTokens / 2000),
+			contextPct: Math.round(totalTokens / (CONTEXT_WINDOW / 100)),
 			git_commits: gitCommits, prs_created: prsCreated, prs_merged: prsMerged,
 		};
 
