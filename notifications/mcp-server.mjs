@@ -85,11 +85,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const os = await import("node:os");
         const path = await import("node:path");
         const waitPath = path.join(os.tmpdir(), "relaygent-wait-until.json");
+        // If a prior file's deadline is still in the future, this is a duplicate
+        // in-turn call — error rather than silently overwriting. A file whose
+        // deadline has already passed is stale (harness woke via notification
+        // and didn't clean up), safe to overwrite.
         if (fs.existsSync(waitPath)) {
-          return text(
-            "Error: wait_for_user already active this turn — a second call would overwrite the earlier deadline. " +
-            "Finish your turn now to enter the wait state, then call wait_for_user again on wake."
-          );
+          try {
+            const prior = JSON.parse(fs.readFileSync(waitPath, "utf8"));
+            if (prior.wake_at > Date.now()) {
+              return text(
+                "Error: wait_for_user already active this turn — a second call would overwrite " +
+                "the earlier deadline. Finish your turn now to enter the wait state, then call " +
+                "wait_for_user again on wake."
+              );
+            }
+          } catch { /* malformed file, treat as stale */ }
         }
         try {
           const wake_at = Date.now() + mins * 60 * 1000;
