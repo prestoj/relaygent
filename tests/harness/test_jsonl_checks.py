@@ -212,3 +212,22 @@ class TestLastOutputIsIdle:
             ]}},
         ])
         assert last_output_is_idle(sid, ws) is False
+
+    def test_wait_for_user_tool_not_idle(self, tmp_jsonl):
+        """wait_for_user in recent messages → not idle (intentional wait)."""
+        sid, ws, path, write = tmp_jsonl
+        write([
+            {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "id": "t1",
+                 "name": "mcp__relaygent-notifications__wait_for_user",
+                 "input": {"max_minutes": 30}},
+            ]}},
+            {"type": "user", "message": {"content": [
+                {"type": "tool_result", "tool_use_id": "t1",
+                 "content": "wait_for_user activated."}
+            ]}},
+            {"type": "assistant", "message": {"content": [
+                {"type": "text", "text": "Waiting."}
+            ]}},
+        ])
+        assert last_output_is_idle(sid, ws) is False
