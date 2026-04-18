@@ -82,9 +82,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           return text("Error: max_minutes must be an integer between 1 and 480.");
         }
         const fs = await import("node:fs");
-        const os = await import("node:os");
-        const path = await import("node:path");
-        const waitPath = path.join(os.tmpdir(), "relaygent-wait-until.json");
+        // Hardcoded /tmp, NOT os.tmpdir(): on macOS, Node's tmpdir() is
+        // /var/folders/.../T while Python's tempfile defaults differ — but
+        // the harness reads "/tmp/relaygent-wait-until.json" (session.py).
+        // Using os.tmpdir() here meant the harness never saw the file on Mac.
+        const waitPath = "/tmp/relaygent-wait-until.json";
         // If a prior file's deadline is still in the future, this is a duplicate
         // in-turn call — error rather than silently overwriting. A file whose
         // deadline has already passed is stale (harness woke via notification
