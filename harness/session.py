@@ -132,6 +132,22 @@ class SleepManager:
                     return True, [{"type": "system", "message":
                         "Notification cache missing — poller may not be running."}]
 
+            # wait_for_user timeout — wake so Claude can pick up backlog
+            try:
+                import json as _json
+                wait_file = "/tmp/relaygent-wait-until.json"
+                if os.path.exists(wait_file):
+                    with open(wait_file) as f:
+                        wait_data = _json.load(f)
+                    if time.time() * 1000 >= wait_data.get("wake_at", 0):
+                        os.remove(wait_file)
+                        log(f"wait_for_user timeout ({wait_data.get('max_minutes')} min) — waking for backlog work")
+                        return True, [{"type": "system", "message":
+                            f"wait_for_user timeout after {wait_data.get('max_minutes')} min — "
+                            "user didn't return. Pick up backlog work via get_next_task()."}]
+            except (OSError, ValueError, KeyError):
+                pass
+
             if self.timer.is_expired():
                 log("Out of time")
                 return False, []
