@@ -136,6 +136,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
       case "retire": {
+        try {
+          const fs = await import("node:fs");
+          fs.writeFileSync("/tmp/relaygent-retire.json",
+            JSON.stringify({ ts: Date.now() }));
+        } catch (e) { /* best effort */ }
         return text(
           "Retire requested. After your turn ends, the harness will commit KB changes " +
           "and spawn a fresh successor session that reads your HANDOFF.md. Make sure " +

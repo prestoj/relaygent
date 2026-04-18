@@ -157,16 +157,18 @@ def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) 
     return False
 
 
-def retire_requested(session_id: str, workspace: Path) -> bool:
-    """True if Claude's last assistant message called the retire MCP tool."""
-    jsonl = find_jsonl_path(session_id, workspace)
-    if not jsonl or not jsonl.exists(): return False
-    for line in reversed(_read_tail(jsonl)):
-        try: e = json.loads(line)
-        except json.JSONDecodeError: continue
-        if e.get("type") != "assistant": continue
-        return any(isinstance(x, dict) and x.get("type") == "tool_use" and (x.get("name") or "").endswith("retire") for x in e.get("message", {}).get("content") or [])
-    return False
+RETIRE_MARKER = Path("/tmp/relaygent-retire.json")
+
+
+def retire_requested(session_id: str = "", workspace: Path | None = None) -> bool:
+    """True if retire marker exists. Args kept for call-site compat."""
+    return RETIRE_MARKER.exists()
+
+
+def clear_retire_marker() -> None:
+    """Remove the retire marker. Call before spawning a successor."""
+    try: RETIRE_MARKER.unlink()
+    except (FileNotFoundError, OSError): pass
 
 
 def get_context_fill_from_jsonl(session_id: str, workspace: Path) -> float:
