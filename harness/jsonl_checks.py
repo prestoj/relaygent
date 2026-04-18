@@ -126,15 +126,11 @@ def should_sleep(session_id: str, workspace: Path) -> bool:
 
 
 def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) -> bool:
-    """True if Claude's last output was short text with no tool calls (idle/conversational).
-
-    Returns False if the sleep MCP tool was called recently (intentional sleep, not idle).
-    """
+    """True if last output was idle (short text, no tools, no sleep/wait_for_user within 3 msgs)."""
     jsonl = find_jsonl_path(session_id, workspace)
     if not jsonl: return False
     try:
         lines = _read_tail(jsonl)
-        # Check last few assistant messages for sleep tool call
         assistant_count = 0
         for line in reversed(lines):
             if not line.strip(): continue
@@ -144,10 +140,11 @@ def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) 
             assistant_count += 1
             c = e.get("message", {}).get("content") or []
             has_tool = any(isinstance(x, dict) and x.get("type") == "tool_use" for x in c)
-            has_sleep = any(isinstance(x, dict) and x.get("type") == "tool_use"
-                           and "sleep" in (x.get("name") or "") for x in c)
-            if has_sleep:
-                return False  # Intentional sleep — not idle
+            idle_intent = any(isinstance(x, dict) and x.get("type") == "tool_use"
+                              and any(t in (x.get("name") or "") for t in ("sleep", "wait_for_user"))
+                              for x in c)
+            if idle_intent:
+                return False  # Intentional sleep/wait — not idle
             if assistant_count == 1:
                 text = "".join(x.get("text", "") for x in c
                                if isinstance(x, dict) and x.get("type") == "text")
