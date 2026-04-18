@@ -12,7 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from handoff import validate_and_log
-from jsonl_checks import should_sleep, last_output_is_idle, retire_requested
+from jsonl_checks import (should_sleep, last_output_is_idle, retire_requested,
+                          clear_retire_marker)
 from jsonl_images import strip_all_images
 from harness_env import find_claude_binary
 from process import ClaudeProcess
@@ -39,6 +40,7 @@ class RelayRunner:
         notify_lifecycle("New session", reason)
         commit_kb()
         cleanup_context_file()
+        clear_retire_marker()
         state.new_session()
         state.crash_count = state.idle_continuation_count = state.api_error_count = 0
         self.claude = ClaudeProcess(state.session_id, self.timer, workspace, self.claude._claude_bin)
@@ -61,6 +63,7 @@ class RelayRunner:
         """Main entry point. Returns exit code."""
         rotate_log()
         cleanup_context_file()
+        clear_retire_marker()  # drop any stale marker from a crashed prior run
 
         claude_bin = find_claude_binary()
         if not claude_bin:

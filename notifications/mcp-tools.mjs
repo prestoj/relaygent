@@ -37,7 +37,7 @@ export const tools = [
   },
   {
     name: "retire",
-    description: "Voluntarily end this session and spawn a fresh successor. Use when you've finished a coherent chunk of work and want a clean slate — the handoff distills the load-bearing bits and the successor picks up without accumulated scroll. IMPORTANT: (1) write your HANDOFF.md and commit KB changes BEFORE calling this; (2) do NOT send any additional text or tool calls after this — the harness checks only your LAST assistant message for the retire tool, so trailing text silently cancels the retire.",
+    description: "Voluntarily end this session and spawn a fresh successor. Use when you've finished a coherent chunk of work and want a clean slate — the handoff distills the load-bearing bits and the successor picks up without accumulated scroll. IMPORTANT: write your HANDOFF.md and commit KB changes BEFORE calling this. Retire intent persists across any trailing text/tool calls you send after — the harness spawns the successor at turn end regardless.",
     inputSchema: {
       type: "object",
       properties: {},
