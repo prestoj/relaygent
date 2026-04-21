@@ -19,7 +19,26 @@ MAX_IDLE_CONTINUATIONS = 3      # Max times to resume due to short/idle output b
 INCOMPLETE_BASE_DELAY = 5       # Base delay for incomplete exit backoff (seconds)
 CONTEXT_THRESHOLD = 85          # % context fill to trigger wrap-up warning
 MIN_SUCCESSOR_TIME = 10 * 60    # Don't spawn successor with <10 min remaining
-CONTEXT_WINDOW = 1000000        # Opus 4.7 context window size (1M as of CLI 2.1.76)
+
+def _load_context_window() -> int:
+    """Read harness.contextWindow from ~/.relaygent/config.json.
+
+    Default 1_000_000 matches Claude Code's 1M-beta window. Operators set
+    this lower (e.g. 200_000) to force earlier wrap-up and stay under the
+    Anthropic 1M-beta 2× input-pricing tier. Claude Code itself still
+    allocates 1M — this cap governs only when the harness spawns a successor.
+    """
+    import json
+    try:
+        cfg = json.loads((Path.home() / ".relaygent" / "config.json").read_text())
+        v = cfg.get("harness", {}).get("contextWindow")
+        if isinstance(v, int) and v > 0:
+            return v
+    except (OSError, ValueError, KeyError):
+        pass
+    return 1_000_000
+
+CONTEXT_WINDOW = _load_context_window()
 
 # Log settings
 LOG_MAX_SIZE = 512000           # 500KB
