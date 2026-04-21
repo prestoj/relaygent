@@ -2,11 +2,11 @@ import { json } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 import { findCurrentSession, parseSession } from '$lib/relayActivity.js';
+import { loadContextWindow } from '$lib/sessionStats.js';
 
 const DATA_DIR = process.env.RELAYGENT_DATA_DIR || path.join(process.env.HOME, 'projects', 'relaygent', 'data');
 const STATUS_FILE = process.env.RELAY_STATUS_FILE || path.join(DATA_DIR, 'relay-status.json');
-// Matches harness/config.py CONTEXT_WINDOW. Opus 4.7 = 1M tokens (CLI 2.1.76+).
-const CONTEXT_WINDOW = 1000000;
+const CONTEXT_WINDOW = loadContextWindow();
 
 function getRelayStatus() {
 	try { return JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8')); }

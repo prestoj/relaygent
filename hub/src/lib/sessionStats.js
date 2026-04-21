@@ -1,8 +1,18 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
-// Matches harness/config.py CONTEXT_WINDOW. Opus 4.7 = 1M tokens (CLI 2.1.76+).
-const CONTEXT_WINDOW = 1000000;
+// Matches harness/config.py CONTEXT_WINDOW. Reads ~/.relaygent/config.json's
+// harness.contextWindow; default 1M for Opus 4.7 on CLI 2.1.76+.
+export function loadContextWindow() {
+	try {
+		const cfg = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.relaygent', 'config.json'), 'utf8'));
+		const v = cfg?.harness?.contextWindow;
+		if (Number.isInteger(v) && v > 0) return v;
+	} catch {}
+	return 1000000;
+}
+const CONTEXT_WINDOW = loadContextWindow();
 
 // Per-file stats cache: avoids re-parsing unchanged JSONL files
 const _statsCache = new Map(); // path → { mtimeMs, size, stats }
