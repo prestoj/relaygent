@@ -113,13 +113,18 @@ def _parse_dt(s):
 
 
 def _cron_task(t, tasks_file, notified, now, now_ms):
-    """Handle cron-scheduled task. Returns (fire_dt_or_None, should_emit)."""
+    """Handle cron-scheduled task. Returns (fire_dt_or_None, should_emit).
+
+    `last: never` = seed to now → only future firings count. Prevents a new
+    task from reading as "24h overdue" just because yesterday's cron time has
+    passed.
+    """
     last = t["last"]; desc = t["description"]; expr = t["cron"]
     if not last or last == "never":
-        fire_dt = _last_cron_fire(expr, now - timedelta(days=1), now)
-    else:
-        last_dt = _parse_dt(last)
-        fire_dt = _last_cron_fire(expr, last_dt, now) if last_dt else None
+        _rewrite_last(tasks_file, desc, now.strftime("%Y-%m-%d %H:%M"))
+        return None, False
+    last_dt = _parse_dt(last)
+    fire_dt = _last_cron_fire(expr, last_dt, now) if last_dt else None
 
     sticky = notified.get(desc) or {}
     if not isinstance(sticky, dict): sticky = {}
