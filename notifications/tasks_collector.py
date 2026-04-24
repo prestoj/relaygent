@@ -34,14 +34,12 @@ def _freq_ms(freq): return FREQ_HOURS.get(freq, 24) * 3600000
 
 def _parse_task_line(line):
     m = re.match(r'^-\s+\[([x ])\]\s+(.+)$', line, re.IGNORECASE)
-    if not m:
-        return None
+    if not m: return None
     parts = m.group(2).split("|")
     meta = {}
     for p in parts[1:]:
         kv = re.match(r'^(\w+):\s*(.+)$', p.strip())
-        if kv:
-            meta[kv.group(1)] = kv.group(2).strip().strip('"').strip("'")
+        if kv: meta[kv.group(1)] = kv.group(2).strip().strip('"').strip("'")
     return {"description": parts[0].strip(), "type": meta.get("type", "one-off"),
             "freq": meta.get("freq", ""), "cron": meta.get("cron", ""),
             "last": meta.get("last", ""), "runbook": meta.get("runbook", "")}
@@ -57,13 +55,11 @@ def _save_notified(data):
         tmp = str(NOTIFIED_FILE) + ".tmp"
         with open(tmp, "w") as f: json.dump(data, f)
         os.replace(tmp, NOTIFIED_FILE)
-    except OSError:
-        logger.warning("Failed to save task-notified.json")
+    except OSError: logger.warning("Failed to save task-notified.json")
 
 
 def _last_cron_fire(cron_expr, last_dt, now_dt):
-    if croniter is None:
-        return None
+    if croniter is None: return None
     try: it = croniter(cron_expr, last_dt)
     except Exception: return None
     latest = None
@@ -113,12 +109,8 @@ def _parse_dt(s):
 
 
 def _cron_task(t, tasks_file, notified, now, now_ms):
-    """Handle cron-scheduled task. Returns (fire_dt_or_None, should_emit).
-
-    `last: never` = seed to now → only future firings count. Prevents a new
-    task from reading as "24h overdue" just because yesterday's cron time has
-    passed.
-    """
+    """Cron-scheduled task. `last: never` → seed to now so only future
+    firings count (avoids a new task reading as "24h overdue")."""
     last = t["last"]; desc = t["description"]; expr = t["cron"]
     if not last or last == "never":
         _rewrite_last(tasks_file, desc, now.strftime("%Y-%m-%d %H:%M"))
@@ -149,7 +141,7 @@ def _cron_task(t, tasks_file, notified, now, now_ms):
     return None, False
 
 
-def _freq_task(t, notified, now, now_ms):
+def _freq_task(t, tasks_file, notified, now, now_ms):
     """Handle coarse-freq task. Returns (fire_dt_or_None, should_emit)."""
     last = t["last"]; desc = t["description"]; freq = t["freq"]
     if not last or last == "never":
@@ -166,6 +158,8 @@ def _freq_task(t, notified, now, now_ms):
     if now_ms - last_notified_ms < _freq_ms(freq):
         return None, False
     notified[desc] = now_ms
+    # Advance last: so tasks.md shows a real firing time, not a stale "never".
+    _rewrite_last(tasks_file, desc, fire_dt.strftime("%Y-%m-%d %H:%M"))
     return fire_dt, True
 
 
@@ -187,7 +181,7 @@ def collect(notifications):
         if t["cron"]:
             fire_dt, emit = _cron_task(t, tasks_file, notified, now, now_ms)
         else:
-            fire_dt, emit = _freq_task(t, notified, now, now_ms)
+            fire_dt, emit = _freq_task(t, tasks_file, notified, now, now_ms)
         if not emit: continue
         overdue = _fmt_overdue((now - fire_dt).total_seconds()) if fire_dt < now else "first run"
         notifications.append({
