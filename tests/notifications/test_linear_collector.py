@@ -144,6 +144,20 @@ class TestCollect:
         assert notifications == []
 
     @patch.object(lc, "_graphql")
+    def test_filters_already_read(self, mock_gql):
+        """readAt is filtered post-fetch — Linear's NotificationFilter
+        doesn't accept a readAt comparator, so the query returns all and
+        we drop already-read notifications here."""
+        unread = _make_notif(notif_id="u")
+        read = _make_notif(notif_id="r")
+        read["readAt"] = "2026-04-27T10:00:00Z"
+        mock_gql.return_value = _fake_graphql_response([unread, read])
+        notifications = []
+        lc.collect(notifications)
+        assert len(notifications) == 1
+        assert notifications[0]["count"] == 1
+
+    @patch.object(lc, "_graphql")
     def test_caps_at_10_messages(self, mock_gql):
         nodes = [_make_notif(notif_id=f"n-{i}") for i in range(15)]
         mock_gql.return_value = _fake_graphql_response(nodes)

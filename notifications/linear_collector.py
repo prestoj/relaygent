@@ -27,9 +27,9 @@ _WAKE_TYPES = {
 }
 
 _NOTIF_QUERY = """
-query($createdAfter: DateTime) {
+query($createdAfter: DateTimeOrDuration) {
   notifications(
-    filter: { readAt: { null: true }, createdAt: { gte: $createdAfter } }
+    filter: { createdAt: { gte: $createdAfter } }
     first: 20
     orderBy: createdAt
   ) {
@@ -139,7 +139,7 @@ def collect(notifications):
         return
 
     nodes = data.get("notifications", {}).get("nodes", [])
-    relevant = [n for n in nodes if n.get("type") in _WAKE_TYPES]
+    relevant = [n for n in nodes if n.get("type") in _WAKE_TYPES and not n.get("readAt")]
 
     if not relevant:
         _save_last_check()
