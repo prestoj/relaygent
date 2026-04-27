@@ -79,6 +79,21 @@ class TestCheckNotifications:
         cache_file.write_text(json.dumps(msg_notif("t2", "second")))
         assert len(mgr._check_notifications()) == 1
 
+    def test_task_subsequent_firing_wakes(self, timer, cache_file):
+        """Each cron firing has a distinct timestamp — sticky-window
+        re-emissions of one firing dedup, but the next firing must wake."""
+        mgr = SleepManager(timer)
+        ts1 = "task-Review trading book-2026-04-27 06:30"
+        ts2 = "task-Review trading book-2026-04-27 12:30"
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts1}]))
+        assert len(mgr._check_notifications()) == 1
+        # Same firing re-emitted (sticky window) — silent
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts1}]))
+        assert mgr._check_notifications() == []
+        # Next cron firing — must wake
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts2}]))
+        assert len(mgr._check_notifications()) == 1
+
     def test_missing_cache_file(self, mgr, cache_file):
         assert mgr._check_notifications() == []
 
