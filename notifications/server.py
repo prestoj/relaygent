@@ -4,6 +4,7 @@
 Aggregates reminders and optional messaging sources into a unified endpoint.
 """
 
+import logging
 import os
 
 import reminders  # noqa: F401 — /pending, /upcoming, /reminder routes
@@ -13,6 +14,10 @@ from db import init_db
 
 if __name__ == "__main__":
     init_db()
+    if not os.environ.get("RELAYGENT_KB_DIR"):
+        logging.getLogger().warning(
+            "RELAYGENT_KB_DIR unset — tasks_collector will silently skip cron tasks. "
+            "Add it to the LaunchAgent plist or systemd EnvironmentFile.")
     port = int(os.environ.get("RELAYGENT_NOTIFICATIONS_PORT", "8083"))
     host = os.environ.get("RELAYGENT_BIND_HOST", "127.0.0.1")
     app.run(host=host, port=port, debug=False)
