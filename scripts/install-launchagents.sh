@@ -97,7 +97,11 @@ do_install() {
         write_plist "com.relaygent.notifications" "$NOTIF_VENV" \
             "$REPO_DIR/notifications/server.py" \
 "        <key>RELAYGENT_NOTIFICATIONS_PORT</key>
-        <string>$NOTIF_PORT</string>"
+        <string>$NOTIF_PORT</string>
+        <key>RELAYGENT_KB_DIR</key>
+        <string>$KB_DIR</string>
+        <key>RELAYGENT_DATA_DIR</key>
+        <string>$DATA_DIR</string>"
     else
         echo -e "  com.relaygent.notifications: ${YELLOW}skipped (no venv)${NC}"
     fi
