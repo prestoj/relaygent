@@ -34,6 +34,16 @@ try:
                 parts.append(line)
             else:
                 parts.append(f'{count} new {noun}')
+        elif n.get('type') == 'task':
+            desc = n.get('description', '?')
+            overdue = n.get('overdue', '')
+            rb = n.get('runbook', '')
+            line = f'TASK DUE: {desc}'
+            if overdue:
+                line += f' ({overdue})'
+            if rb:
+                line += f' — runbook: {rb}'
+            parts.append(line)
         elif n.get('type') == 'call_speech':
             msgs = n.get('messages', [])
             for m in msgs:

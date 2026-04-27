@@ -26,9 +26,31 @@ for line in lines:
             meta[kv.group(1)] = kv.group(2).strip()
     ttype = meta.get('type', 'one-off')
     freq = meta.get('freq', '')
+    cron_expr = meta.get('cron', '').strip('"').strip("'")
     last = meta.get('last', '')
     if ttype == 'one-off':
         due.append((1.0, desc))
+    elif ttype == 'recurring' and cron_expr:
+        # Cron schedule — check if it fired since `last:`
+        try:
+            from croniter import croniter
+        except ImportError:
+            continue
+        if not last or last == 'never':
+            due.append((99.0, desc))
+        else:
+            try:
+                last_dt = datetime.strptime(last, '%Y-%m-%d %H:%M')
+                it = croniter(cron_expr, last_dt)
+                nxt = it.get_next(datetime)
+                if nxt <= now:
+                    overdue = now - nxt
+                    hours_over = overdue.total_seconds() / 3600
+                    tag = f'{int(hours_over)}h overdue' if hours_over < 24 else f'{overdue.days}d overdue'
+                    label = f'\033[1;33m{desc} ({tag})\033[0m' if hours_over < 24 else f'\033[1;31m{desc} ({tag})\033[0m'
+                    due.append((hours_over / 24 if hours_over else 0.01, label))
+            except (ValueError, Exception):
+                pass
     elif ttype == 'recurring' and freq:
         freq_days = freqs.get(freq, 1)
         if not last or last == 'never':

@@ -65,6 +65,8 @@ class SleepManager:
         timestamps = {m["timestamp"] for m in notif.get("messages", []) if m.get("timestamp")}
         if notif.get("type") == "reminder":
             timestamps.add(f"reminder-{notif.get('id')}")
+        if notif.get("type") == "task" and notif.get("timestamp"):
+            timestamps.add(notif["timestamp"])
         source = notif.get("source", "")
         for ch in notif.get("channels", []):
             msgs = ch.get("messages", [])

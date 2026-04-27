@@ -23,6 +23,7 @@
 	onDestroy(() => clearInterval(pollInterval));
 
 	function formatDue(task) {
+		if (task.cron) return task.last && task.last !== 'never' ? `last: ${task.last}` : 'no firings yet';
 		if (!task.nextDue) return '—';
 		if (task.last === 'never' || !task.last) return 'overdue (never done)';
 		const m = task.minsLate;
@@ -77,7 +78,7 @@
 						<div class="task-actions"><button class="save-btn" onclick={() => saveEdit(t.description)}>Save</button><button class="cancel-btn" onclick={cancelEdit}>Cancel</button></div>
 					{:else}
 						<div class="task-desc">{t.description}</div>
-						<div class="task-meta"><span class="freq">{t.freq}</span><span class="due-label" class:overdue={t.due}>{formatDue(t)}</span><button class="done-btn" onclick={() => completeRecurring(t.description)} title="Mark done">✓</button><button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button><button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button></div>
+						<div class="task-meta"><span class="freq">{t.cron ? `cron: ${t.cron}` : t.freq}</span><span class="due-label" class:overdue={t.due}>{formatDue(t)}</span><button class="done-btn" onclick={() => completeRecurring(t.description)} title="Mark done">✓</button><button class="edit-btn" onclick={() => startEdit(t.description)} title="Edit">✎</button><button class="del-btn" onclick={() => removeTask(t.description)} title="Delete">✕</button></div>
 					{/if}
 				</div>
 			{/each}

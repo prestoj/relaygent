@@ -48,6 +48,18 @@ class TestExtractTimestamps:
     def test_empty_notif_with_type(self, mgr):
         assert len(mgr._extract_timestamps({"type": "system"})) == 1
 
+    def test_task_uses_top_level_timestamp(self, mgr):
+        """Task notifications carry a per-firing `timestamp` field — without
+        reading it, every task collapses to dedup key `task--0` and only the
+        first firing ever wakes the relay."""
+        ts1 = "task-Review trading book-2026-04-27 06:30"
+        ts2 = "task-Review trading book-2026-04-27 12:30"
+        n1 = {"type": "task", "description": "Review trading book", "timestamp": ts1}
+        n2 = {"type": "task", "description": "Review trading book", "timestamp": ts2}
+        assert mgr._extract_timestamps(n1) == {ts1}
+        assert mgr._extract_timestamps(n2) == {ts2}
+        assert mgr._extract_timestamps(n1) != mgr._extract_timestamps(n2)
+
 
 class TestCheckNotifications:
     def test_returns_new_notifications(self, mgr, cache_file):
@@ -65,6 +77,21 @@ class TestCheckNotifications:
         cache_file.write_text(json.dumps(msg_notif("t1", "first")))
         mgr._check_notifications()
         cache_file.write_text(json.dumps(msg_notif("t2", "second")))
+        assert len(mgr._check_notifications()) == 1
+
+    def test_task_subsequent_firing_wakes(self, timer, cache_file):
+        """Each cron firing has a distinct timestamp — sticky-window
+        re-emissions of one firing dedup, but the next firing must wake."""
+        mgr = SleepManager(timer)
+        ts1 = "task-Review trading book-2026-04-27 06:30"
+        ts2 = "task-Review trading book-2026-04-27 12:30"
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts1}]))
+        assert len(mgr._check_notifications()) == 1
+        # Same firing re-emitted (sticky window) — silent
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts1}]))
+        assert mgr._check_notifications() == []
+        # Next cron firing — must wake
+        cache_file.write_text(json.dumps([{"type": "task", "timestamp": ts2}]))
         assert len(mgr._check_notifications()) == 1
 
     def test_missing_cache_file(self, mgr, cache_file):

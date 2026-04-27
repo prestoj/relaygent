@@ -9,7 +9,7 @@ from pathlib import Path
 # Timing constants
 SLEEP_POLL_INTERVAL = 0.2       # Local file check frequency while sleeping
 SLEEP_DEBOUNCE = 1              # Seconds to collect additional notifications before waking
-URGENT_NOTIFICATION_TYPES = {"call_speech", "message"}  # Skip debounce for these (real-time-sensitive)
+URGENT_NOTIFICATION_TYPES = {"call_speech", "message", "task"}  # Skip debounce for these (real-time-sensitive)
 HANG_CHECK_DELAY = 90           # Seconds before checking for hang patterns
 SILENCE_TIMEOUT = 300           # Seconds of no output before considering hung
 MAX_RETRIES = 2                 # 3 total attempts

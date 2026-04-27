@@ -236,3 +236,15 @@ test('addRecurringTask: returns false for missing tasks.md', () => {
 	const ok = addRecurringTask(dir, 'Oops', 'daily');
 	assert.equal(ok, false);
 });
+
+test('loadTasks: parses cron-scheduled task', () => {
+	const dir = makeTempDir();
+	writeTasks(dir, '- [ ] Review trading book | type: recurring | cron: "30 6,12 * * 1-5" | last: 2026-04-27 06:30 | runbook: /tmp/rb.md\n');
+	const { tasks } = loadTasks(dir);
+	assert.equal(tasks.length, 1);
+	assert.equal(tasks[0].cron, '30 6,12 * * 1-5');
+	assert.equal(tasks[0].runbook, '/tmp/rb.md');
+	assert.equal(tasks[0].freq, '');
+	assert.equal(tasks[0].nextDue, null);
+	assert.equal(tasks[0].due, false);
+});

@@ -18,13 +18,22 @@ function parseTaskLine(line) {
 	const meta = {};
 	for (const p of parts.slice(1)) {
 		const kv = p.match(/^(\w+):\s*(.+)$/);
-		if (kv) meta[kv[1]] = kv[2].trim();
+		if (kv) meta[kv[1]] = kv[2].trim().replace(/^["']|["']$/g, '');
 	}
-	return { checked, description, type: meta.type || 'one-off', freq: meta.freq || '', last: meta.last || '' };
+	return {
+		checked, description,
+		type: meta.type || 'one-off',
+		freq: meta.freq || '',
+		cron: meta.cron || '',
+		last: meta.last || '',
+		runbook: meta.runbook || '',
+	};
 }
 
 function getNextDue(task) {
-	if (task.type !== 'recurring' || !task.freq) return null;
+	if (task.type !== 'recurring') return null;
+	if (task.cron) return null;  // cron next-fire not computed in JS yet
+	if (!task.freq) return null;
 	if (!task.last || task.last === 'never') return new Date(0);
 	const ms = new Date(task.last).getTime();
 	return isNaN(ms) ? new Date(0) : new Date(ms + freqToMs(task.freq));
