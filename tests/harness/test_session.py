@@ -48,6 +48,18 @@ class TestExtractTimestamps:
     def test_empty_notif_with_type(self, mgr):
         assert len(mgr._extract_timestamps({"type": "system"})) == 1
 
+    def test_task_uses_top_level_timestamp(self, mgr):
+        """Task notifications carry a per-firing `timestamp` field — without
+        reading it, every task collapses to dedup key `task--0` and only the
+        first firing ever wakes the relay."""
+        ts1 = "task-Review trading book-2026-04-27 06:30"
+        ts2 = "task-Review trading book-2026-04-27 12:30"
+        n1 = {"type": "task", "description": "Review trading book", "timestamp": ts1}
+        n2 = {"type": "task", "description": "Review trading book", "timestamp": ts2}
+        assert mgr._extract_timestamps(n1) == {ts1}
+        assert mgr._extract_timestamps(n2) == {ts2}
+        assert mgr._extract_timestamps(n1) != mgr._extract_timestamps(n2)
+
 
 class TestCheckNotifications:
     def test_returns_new_notifications(self, mgr, cache_file):
