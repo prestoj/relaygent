@@ -7,6 +7,7 @@ import time
 from config import (
     CONTEXT_THRESHOLD, INCOMPLETE_BASE_DELAY, MAX_INCOMPLETE_RETRIES, log,
 )
+from jsonl_checks import retire_requested
 from jsonl_images import strip_all_images
 
 
@@ -74,4 +75,7 @@ def run_wake_cycle(sleep_mgr, claude):
                 log(f"Resume after crash failed: {e}"); return claude_result
             claude_result = claude.monitor(log_start)
         if claude_result.context_pct >= CONTEXT_THRESHOLD:
+            return claude_result
+        if retire_requested():
+            log("Retire requested during wake cycle — returning to spawn successor")
             return claude_result
