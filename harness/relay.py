@@ -152,6 +152,9 @@ class RelayRunner:
                 self._spawn_successor(workspace, state,
                     f"Context at {wake_result.context_pct:.0f}% after wake")
                 continue
+            if wake_result and retire_requested() and self.timer.has_successor_time():
+                self._spawn_successor(workspace, state, "Retire requested during wake cycle")
+                continue
             break
 
         goal = validate_and_log()
