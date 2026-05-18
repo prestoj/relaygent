@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, URGENT_NOTIFICATION_TYPES,
-    Timer, log, set_status,
+    MAX_SESSION_UPTIME, SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL,
+    URGENT_NOTIFICATION_TYPES, Timer, log, set_status,
 )
 from notify_format import format_notifications
 
@@ -149,6 +149,23 @@ class SleepManager:
                             "user didn't return. Pick up backlog work via get_next_task()."}]
             except (OSError, ValueError, KeyError):
                 pass
+
+            if self.timer.elapsed() > MAX_SESSION_UPTIME:
+                from jsonl_checks import RETIRE_MARKER
+                hours = MAX_SESSION_UPTIME // 3600
+                try:
+                    RETIRE_MARKER.write_text(json.dumps({
+                        "ts": int(time.time() * 1000),
+                        "reason": f"uptime-rollover ({hours}h)",
+                    }))
+                except OSError:
+                    pass
+                log(f"Session uptime exceeded {hours}h — retire marker written, waking to finalize")
+                return True, [{"type": "system", "message":
+                    f"Session uptime exceeded {hours}h. The relay rotates long-lived sessions "
+                    "to avoid in-memory state accumulation. Please write your handoff "
+                    "(MAIN GOAL, what you did, open threads) and finish your turn — a fresh "
+                    "successor session will pick up from here."}]
 
             if self.timer.is_expired():
                 log("Out of time")

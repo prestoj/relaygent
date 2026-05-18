@@ -11,6 +11,7 @@ from session import SleepManager, SleepResult, MAX_CACHE_STALE, _is_sleep_timeou
 def timer():
     t = MagicMock()
     t.is_expired.return_value = False
+    t.elapsed.return_value = 0
     return t
 
 @pytest.fixture
@@ -156,6 +157,22 @@ class TestWaitForWake:
              patch("session.set_status"), patch("session.log"), patch("session.time.sleep"):
             woken, notifs = SleepManager(timer)._wait_for_wake()
         assert woken and notifs[0]["type"] == "message"
+
+    def test_uptime_rollover_writes_retire_marker(self, timer, cache_file, tmp_path, monkeypatch):
+        """When uptime exceeds MAX_SESSION_UPTIME, force-wake and write retire marker."""
+        from session import MAX_SESSION_UPTIME
+        marker = tmp_path / "retire-marker.json"
+        monkeypatch.setattr("jsonl_checks.RETIRE_MARKER", marker)
+        timer.elapsed.return_value = MAX_SESSION_UPTIME + 1
+        cache_file.write_text("[]")
+        with patch("session.set_status"), patch("session.log"):
+            woken, notifs = SleepManager(timer)._wait_for_wake()
+        assert woken
+        assert len(notifs) == 1 and notifs[0]["type"] == "system"
+        assert "uptime" in notifs[0]["message"].lower()
+        assert marker.exists()
+        data = json.loads(marker.read_text())
+        assert "uptime-rollover" in data["reason"]
 
 
 class TestIsSleepTimeoutReminder:
