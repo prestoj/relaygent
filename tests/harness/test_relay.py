@@ -235,3 +235,51 @@ class TestShouldSleepFalse:
         assert exit_code == 0
         # Should have resumed (not gone to sleep cycle)
         r._wake_cycle_mock.assert_not_called()
+
+
+class TestSpawnSuccessorUptimeRollover:
+    """_spawn_successor must exit (return True) on uptime-rollover so systemd
+    respawns relay.py with fresh in-memory state. Otherwise the same Timer is
+    reused across in-process successors and the 24h guard re-fires immediately,
+    looping forever."""
+
+    def _make_runner(self):
+        from relay_loop import LoopState
+        r = RelayRunner()
+        r.timer = MagicMock()
+        r.timer.remaining.return_value = 3600
+        r.claude = MagicMock()
+        r.claude._claude_bin = "/usr/bin/claude"
+        state = LoopState(session_id="orig")
+        return r, state
+
+    def test_returns_true_on_uptime_rollover_marker(self, tmp_path):
+        marker = tmp_path / "retire-marker.json"
+        marker.write_text('{"reason": "uptime-rollover (24h)"}')
+        r, state = self._make_runner()
+        with (patch("jsonl_checks.RETIRE_MARKER", marker),
+              patch("relay.commit_kb"), patch("relay.notify_lifecycle"),
+              patch("relay.cleanup_context_file"), patch("relay.log"),
+              patch("relay.ClaudeProcess")):
+            assert r._spawn_successor(tmp_path, state, "any") is True
+        assert not marker.exists()  # cleared so a hung restart doesn't loop
+
+    def test_returns_false_for_other_retire_reasons(self, tmp_path):
+        marker = tmp_path / "retire-marker.json"
+        marker.write_text('{"reason": "claude requested"}')
+        r, state = self._make_runner()
+        with (patch("jsonl_checks.RETIRE_MARKER", marker),
+              patch("relay.commit_kb"), patch("relay.notify_lifecycle"),
+              patch("relay.cleanup_context_file"), patch("relay.log"),
+              patch("relay.time.sleep"), patch("relay.ClaudeProcess")):
+            assert r._spawn_successor(tmp_path, state, "any") is False
+
+    def test_returns_false_when_no_marker(self, tmp_path):
+        """Context-fill successor spawns: no marker exists, normal flow."""
+        marker = tmp_path / "retire-marker.json"  # never written
+        r, state = self._make_runner()
+        with (patch("jsonl_checks.RETIRE_MARKER", marker),
+              patch("relay.commit_kb"), patch("relay.notify_lifecycle"),
+              patch("relay.cleanup_context_file"), patch("relay.log"),
+              patch("relay.time.sleep"), patch("relay.ClaudeProcess")):
+            assert r._spawn_successor(tmp_path, state, "context 90%") is False

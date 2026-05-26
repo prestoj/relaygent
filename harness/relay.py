@@ -13,7 +13,7 @@ from config import (CONTEXT_THRESHOLD, MAX_IDLE_CONTINUATIONS, SILENCE_TIMEOUT,
                     Timer, cleanup_old_workspaces, get_workspace_dir, log, set_status)
 from handoff import validate_and_log
 from jsonl_checks import (should_sleep, last_output_is_idle, retire_requested,
-                          clear_retire_marker)
+                          retire_reason, clear_retire_marker)
 from jsonl_images import strip_all_images
 from harness_env import find_claude_binary
 from process import ClaudeProcess
@@ -34,8 +34,20 @@ class RelayRunner:
         self.sleep_mgr = SleepManager(self.timer)
         self.claude: ClaudeProcess | None = None
 
-    def _spawn_successor(self, workspace, state, reason):
-        """Spawn a successor session."""
+    def _spawn_successor(self, workspace, state, reason) -> bool:
+        """Spawn an in-process successor session.
+
+        Returns True iff caller should exit the main loop instead: an
+        uptime-rollover retire marker means the whole point is to clear
+        relay.py's in-memory state, which only systemd respawn can do.
+        """
+        if "uptime-rollover" in (retire_reason() or ""):
+            log("Uptime rollover — exiting for systemd restart (fresh in-memory state)")
+            clear_retire_marker()
+            commit_kb()
+            cleanup_context_file()
+            notify_lifecycle("Relay restarting", "uptime rollover")
+            return True
         log(f"{reason} ({self.timer.remaining() // 60} min remaining)")
         notify_lifecycle("New session", reason)
         commit_kb()
@@ -46,6 +58,7 @@ class RelayRunner:
         self.claude = ClaudeProcess(state.session_id, self.timer, workspace, self.claude._claude_bin)
         log(f"Successor session: {state.session_id}")
         time.sleep(3)
+        return False
 
     def _apply_error(self, err, state):
         """Execute side effects from an error result."""
@@ -126,13 +139,15 @@ class RelayRunner:
             save_summary(self.claude.session_id, self.claude.workspace)
 
             if result.context_pct >= CONTEXT_THRESHOLD and self.timer.has_successor_time():
-                self._spawn_successor(workspace, state,
-                    f"Context at {result.context_pct:.0f}%, spawning successor")
+                if self._spawn_successor(workspace, state,
+                        f"Context at {result.context_pct:.0f}%, spawning successor"):
+                    return 0
                 continue
 
             if (retire_requested(self.claude.session_id, self.claude.workspace)
                     and self.timer.has_successor_time()):
-                self._spawn_successor(workspace, state, "Retire requested by Claude")
+                if self._spawn_successor(workspace, state, "Retire requested by Claude"):
+                    return 0
                 continue
 
             if (result.context_pct < CONTEXT_THRESHOLD
@@ -149,11 +164,13 @@ class RelayRunner:
             wake_result = run_wake_cycle(self.sleep_mgr, self.claude)
             if (wake_result and wake_result.context_pct >= CONTEXT_THRESHOLD
                     and self.timer.has_successor_time()):
-                self._spawn_successor(workspace, state,
-                    f"Context at {wake_result.context_pct:.0f}% after wake")
+                if self._spawn_successor(workspace, state,
+                        f"Context at {wake_result.context_pct:.0f}% after wake"):
+                    return 0
                 continue
             if wake_result and retire_requested() and self.timer.has_successor_time():
-                self._spawn_successor(workspace, state, "Retire requested during wake cycle")
+                if self._spawn_successor(workspace, state, "Retire requested during wake cycle"):
+                    return 0
                 continue
             break
 

@@ -1,10 +1,4 @@
-"""JSONL session file inspection utilities for the relay harness.
-
-These functions read Claude's session JSONL files to detect:
-- Incomplete exits (Claude crashed mid-conversation)
-- Whether Claude finished communicating (for sleep decisions)
-- Context window fill percentage
-"""
+"""JSONL session file inspection: incomplete-exit, idle, sleep-readiness, context-fill, retire marker."""
 
 from __future__ import annotations
 
@@ -169,6 +163,12 @@ def clear_retire_marker() -> None:
     """Remove the retire marker. Call before spawning a successor."""
     try: RETIRE_MARKER.unlink()
     except (FileNotFoundError, OSError): pass
+
+
+def retire_reason() -> str | None:
+    """Read marker's reason field without clearing it. None if missing/malformed."""
+    try: return json.loads(RETIRE_MARKER.read_text()).get("reason")
+    except (OSError, json.JSONDecodeError, AttributeError): return None
 
 
 def get_context_fill_from_jsonl(session_id: str, workspace: Path) -> float:

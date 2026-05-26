@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from jsonl_checks import retire_requested, clear_retire_marker
+from jsonl_checks import retire_requested, clear_retire_marker, retire_reason
 
 
 @pytest.fixture
@@ -48,3 +48,25 @@ class TestClearRetireMarker:
         clear_retire_marker()
         clear_retire_marker()
         assert not marker_at.exists()
+
+
+class TestRetireReason:
+    def test_none_when_missing(self, marker_at):
+        assert retire_reason() is None
+
+    def test_returns_reason_string(self, marker_at):
+        marker_at.write_text('{"ts": 1, "reason": "uptime-rollover (24h)"}')
+        assert retire_reason() == "uptime-rollover (24h)"
+
+    def test_none_when_reason_field_absent(self, marker_at):
+        marker_at.write_text('{"ts": 1}')
+        assert retire_reason() is None
+
+    def test_none_on_malformed_json(self, marker_at):
+        marker_at.write_text("not json")
+        assert retire_reason() is None
+
+    def test_does_not_clear_marker(self, marker_at):
+        marker_at.write_text('{"reason": "x"}')
+        retire_reason()
+        assert marker_at.exists()
