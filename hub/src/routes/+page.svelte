@@ -15,6 +15,18 @@
 	let loading = $state(false);
 	let historyOffset = 0;
 	let seenKeys = new Set();
+	let retiring = $state(false);
+
+	async function requestWrap() {
+		if (retiring) return;
+		if (!confirm('Wrap up session?\n\nThe agent will write its handoff, then a fresh successor will spawn.')) return;
+		retiring = true;
+		try {
+			const r = await fetch('/api/relay/retire', { method: 'POST' });
+			if (!r.ok) alert('Wrap request failed: HTTP ' + r.status);
+		} catch (e) { alert('Wrap request error: ' + e); }
+		finally { setTimeout(() => { retiring = false; }, 5000); }
+	}
 
 	async function fetchContext() {
 		try { const r = await fetch('/api/session/live'); if (r.ok) { const d = await r.json(); contextPct = d.contextPct || 0; } } catch {}
@@ -71,8 +83,13 @@
 
 <div class="activity-page">
 	<div class="activity-header">
-		<span class="activity-title">Activity</span>
-		{#if connected}<span class="live-badge">LIVE</span>{/if}
+		<div class="ah-left">
+			<span class="activity-title">Activity</span>
+			{#if connected}<span class="live-badge">LIVE</span>{/if}
+		</div>
+		<button class="wrap-btn" onclick={requestWrap} disabled={retiring} title="Ask agent to wrap up + spawn fresh successor">
+			{retiring ? '…' : 'Wrap'}
+		</button>
 	</div>
 	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
 	<TodoWidget {activities} />
@@ -108,9 +125,13 @@
 
 <style>
 	.activity-page { display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; width: 100%; }
-	.activity-header { display: flex; align-items: center; gap: 0.5em; padding: 0.8em 1em; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+	.activity-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; padding: 0.8em 1em; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+	.ah-left { display: flex; align-items: center; gap: 0.5em; }
 	.activity-title { font-weight: 700; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em; }
 	.live-badge { font-size: 0.6em; font-weight: 700; padding: 0.15em 0.4em; border-radius: 4px; background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent); color: var(--success, #22c55e); }
+	.wrap-btn { background: none; border: 1px solid var(--border); cursor: pointer; font-size: 0.75em; padding: 0.25em 0.65em; border-radius: 4px; color: var(--text-muted); font-weight: 600; }
+	.wrap-btn:hover:not(:disabled) { color: var(--warning, #f59e0b); border-color: var(--warning, #f59e0b); }
+	.wrap-btn:disabled { opacity: 0.5; cursor: wait; }
 	.activity-empty { padding: 3em 1em; text-align: center; color: var(--text-muted); font-size: 0.9em; }
 	.context-row { display: flex; align-items: center; gap: 0.5em; padding: 0.3em 1em; flex-shrink: 0; }
 	.context-bar { height: 3px; background: var(--code-bg); flex: 1; }

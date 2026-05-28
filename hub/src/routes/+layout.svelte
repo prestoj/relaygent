@@ -24,21 +24,6 @@
 	}
 
 	function closeMenu() { menuOpen = false; }
-
-	let retiring = $state(false);
-	async function requestWrap() {
-		if (retiring) return;
-		if (!confirm('Wrap up session?\n\nThe agent will be asked to write its handoff, then a fresh successor will spawn.')) return;
-		retiring = true;
-		try {
-			const r = await fetch('/api/relay/retire', { method: 'POST' });
-			if (!r.ok) alert('Wrap request failed: HTTP ' + r.status);
-		} catch (e) {
-			alert('Wrap request error: ' + e);
-		} finally {
-			setTimeout(() => { retiring = false; }, 5000);
-		}
-	}
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
 	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
 	let isRootPage = $derived($page.url.pathname === '/');
@@ -87,9 +72,6 @@
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
-		<button class="wrap-btn" onclick={requestWrap} disabled={retiring} title="Ask agent to wrap up + spawn fresh successor">
-			{retiring ? '…' : 'Wrap'}
-		</button>
 		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
 			{darkMode ? '☀️' : '🌙'}
 		</button>
@@ -128,9 +110,6 @@
 		transition: transform 0.2s;
 	}
 	.theme-toggle:hover { transform: scale(1.2); }
-	.wrap-btn { background: none; border: 1px solid var(--border); cursor: pointer; font-size: 0.8em; padding: 0.3em 0.7em; border-radius: 4px; color: var(--muted, #888); font-weight: 600; }
-	.wrap-btn:hover:not(:disabled) { color: var(--warning, #f59e0b); border-color: var(--warning, #f59e0b); }
-	.wrap-btn:disabled { opacity: 0.5; cursor: wait; }
 	.logout-btn {
 		background: none; border: 1px solid var(--border); cursor: pointer;
 		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
