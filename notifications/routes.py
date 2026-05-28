@@ -64,11 +64,23 @@ def get_notifications():
     return jsonify(notifications)
 
 
+STICKY_WINDOW_SEC = 5  # Keep due reminders queryable this long so the poller's
+                       # cache stays populated → hook catches them after a tool use
+
+
 def _collect_due_reminders(notifications):
-    """Add due reminders (one-off and recurring) to notifications list."""
+    """Add due reminders (one-off and recurring) to notifications list.
+
+    One-off reminders stay returned (and `fired=0`) for STICKY_WINDOW_SEC
+    after their trigger_time, so the notification poller's cache holds them
+    long enough for the PostToolUse hook to inject them into an active
+    Claude turn. Hook-side dedup (`/tmp/relaygent-reminder-seen.json`)
+    prevents repeat injections.
+    """
     now = datetime.now()
     now_iso = now.isoformat()
-    stale_cutoff = (now - timedelta(hours=1)).isoformat()
+    fire_cutoff_iso = (now - timedelta(seconds=STICKY_WINDOW_SEC)).isoformat()
+    stale_cutoff_iso = (now - timedelta(hours=1)).isoformat()
 
     with get_db() as conn:
         rows = conn.execute(
@@ -88,26 +100,22 @@ def _collect_due_reminders(notifications):
                     )
                     conn.commit()
                     notifications.append({
-                        "type": "reminder",
-                        "id": r["id"],
-                        "message": r["message"],
-                        "trigger_time": prev_occ,
-                        "created_at": r["created_at"],
+                        "type": "reminder", "id": r["id"], "message": r["message"],
+                        "trigger_time": prev_occ, "created_at": r["created_at"],
                     })
             elif r["trigger_time"] <= now_iso:
-                conn.execute(
-                    "UPDATE reminders SET fired = 1 WHERE id = ?",
-                    (r["id"],),
-                )
-                conn.commit()
-                if r["trigger_time"] >= stale_cutoff:
-                    notifications.append({
-                        "type": "reminder",
-                        "id": r["id"],
-                        "message": r["message"],
-                        "trigger_time": r["trigger_time"],
-                        "created_at": r["created_at"],
-                    })
+                # Past the sticky window → mark fired=1 and stop returning.
+                if r["trigger_time"] <= fire_cutoff_iso:
+                    conn.execute(
+                        "UPDATE reminders SET fired = 1 WHERE id = ?", (r["id"],)
+                    )
+                    conn.commit()
+                    if r["trigger_time"] < stale_cutoff_iso:
+                        continue  # Too old to bother delivering
+                notifications.append({
+                    "type": "reminder", "id": r["id"], "message": r["message"],
+                    "trigger_time": r["trigger_time"], "created_at": r["created_at"],
+                })
 
 
 def _collect_chat_messages(notifications):

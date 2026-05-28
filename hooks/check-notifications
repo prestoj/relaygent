@@ -14,11 +14,20 @@ CTX="Current time: $TIME"
 # Read cached notifications and extract reminders + chat messages
 NOTIF_INFO=$(CACHE_FILE="$CACHE_FILE" python3 -c "
 import json, os
+SEEN_FILE = '/tmp/relaygent-reminder-seen.json'
+try:
+    seen = set(json.load(open(SEEN_FILE)))
+except (FileNotFoundError, json.JSONDecodeError, ValueError):
+    seen = set()
+seen_added = []
 try:
     with open(os.environ['CACHE_FILE']) as f: data = json.load(f)
     parts = []
     for n in data:
         if n.get('type') == 'reminder':
+            rid = n.get('id')
+            if rid in seen: continue
+            if rid is not None: seen_added.append(rid)
             parts.append('REMINDER DUE: \"' + n.get('message', '') + '\"')
         elif n.get('type') == 'email':
             count = n.get('count', 0)
@@ -103,6 +112,13 @@ try:
                 parts.append(f'{count} unread chat message(s) — check with read_messages')
     if parts:
         print(' | '.join(parts))
+        if seen_added:
+            seen |= set(seen_added)
+            # Trim to last 200 — keeps file bounded if reminders churn
+            trimmed = list(seen)[-200:]
+            tmp = SEEN_FILE + '.tmp'
+            with open(tmp, 'w') as f: json.dump(trimmed, f)
+            os.rename(tmp, SEEN_FILE)
 except Exception as e:
     import sys; print(f'WARNING: notification cache parse error: {e}', file=sys.stderr)
 " 2>>/tmp/relaygent-hook-errors.log)
