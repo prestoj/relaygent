@@ -85,9 +85,6 @@
 	<div class="sidebar-header">
 		<span class="sidebar-title">Activity</span>
 		{#if connected}<span class="live-badge">LIVE</span>{/if}
-		<button class="wrap-btn" onclick={requestWrap} disabled={retiring} title="Ask agent to wrap up + spawn fresh successor">
-			{retiring ? '…' : 'Wrap'}
-		</button>
 	</div>
 	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
 	{#if activities.length === 0}
