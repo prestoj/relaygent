@@ -84,6 +84,26 @@ class TestCollectDueReminders:
             row = conn.execute("SELECT fired FROM reminders WHERE id=1").fetchone()
             assert row["fired"] == 1
 
+    def test_recently_due_stays_unfired_in_sticky_window(self):
+        """Reminder due within the sticky window stays fired=0 so the
+        notification-poller cache holds it long enough to inject."""
+        just_now = (datetime.now() - timedelta(seconds=1)).isoformat()
+        with notif_db.get_db() as conn:
+            conn.execute(
+                "INSERT INTO reminders (trigger_time, message) VALUES (?, ?)",
+                (just_now, "wrap"),
+            )
+            conn.commit()
+        notifs = []
+        routes_mod._collect_due_reminders(notifs)
+        assert len(notifs) == 1 and notifs[0]["message"] == "wrap"
+        with notif_db.get_db() as conn:
+            assert conn.execute("SELECT fired FROM reminders WHERE id=1").fetchone()["fired"] == 0
+        # Second poll within the same window: still returned, still not fired
+        notifs2 = []
+        routes_mod._collect_due_reminders(notifs2)
+        assert len(notifs2) == 1
+
     def test_already_fired_not_collected(self):
         past = (datetime.now() - timedelta(minutes=5)).isoformat()
         with notif_db.get_db() as conn:
