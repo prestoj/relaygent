@@ -15,19 +15,6 @@
 	let loading = $state(false);
 	let historyOffset = 0;
 	let seenKeys = new Set();
-	let wrapState = $state('idle'); // idle | sending | queued
-
-	async function requestWrap() {
-		if (wrapState !== 'idle') return;
-		if (!confirm('Wrap up session?\n\nThe agent will be notified to write its handoff and spawn a successor.')) return;
-		wrapState = 'sending';
-		try {
-			const r = await fetch('/api/relay/retire', { method: 'POST' });
-			if (!r.ok) { alert('Wrap request failed: HTTP ' + r.status); wrapState = 'idle'; return; }
-			wrapState = 'queued';
-			setTimeout(() => { wrapState = 'idle'; }, 60000);
-		} catch (e) { alert('Wrap request error: ' + e); wrapState = 'idle'; }
-	}
 
 	async function fetchContext() {
 		try { const r = await fetch('/api/session/live'); if (r.ok) { const d = await r.json(); contextPct = d.contextPct || 0; } } catch {}
@@ -88,10 +75,6 @@
 			<span class="activity-title">Activity</span>
 			{#if connected}<span class="live-badge">LIVE</span>{/if}
 		</div>
-		<button class="wrap-btn" class:queued={wrapState === 'queued'} onclick={requestWrap} disabled={wrapState !== 'idle'}
-			title="Notify agent to wrap up + spawn fresh successor">
-			{wrapState === 'sending' ? '…' : wrapState === 'queued' ? 'Wrap queued ✓' : 'Wrap'}
-		</button>
 	</div>
 	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
 	<TodoWidget {activities} />
@@ -131,10 +114,6 @@
 	.ah-left { display: flex; align-items: center; gap: 0.5em; }
 	.activity-title { font-weight: 700; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em; }
 	.live-badge { font-size: 0.6em; font-weight: 700; padding: 0.15em 0.4em; border-radius: 4px; background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent); color: var(--success, #22c55e); }
-	.wrap-btn { background: none; border: 1px solid var(--border); cursor: pointer; font-size: 0.75em; padding: 0.25em 0.65em; border-radius: 4px; color: var(--text-muted); font-weight: 600; }
-	.wrap-btn:hover:not(:disabled) { color: var(--warning, #f59e0b); border-color: var(--warning, #f59e0b); }
-	.wrap-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-	.wrap-btn.queued { color: var(--success, #22c55e); border-color: var(--success, #22c55e); opacity: 1; }
 	.activity-empty { padding: 3em 1em; text-align: center; color: var(--text-muted); font-size: 0.9em; }
 	.context-row { display: flex; align-items: center; gap: 0.5em; padding: 0.3em 1em; flex-shrink: 0; }
 	.context-bar { height: 3px; background: var(--code-bg); flex: 1; }
