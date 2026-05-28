@@ -14,6 +14,21 @@
 	let loading = $state(false);
 	let historyOffset = 0;
 	let seenKeys = new Set();
+	let retiring = $state(false);
+
+	async function requestWrap() {
+		if (retiring) return;
+		if (!confirm('Wrap up session?\n\nThe agent will be asked to write its handoff, then a fresh successor will spawn.')) return;
+		retiring = true;
+		try {
+			const r = await fetch('/api/relay/retire', { method: 'POST' });
+			if (!r.ok) alert('Wrap request failed: HTTP ' + r.status);
+		} catch (e) {
+			alert('Wrap request error: ' + e);
+		} finally {
+			setTimeout(() => { retiring = false; }, 5000);
+		}
+	}
 
 	async function fetchContext() {
 		try { const r = await fetch('/api/session/live'); if (r.ok) { const d = await r.json(); contextPct = d.contextPct || 0; } } catch {}
@@ -70,6 +85,9 @@
 	<div class="sidebar-header">
 		<span class="sidebar-title">Activity</span>
 		{#if connected}<span class="live-badge">LIVE</span>{/if}
+		<button class="wrap-btn" onclick={requestWrap} disabled={retiring} title="Ask agent to wrap up + spawn fresh successor">
+			{retiring ? '…' : 'Wrap'}
+		</button>
 	</div>
 	{#if contextPct > 0}<div class="context-row"><div class="context-bar"><div class="context-fill" style="width: {contextPct}%; background: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}"></div></div><span class="context-pct" style="color: {contextPct > 80 ? 'var(--error)' : contextPct > 60 ? 'var(--warning)' : 'var(--success)'}">{contextPct}%</span></div>{/if}
 	{#if activities.length === 0}
@@ -116,6 +134,9 @@
 	}
 	.sidebar-title { font-weight: 700; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.05em; }
 	.live-badge { font-size: 0.6em; font-weight: 700; padding: 0.15em 0.4em; border-radius: 4px; background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent); color: var(--success, #22c55e); }
+	.wrap-btn { margin-left: auto; font-size: 0.7em; font-weight: 600; padding: 0.25em 0.6em; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted, #888); cursor: pointer; }
+	.wrap-btn:hover:not(:disabled) { color: var(--warning, #f59e0b); border-color: var(--warning, #f59e0b); }
+	.wrap-btn:disabled { opacity: 0.5; cursor: wait; }
 	.sidebar-empty { padding: 2em 0.8em; text-align: center; color: var(--text-muted); font-size: 0.8em; }
 	.context-row { display: flex; align-items: center; gap: 0.4em; padding: 0.2em 0.8em; flex-shrink: 0; }
 	.context-bar { height: 3px; background: var(--code-bg); flex: 1; }
