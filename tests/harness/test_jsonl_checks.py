@@ -231,3 +231,16 @@ class TestLastOutputIsIdle:
             ]}},
         ])
         assert last_output_is_idle(sid, ws) is False
+
+
+class TestNonDictContentItem:
+    def test_check_incomplete_exit_survives_non_dict_content_item(self, tmp_jsonl):
+        """A user-message content list containing a bare string must not raise
+        AttributeError (which isn't in the except tuple) — treat as incomplete
+        (no tool_result present)."""
+        sid, ws, path, write = tmp_jsonl
+        write([
+            {"type": "user", "message": {"content": ["just a string, not a dict"]}},
+        ])
+        incomplete, tool = check_incomplete_exit(sid, ws)
+        assert incomplete is True and tool == ""
