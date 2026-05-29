@@ -56,15 +56,33 @@ class ClaudeProcess:
         except (OSError, ValueError): pass
         return get_context_fill_from_jsonl(self.session_id, self.workspace)
 
+    def _kill_group(self, sig: int) -> None:
+        """Signal Claude's process group (leader + MCP children share its pgid
+        via start_new_session). killpg ONLY when the leader is our un-reaped
+        child (poll() is None => pid can't be recycled), leads its OWN group
+        (pgid == pid), and that group isn't the relay's (pgid != getpgrp()).
+        killpg on a stale/reaped pid has SIGKILLed the systemd --user manager
+        via PID reuse (runbook-service-resilience); otherwise signal leader."""
+        proc = self.process
+        if not proc: return
+        if proc.poll() is None:
+            try:
+                pgid = os.getpgid(proc.pid)
+                if pgid == proc.pid and pgid != os.getpgrp():
+                    os.killpg(pgid, sig); return
+            except (OSError, ProcessLookupError, TypeError): pass
+        try: proc.send_signal(sig)
+        except (OSError, ProcessLookupError, ValueError): pass
+
     def _terminate(self) -> None:
         if not self.process or self.process.poll() is not None: return
         log("Terminating Claude process...")
-        self.process.terminate()
+        # SIGTERM the whole group (leader + MCP servers) while the leader is
+        # alive — the only point at which group signalling is provably safe.
+        self._kill_group(signal.SIGTERM)
         try: self.process.wait(timeout=5); return
         except subprocess.TimeoutExpired: pass
-        # Kill entire process group (Claude + MCP servers) since start_new_session=True
-        try: os.killpg(self.process.pid, signal.SIGKILL)
-        except (OSError, ProcessLookupError, TypeError): self.process.kill()
+        self._kill_group(signal.SIGKILL)
         try: self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             log("WARNING: Process did not die")
