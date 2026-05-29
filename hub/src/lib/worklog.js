@@ -43,12 +43,24 @@ export function listEntries({ limit = 200 } = {}) {
 	return out.slice(0, limit);
 }
 
+// Local YYYY-MM-DD for a parsed instant (box tz); falls back to the raw slice
+// if the ts won't parse.
+function localDay(ts) {
+	const d = new Date(ts);
+	if (isNaN(d)) return (ts || '').slice(0, 10);
+	const p = (n) => String(n).padStart(2, '0');
+	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
 // Group newest-first entries by local YYYY-MM-DD for the day-sectioned UI.
+// Derive the day from the parsed instant (not a string slice) so entries
+// stamped in UTC (hub appendEntry) and local+offset (CLI) land in the same
+// local day — otherwise evening entries drift into the wrong day for the viewer.
 export function groupByDay(entries) {
 	const groups = [];
 	let cur = null;
 	for (const e of entries) {
-		const day = (e.ts || '').slice(0, 10);
+		const day = localDay(e.ts);
 		if (!cur || cur.day !== day) { cur = { day, entries: [] }; groups.push(cur); }
 		cur.entries.push(e);
 	}

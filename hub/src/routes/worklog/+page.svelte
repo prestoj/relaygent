@@ -11,9 +11,12 @@
 	};
 	const meta = (k) => KIND_META[k] || KIND_META.note;
 
+	// Compare against LOCAL today/yesterday (not toISOString/UTC), matching the
+	// local-day grouping — otherwise evening entries label as "Yesterday".
+	const localYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 	function dayLabel(day) {
-		const today = new Date(); const t = today.toISOString().slice(0, 10);
-		const y = new Date(today.getTime() - 86400000).toISOString().slice(0, 10);
+		const today = new Date(); const t = localYMD(today);
+		const y = localYMD(new Date(today.getTime() - 86400000));
 		if (day === t) return 'Today';
 		if (day === y) return 'Yesterday';
 		// day is YYYY-MM-DD — render as "Mon DD" without TZ shift
@@ -37,7 +40,7 @@
 <div class="worklog">
 	<header>
 		<h1>Worklog</h1>
-		<span class="sub">{data.total} logged · what agent-two has shipped</span>
+		<span class="sub">{data.total} logged · shipped from {data.hostname}</span>
 	</header>
 
 	{#if data.groups.length === 0}
