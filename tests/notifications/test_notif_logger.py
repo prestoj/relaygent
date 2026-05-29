@@ -54,6 +54,62 @@ class TestTaskDedup:
         assert len(tasks) == 1
 
 
+class TestMessageHistory:
+    def test_slack_messages_logged_from_channels(self):
+        """Slack nests messages under channels[]; regression: the flat
+        messages[] path logged nothing for Slack, so history was empty."""
+        n = {"type": "message", "source": "slack", "count": 2, "channels": [
+            {"id": "C1", "name": "general", "unread": 2, "messages": [
+                {"user": "U1", "text": "hi", "ts": "1780095000.1"},
+                {"user": "U2", "text": "yo", "ts": "1780095001.2"},
+            ]},
+        ]}
+        notif_logger.log_notifications([n])
+        rows = [h for h in notif_db.get_notification_history()
+                if h["type"] == "message" and h["source"] == "slack"]
+        assert len(rows) == 2
+        assert {r["summary"] for r in rows} == {"hi", "yo"}
+
+    def test_slack_same_ts_deduped(self):
+        n = {"type": "message", "source": "slack", "count": 1, "channels": [
+            {"id": "C1", "name": "g", "messages": [{"text": "hi", "ts": "1.0"}]}]}
+        notif_logger.log_notifications([n])
+        notif_logger.log_notifications([n])
+        rows = [h for h in notif_db.get_notification_history() if h["source"] == "slack"]
+        assert len(rows) == 1
+
+    def test_flat_messages_logged_with_source(self):
+        """GitHub/chat carry a flat messages[] with content+timestamp."""
+        n = {"type": "message", "source": "github", "count": 1,
+             "messages": [{"content": "[PR] repo: x (review requested)", "timestamp": "t1"}]}
+        notif_logger.log_notifications([n])
+        rows = [h for h in notif_db.get_notification_history() if h["source"] == "github"]
+        assert len(rows) == 1
+        assert rows[0]["summary"].startswith("[PR]")
+
+
+class TestEmailHistory:
+    def test_each_email_logged_distinctly(self):
+        """Regression: the whole batch keyed on an absent top-level id →
+        constant key `email-` + empty content, collapsing to one row."""
+        n = {"type": "email", "source": "email", "count": 2, "messages": [
+            {"from": "a@x.com", "subject": "Hi", "received_at": 100, "dedup": "m1"},
+            {"from": "b@x.com", "subject": "Yo", "received_at": 100, "dedup": "m2"},
+        ]}
+        notif_logger.log_notifications([n])
+        rows = [h for h in notif_db.get_notification_history() if h["type"] == "email"]
+        assert len(rows) == 2
+        assert any("a@x.com: Hi" in r["summary"] for r in rows)
+
+    def test_email_dedup_key_fallback_without_id(self):
+        n = {"type": "email", "source": "email", "count": 1, "messages": [
+            {"from": "a@x.com", "subject": "Hi", "received_at": 100}]}
+        notif_logger.log_notifications([n])
+        notif_logger.log_notifications([n])
+        rows = [h for h in notif_db.get_notification_history() if h["type"] == "email"]
+        assert len(rows) == 1
+
+
 class TestUnknownTypeDedupStable:
     def test_unknown_type_key_is_deterministic(self):
         """Fallback key must be stable (regression: hash() is PYTHONHASHSEED-
