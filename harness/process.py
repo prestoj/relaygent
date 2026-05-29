@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os, signal, subprocess, time
 from dataclasses import dataclass
+from pathlib import Path  # used in type annotations (lazy via __future__ annotations)
 from config import CONTEXT_THRESHOLD, HANG_CHECK_DELAY, LOG_FILE, SILENCE_TIMEOUT, Timer, log
 from harness_env import CONTEXT_PCT_FILE, build_prompt, clean_env, configured_model, ensure_settings, find_claude_binary
 from jsonl_checks import check_incomplete_exit, get_context_fill_from_jsonl, get_jsonl_size

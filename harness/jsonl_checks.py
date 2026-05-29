@@ -69,7 +69,7 @@ def check_incomplete_exit(session_id: str, workspace: Path) -> tuple[bool, str]:
             has_tool_result = False
             if content and isinstance(content, list):
                 for item in content:
-                    if item.get("type") == "tool_result":
+                    if isinstance(item, dict) and item.get("type") == "tool_result":
                         has_tool_result = True
                         break
             if not has_tool_result and not content:
@@ -132,6 +132,7 @@ def last_output_is_idle(session_id: str, workspace: Path, max_chars: int = 280) 
     try:
         lines = _read_tail(jsonl)
         assistant_count = 0
+        is_idle = False  # bound before loop; UnboundLocalError isn't in the except tuple
         for line in reversed(lines):
             if not line.strip(): continue
             try: e = json.loads(line)
