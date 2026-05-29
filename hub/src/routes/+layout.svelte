@@ -20,7 +20,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',secrets:'Secrets',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',secrets:'Secrets',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen',worklog:'Worklog'}[$page.url.pathname.split('/')[1]] || '');
 	let isRootPage = $derived($page.url.pathname === '/');
 	let isChatPage = $derived($page.url.pathname === '/chat');
 	let isFullPage = $derived(isRootPage || isChatPage);
@@ -56,6 +56,7 @@
 	</button>
 	<div class="links" class:open={menuOpen}>
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Activity</a>
+		<a href="/worklog" class:active={isActive('/worklog')} onclick={closeMenu}>Worklog</a>
 		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
