@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, URGENT_NOTIFICATION_TYPES,
-    Timer, log, set_status,
+    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, UPTIME_WARN_THRESHOLD,
+    URGENT_NOTIFICATION_TYPES, Timer, log, set_status,
 )
 from notify_format import format_notifications
 
@@ -43,6 +43,7 @@ class SleepManager:
         self.timer = timer
         self._seen_timestamps = set()
         self._cache_missing_since: float | None = None
+        self._uptime_warned = False
 
     def _check_notifications(self) -> list:
         """Read cached notifications file. Returns list of NEW pending notifications."""
@@ -91,7 +92,18 @@ class SleepManager:
     def _wait_for_wake(self) -> tuple[bool, list]:
         """Poll cache file for wake condition. Returns (woken, notifications)."""
         set_status("sleeping")
-        log("Sleeping, waiting for notifications...")
+        uptime_h = self.timer.elapsed() / 3600
+        log(f"Sleeping, waiting for notifications... (relay uptime {uptime_h:.1f}h)")
+        # Observability, not rotation: long-lived relays have historically
+        # degraded task-wakes (root cause never found — runbook-wake-bug-followup).
+        # Surface uptime so any recurrence is diagnosable from logs; warn once.
+        if not self._uptime_warned and self.timer.elapsed() > UPTIME_WARN_THRESHOLD:
+            self._uptime_warned = True
+            log(f"WARNING: relay process uptime {uptime_h/24:.1f}d exceeds "
+                f"{UPTIME_WARN_THRESHOLD // 86400}d. Long-lived relays have "
+                "historically stopped waking on 'task' notifications. If scheduled "
+                "tasks seem stuck, restart the relay (systemctl --user restart "
+                "relaygent-relay.service).")
 
         while True:
             notifications = self._check_notifications()
