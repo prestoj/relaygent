@@ -1,8 +1,10 @@
 <script>
 	import FilePreview from '$lib/components/FilePreview.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import { typeOf, isVideo } from '$lib/fileTypes.js';
 	let { data } = $props();
 	let files = $state(data.files || []);
+	let cwd = $state('');
 	let uploading = $state(false);
 	let dragOver = $state(false);
 	let error = $state('');
@@ -11,7 +13,11 @@
 	let filter = $state('all');
 	let search = $state('');
 
-	let filtered = $derived(files.filter(f => (filter === 'all' || typeOf(f.name) === filter) && (!search || f.name.toLowerCase().includes(search.toLowerCase()))));
+	let matchSearch = (n) => !search || n.toLowerCase().includes(search.toLowerCase());
+	let dirs = $derived(files.filter(f => f.isDir && matchSearch(f.name)));
+	let fileItems = $derived(files.filter(f => !f.isDir));
+	let filtered = $derived(fileItems.filter(f => (filter === 'all' || typeOf(f.name) === filter) && matchSearch(f.name)));
+
 	function fmtSize(bytes) {
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -23,17 +29,26 @@
 		return d.toLocaleDateString();
 	}
 
+	async function loadDir(path) {
+		try {
+			const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+			const d = await res.json();
+			files = d.files || []; cwd = path; preview = null; error = '';
+		} catch { error = 'Could not load folder'; }
+	}
+
 	function uploadOne(file) {
 		return new Promise((resolve) => {
 			const xhr = new XMLHttpRequest();
-			xhr.open('POST', `/api/files/stream?name=${encodeURIComponent(file.name)}`);
+			const name = cwd ? `${cwd}/${file.name}` : file.name;
+			xhr.open('POST', `/api/files/stream?name=${encodeURIComponent(name)}`);
 			xhr.upload.onprogress = (e) => {
 				if (e.lengthComputable) uploadProgress = `${file.name}: ${Math.round(e.loaded / e.total * 100)}%`;
 			};
 			xhr.onload = () => {
 				try {
 					const d = JSON.parse(xhr.responseText);
-					if (xhr.status >= 200 && xhr.status < 300) files = [d, ...files.filter(x => x.name !== d.name)];
+					if (xhr.status >= 200 && xhr.status < 300) files = [d, ...files.filter(x => x.path !== d.path)];
 					else error = d.error || 'Upload failed';
 				} catch { error = 'Upload failed'; }
 				resolve();
@@ -51,46 +66,79 @@
 	function onDrop(e) { e.preventDefault(); dragOver = false; uploadFiles(e.dataTransfer?.files); }
 	function onDragOver(e) { e.preventDefault(); dragOver = true; }
 	function onFileInput(e) { uploadFiles(e.target.files); e.target.value = ''; }
-	async function deleteFile(name) {
-		try {
-			const res = await fetch(`/api/files?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
-			if (res.ok) { files = files.filter(f => f.name !== name); if (preview?.name === name) preview = null; }
-		} catch { /* ignore */ }
+
+	async function newFolder() {
+		const name = prompt('New folder name:');
+		if (!name) return;
+		const rel = cwd ? `${cwd}/${name}` : name;
+		const res = await fetch(`/api/files?dir=${encodeURIComponent(rel)}`, { method: 'POST' });
+		if (res.ok) loadDir(cwd);
+		else error = (await res.json().catch(() => ({}))).error || 'Could not create folder';
+	}
+	async function renameMove(f) {
+		const to = prompt('Rename or move to (path relative to Home):', f.path);
+		if (!to || to === f.path) return;
+		const res = await fetch(`/api/files?from=${encodeURIComponent(f.path)}&to=${encodeURIComponent(to)}`, { method: 'PATCH' });
+		if (res.ok) loadDir(cwd);
+		else error = (await res.json().catch(() => ({}))).error || 'Rename failed';
+	}
+	async function deleteEntry(f) {
+		if (f.isDir && !confirm(`Delete folder "${f.name}" and everything in it?`)) return;
+		const q = f.isDir ? `&recursive=1` : '';
+		const res = await fetch(`/api/files?name=${encodeURIComponent(f.path)}${q}`, { method: 'DELETE' });
+		if (res.ok) {
+			files = files.filter(x => x.path !== f.path);
+			if (preview?.path === f.path) preview = null;
+		} else error = (await res.json().catch(() => ({}))).error || 'Delete failed';
 	}
 </script>
 
 <svelte:head><title>Files — Relaygent</title></svelte:head>
 
 <h1>Shared Files</h1>
-<p class="desc">Drop files here for the agent, or download files the agent has shared with you.</p>
+<p class="desc">Drop files here for the agent, browse folders, or download files the agent has shared with you.</p>
+
+<Breadcrumbs {cwd} onnavigate={loadDir} />
 
 <div class="drop-zone" class:over={dragOver} class:uploading ondrop={onDrop} ondragover={onDragOver} ondragleave={() => dragOver = false}>
 	{#if uploading}
 		<div class="dz-text">{uploadProgress || 'Uploading...'}</div>
 	{:else}
-		<div class="dz-text">Drag & drop files here</div>
-		<label class="dz-btn"><input type="file" multiple onchange={onFileInput} hidden>Choose files</label>
+		<div class="dz-text">Drag & drop files here{cwd ? ` → ${cwd}` : ''}</div>
+		<div class="dz-actions">
+			<label class="dz-btn"><input type="file" multiple onchange={onFileInput} hidden>Choose files</label>
+			<button class="dz-btn" onclick={newFolder}>＋ New folder</button>
+		</div>
 	{/if}
 </div>
 {#if error}<p class="err">{error}</p>{/if}
 
 {#if files.length === 0}
-	<p class="empty">No shared files yet.</p>
+	<p class="empty">This folder is empty.</p>
 {:else}
 	<div class="filters">
 		{#each ['all', 'video', 'audio', 'image', 'other'] as t}
-			<button class="filter-btn" class:active={filter === t} onclick={() => filter = t}>{t} {t === 'all' ? `(${files.length})` : `(${files.filter(f => typeOf(f.name) === t).length})`}</button>
+			<button class="filter-btn" class:active={filter === t} onclick={() => filter = t}>{t} {t === 'all' ? `(${fileItems.length})` : `(${fileItems.filter(f => typeOf(f.name) === t).length})`}</button>
 		{/each}
-		<input class="search" type="text" placeholder="Search files..." bind:value={search} />
+		<input class="search" type="text" placeholder="Search..." bind:value={search} />
 	</div>
 	<div class="file-list">
+		{#each dirs as f}
+			<div class="file-row">
+				<button class="fname dir" onclick={() => loadDir(f.path)}>📁 {f.name}</button>
+				<span class="fmeta">{fmtDate(f.modified)}</span>
+				<button class="fbtn" onclick={() => renameMove(f)} title="Rename / move">✎</button>
+				<button class="fbtn del" onclick={() => deleteEntry(f)} title="Delete folder">×</button>
+			</div>
+		{/each}
 		{#each filtered as f}
-			<div class="file-row" class:active={preview?.name === f.name}>
-				<button class="fname" onclick={() => preview = f}>{#if isVideo(f.name)}<img class="thumb" src="/api/files/thumbnail?name={encodeURIComponent(f.name)}" alt="" loading="lazy" />{/if}{f.name}</button>
+			<div class="file-row" class:active={preview?.path === f.path}>
+				<button class="fname" onclick={() => preview = f}>{#if isVideo(f.name)}<img class="thumb" src="/api/files/thumbnail?name={encodeURIComponent(f.path)}" alt="" loading="lazy" />{/if}{f.name}</button>
 				<span class="fmeta">{fmtSize(f.size)}</span>
 				<span class="fmeta">{fmtDate(f.modified)}</span>
-				<a href="/api/files/download?name={encodeURIComponent(f.name)}" class="fbtn" download title="Download">↓</a>
-				<button class="fbtn del" onclick={() => deleteFile(f.name)} title="Delete">×</button>
+				<a href="/api/files/download?name={encodeURIComponent(f.path)}" class="fbtn" download title="Download">↓</a>
+				<button class="fbtn" onclick={() => renameMove(f)} title="Rename / move">✎</button>
+				<button class="fbtn del" onclick={() => deleteEntry(f)} title="Delete">×</button>
 			</div>
 		{/each}
 	</div>
@@ -106,7 +154,8 @@
 	.drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5em; text-align: center; margin-bottom: 1em; transition: border-color 0.15s; }
 	.drop-zone.over { border-color: var(--link); background: color-mix(in srgb, var(--link) 5%, var(--bg-surface)); }
 	.drop-zone.uploading { opacity: 0.6; }
-	.dz-text { font-weight: 600; color: var(--text-muted); margin-bottom: 0.3em; }
+	.dz-text { font-weight: 600; color: var(--text-muted); margin-bottom: 0.4em; }
+	.dz-actions { display: flex; gap: 0.5em; justify-content: center; }
 	.dz-btn { display: inline-block; padding: 0.4em 0.8em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); cursor: pointer; font-size: 0.85em; color: var(--text); }
 	.dz-btn:hover { border-color: var(--link); color: var(--link); }
 	.err { color: var(--error); font-size: 0.85em; }
@@ -116,6 +165,7 @@
 	.file-row.active { border-color: var(--link); background: color-mix(in srgb, var(--link) 5%, var(--bg-surface)); }
 	.fname { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: none; border: none; color: var(--link); cursor: pointer; text-align: left; padding: 0; font-size: inherit; }
 	.fname:hover { text-decoration: underline; }
+	.fname.dir { font-weight: 600; }
 	.thumb { width: 40px; height: 24px; object-fit: cover; border-radius: 3px; margin-right: 0.4em; vertical-align: middle; }
 	.fmeta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
 	.fbtn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.95em; padding: 0.15em 0.35em; text-decoration: none; }

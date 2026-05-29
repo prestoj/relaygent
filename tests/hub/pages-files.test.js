@@ -43,8 +43,10 @@ test('files load excludes hidden files', () => {
 	assert.ok(!data.files.some(f => f.name === '.hidden'));
 });
 
-test('files load excludes directories', () => {
+test('files load includes directories with isDir flag', () => {
 	fs.mkdirSync(path.join(sharedDir, 'subdir'), { recursive: true });
 	const data = load();
-	assert.ok(!data.files.some(f => f.name === 'subdir'));
+	const dir = data.files.find(f => f.name === 'subdir');
+	assert.ok(dir);
+	assert.equal(dir.isDir, true);
 });

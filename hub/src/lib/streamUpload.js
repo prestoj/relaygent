@@ -4,16 +4,19 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { getSharedDir, validateFilename, MAX_FILE_SIZE } from './files.js';
+import { safeResolve, validatePath, MAX_FILE_SIZE } from './files.js';
 
 export function handleStreamUpload(req, res) {
 	const url = new URL(req.url, `http://${req.headers.host}`);
+	// `name` may be a subpath (e.g. "docs/report.pdf") so uploads can target folders.
 	const name = url.searchParams.get('name');
-	const err = validateFilename(name);
+	const err = validatePath(name);
 	if (err) return respond(res, 400, { error: err });
 
-	const dest = path.join(getSharedDir(), name);
-	if (!dest.startsWith(getSharedDir())) return respond(res, 400, { error: 'Invalid path' });
+	const resolved = safeResolve(name);
+	if (resolved.error) return respond(res, 400, { error: resolved.error });
+	const dest = resolved.path;
+	try { fs.mkdirSync(path.dirname(dest), { recursive: true }); } catch {}
 
 	const ws = fs.createWriteStream(dest);
 	let bytes = 0;
@@ -37,7 +40,10 @@ export function handleStreamUpload(req, res) {
 	ws.on('finish', () => {
 		if (aborted) return;
 		const stat = fs.statSync(dest);
-		respond(res, 201, { name, size: stat.size, modified: stat.mtime.toISOString() });
+		respond(res, 201, {
+			name: path.basename(name), path: name,
+			size: stat.size, modified: stat.mtime.toISOString(), isDir: false,
+		});
 	});
 
 	ws.on('error', (e) => {

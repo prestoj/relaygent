@@ -27,8 +27,7 @@ describe('files.js', () => {
 	});
 
 	it('listFiles returns empty on fresh dir', () => {
-		const list = files.listFiles();
-		assert.deepEqual(list, []);
+		assert.deepEqual(files.listFiles(), []);
 	});
 
 	it('listFiles returns files sorted by modified desc', () => {
@@ -54,42 +53,116 @@ describe('files.js', () => {
 		assert.equal(list[0].name, 'visible.txt');
 	});
 
-	it('listFiles excludes directories', () => {
+	it('listFiles includes folders, sorted before files, with a relative path', () => {
 		const dir = files.getSharedDir();
 		fs.mkdirSync(path.join(dir, 'subdir'));
 		fs.writeFileSync(path.join(dir, 'file.txt'), 'ok');
 		const list = files.listFiles();
-		assert.equal(list.length, 1);
-		assert.equal(list[0].name, 'file.txt');
+		assert.equal(list.length, 2);
+		assert.equal(list[0].name, 'subdir');
+		assert.equal(list[0].isDir, true);
+		assert.equal(list[0].path, 'subdir');
+		assert.equal(list[1].name, 'file.txt');
+		assert.equal(list[1].isDir, false);
 	});
 
-	it('validateFilename rejects empty', () => {
+	it('listFiles lists a subdirectory and reports nested paths', () => {
+		const dir = files.getSharedDir();
+		fs.mkdirSync(path.join(dir, 'docs'));
+		fs.writeFileSync(path.join(dir, 'docs', 'note.md'), '# hi');
+		const list = files.listFiles('docs');
+		assert.equal(list.length, 1);
+		assert.equal(list[0].name, 'note.md');
+		assert.equal(list[0].path, path.join('docs', 'note.md'));
+	});
+
+	it('listFiles returns empty for a traversal subdir', () => {
+		assert.deepEqual(files.listFiles('../..'), []);
+	});
+
+	it('validateFilename rejects empty / traversal / hidden, accepts valid', () => {
 		assert.ok(files.validateFilename(''));
 		assert.ok(files.validateFilename(null));
-	});
-
-	it('validateFilename rejects path traversal', () => {
 		assert.ok(files.validateFilename('../etc/passwd'));
 		assert.ok(files.validateFilename('foo/bar'));
-	});
-
-	it('validateFilename rejects hidden files', () => {
 		assert.ok(files.validateFilename('.env'));
-	});
-
-	it('validateFilename accepts valid names', () => {
 		assert.equal(files.validateFilename('readme.txt'), null);
 		assert.equal(files.validateFilename('my-file_2.pdf'), null);
 	});
 
-	it('getFilePath returns error for invalid name', () => {
-		const result = files.getFilePath('../hack');
-		assert.ok(result.error);
+	it('validatePath accepts nested paths, rejects traversal/absolute/hidden', () => {
+		assert.equal(files.validatePath('a/b/c.txt'), null);
+		assert.equal(files.validatePath('file.txt'), null);
+		assert.ok(files.validatePath('../escape'));
+		assert.ok(files.validatePath('a/../../etc'));
+		assert.ok(files.validatePath('/abs/path'));
+		assert.ok(files.validatePath('a/.hidden/b'));
+		assert.ok(files.validatePath(''));
 	});
 
-	it('getFilePath returns path for valid name', () => {
-		const result = files.getFilePath('test.txt');
+	it('safeResolve contains paths within the share root', () => {
+		const root = files.getSharedDir();
+		assert.equal(files.safeResolve('a/b.txt').path, path.join(root, 'a/b.txt'));
+		assert.equal(files.safeResolve('').path, root);
+		assert.ok(files.safeResolve('../../etc/passwd').error);
+		assert.ok(files.safeResolve('a/../../..').error);
+	});
+
+	it('getFilePath rejects traversal/hidden, resolves valid (existence left to caller)', () => {
+		assert.ok(files.getFilePath('../hack').error);
+		assert.ok(files.getFilePath('.env').error);
+		// A non-existent but well-formed path still resolves — routes turn ENOENT into 404.
+		assert.ok(files.getFilePath('nope.txt').path);
+	});
+
+	it('getFilePath returns path for an existing nested file', () => {
+		const dir = files.getSharedDir();
+		fs.mkdirSync(path.join(dir, 'sub'));
+		fs.writeFileSync(path.join(dir, 'sub', 'test.txt'), 'x');
+		const result = files.getFilePath('sub/test.txt');
 		assert.ok(result.path);
-		assert.ok(result.path.endsWith('test.txt'));
+		assert.ok(result.path.endsWith(path.join('sub', 'test.txt')));
+	});
+
+	it('createDir makes nested folders and rejects traversal', () => {
+		assert.deepEqual(files.createDir('a/b/c'), { ok: true });
+		assert.ok(fs.existsSync(path.join(files.getSharedDir(), 'a/b/c')));
+		assert.ok(files.createDir('../evil').error);
+	});
+
+	it('renameEntry renames and moves, guarding overwrite & traversal', () => {
+		const dir = files.getSharedDir();
+		fs.writeFileSync(path.join(dir, 'old.txt'), 'data');
+		assert.deepEqual(files.renameEntry('old.txt', 'new.txt'), { ok: true });
+		assert.ok(fs.existsSync(path.join(dir, 'new.txt')));
+		// move into a (new) folder
+		assert.deepEqual(files.renameEntry('new.txt', 'folder/moved.txt'), { ok: true });
+		assert.ok(fs.existsSync(path.join(dir, 'folder', 'moved.txt')));
+		// missing source
+		assert.ok(files.renameEntry('ghost.txt', 'x.txt').error);
+		// overwrite guard
+		fs.writeFileSync(path.join(dir, 'keep.txt'), '1');
+		assert.ok(files.renameEntry('folder/moved.txt', 'keep.txt').error);
+		// traversal
+		assert.ok(files.renameEntry('keep.txt', '../out.txt').error);
+	});
+
+	it('deleteEntry removes files, empty dirs, and recursive dirs', () => {
+		const dir = files.getSharedDir();
+		fs.writeFileSync(path.join(dir, 'f.txt'), 'x');
+		assert.deepEqual(files.deleteEntry('f.txt'), { ok: true });
+		assert.ok(!fs.existsSync(path.join(dir, 'f.txt')));
+
+		fs.mkdirSync(path.join(dir, 'empty'));
+		assert.deepEqual(files.deleteEntry('empty'), { ok: true });
+
+		fs.mkdirSync(path.join(dir, 'full'));
+		fs.writeFileSync(path.join(dir, 'full', 'inner.txt'), 'x');
+		assert.equal(files.deleteEntry('full').error, 'Folder not empty');
+		assert.deepEqual(files.deleteEntry('full', { recursive: true }), { ok: true });
+		assert.ok(!fs.existsSync(path.join(dir, 'full')));
+
+		assert.equal(files.deleteEntry('ghost').error, 'File not found');
+		assert.ok(files.deleteEntry('../etc').error);
 	});
 });
