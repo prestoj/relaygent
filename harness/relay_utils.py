@@ -109,6 +109,7 @@ def startup_init() -> None:
     kill_orphaned_claudes()
     pull_latest()
     check_and_rebuild_hub()
+    ensure_notifications_running()
     check_disk_and_cleanup()
     # Ack Slack so stale unreads from while we were offline don't re-trigger
     try:
@@ -166,3 +167,4 @@ def cleanup_context_file() -> None:
 from relay_alerts import notify_crash, notify_lifecycle  # noqa: E402, F401
 from relay_crash import CRASH_CONTEXT_FILE, clear_crash_context, write_crash_context  # noqa: E402, F401
 from relay_hub import check_and_rebuild_hub  # noqa: E402, F401
+from relay_notifications import ensure_notifications_running  # noqa: E402, F401
