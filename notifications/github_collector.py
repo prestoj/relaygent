@@ -110,7 +110,12 @@ def collect(notifications):
         params["since"] = last_check
 
     data = _gh_api("notifications", params)
-    if not data or not isinstance(data, list):
+    if data is None:
+        # Transient API error (gh failure/timeout/bad JSON). Do NOT advance
+        # `since` — otherwise notifications that arrived during the outage are
+        # excluded from the next poll and lost forever. Retry next poll.
+        return
+    if not isinstance(data, list):
         _save_last_check()
         return
 

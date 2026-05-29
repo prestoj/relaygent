@@ -172,11 +172,14 @@ class TestCollect:
         gc.collect(notifications)
         assert notifications == []
 
+    @patch.object(gc, "_save_last_check")
     @patch.object(gc, "_gh_api", return_value=None)
     @patch.object(gc, "_gh_available", return_value=True)
-    def test_api_failure_still_saves_last_check(self, mock_avail, mock_api):
+    def test_api_failure_does_not_advance_last_check(self, mock_avail, mock_api, mock_save):
+        """Transient API error must NOT advance `since` — else notifications
+        that arrived during the outage are excluded next poll and lost."""
         gc.collect([])
-        assert gc._load_last_check() is not None
+        mock_save.assert_not_called()
 
     @patch.object(gc, "_gh_api")
     @patch.object(gc, "_gh_available", return_value=True)
