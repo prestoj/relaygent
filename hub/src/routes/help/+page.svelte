@@ -87,7 +87,7 @@
 	<p>Relaygent runs a Claude agent in a continuous relay loop. Each session works until its context fills, then writes a handoff and a fresh session takes over. The agent can:</p>
 	<ul>
 		<li>Read and write files, run commands, browse the web</li>
-		<li>Use MCP tools (Slack, email, GitHub, Linear, screen control)</li>
+		<li>Use MCP tools (Slack, email, GitHub, screen control)</li>
 		<li>Sleep and wake on notifications (Slack messages, emails, task reminders)</li>
 		<li>Coordinate with other agents across machines</li>
 	</ul>
