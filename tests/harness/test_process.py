@@ -123,36 +123,34 @@ class TestTerminate:
         p._terminate()  # Should not raise
 
     def test_noop_when_already_exited(self, tmp_path):
+        # Dead leader: NEVER killpg — its pid may have been recycled, and
+        # killpg on a recycled pid has SIGKILLed the systemd --user manager.
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = 0  # Already exited
-        p.process = mock_proc
-        p._terminate()
-        mock_proc.terminate.assert_not_called()
-
-    def test_terminates_running_process(self, tmp_path):
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        mock_proc = MagicMock()
-        mock_proc.poll.return_value = None  # Still running
-        mock_proc.wait.return_value = None
-        p.process = mock_proc
-        p._terminate()
-        mock_proc.terminate.assert_called_once()
-
-    def test_kills_on_timeout(self, tmp_path):
-        p = ClaudeProcess("s", Timer(), tmp_path)
-        mock_proc = MagicMock()
-        mock_proc.poll.return_value = None
         mock_proc.pid = 99999
-        mock_proc.wait.side_effect = [
-            subprocess.TimeoutExpired("claude", 5), None
-        ]
         p.process = mock_proc
         with patch("os.killpg") as mock_killpg:
             p._terminate()
-            mock_killpg.assert_called_once_with(99999, signal.SIGKILL)
+        mock_killpg.assert_not_called()
 
-    def test_falls_back_to_kill_on_killpg_error(self, tmp_path):
+    def test_terminates_running_process_via_group(self, tmp_path):
+        # Live leader leading its own group: SIGTERM the whole group; the
+        # leader exits within the grace window so no SIGKILL is needed.
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None  # Still running
+        mock_proc.pid = 99999
+        mock_proc.wait.return_value = None
+        p.process = mock_proc
+        with patch("os.killpg") as mock_killpg, \
+             patch("os.getpgid", return_value=99999), \
+             patch("os.getpgrp", return_value=1000):
+            p._terminate()
+        mock_killpg.assert_called_once_with(99999, signal.SIGTERM)
+
+    def test_kills_group_on_timeout(self, tmp_path):
+        # SIGTERM grace times out → escalate to SIGKILL on the same group.
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
@@ -161,9 +159,77 @@ class TestTerminate:
             subprocess.TimeoutExpired("claude", 5), None
         ]
         p.process = mock_proc
-        with patch("os.killpg", side_effect=OSError("no such group")):
+        with patch("os.killpg") as mock_killpg, \
+             patch("os.getpgid", return_value=99999), \
+             patch("os.getpgrp", return_value=1000):
             p._terminate()
-            mock_proc.kill.assert_called_once()
+        assert mock_killpg.call_args_list == [
+            ((99999, signal.SIGTERM),), ((99999, signal.SIGKILL),)
+        ]
+
+    def test_never_killpg_relay_own_group(self, tmp_path):
+        # Regression: if Claude's pgid == the relay's own group, killpg would
+        # nuke the relay/session. Must signal the leader only.
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.pid = 1000
+        mock_proc.wait.return_value = None
+        p.process = mock_proc
+        with patch("os.killpg") as mock_killpg, \
+             patch("os.getpgid", return_value=1000), \
+             patch("os.getpgrp", return_value=1000):  # pgid == relay group
+            p._terminate()
+        mock_killpg.assert_not_called()
+        sent = [c.args[0] for c in mock_proc.send_signal.call_args_list]
+        assert signal.SIGTERM in sent
+
+    def test_never_killpg_when_not_group_leader(self, tmp_path):
+        # Regression: pgid != leader pid (not a private group / pid reused
+        # into another group, e.g. the manager's) → never killpg.
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.pid = 99999
+        mock_proc.wait.return_value = None
+        p.process = mock_proc
+        with patch("os.killpg") as mock_killpg, \
+             patch("os.getpgid", return_value=82704), \
+             patch("os.getpgrp", return_value=1000):
+            p._terminate()
+        mock_killpg.assert_not_called()
+        sent = [c.args[0] for c in mock_proc.send_signal.call_args_list]
+        assert signal.SIGTERM in sent
+
+    def test_no_killpg_when_leader_gone_at_kill_time(self, tmp_path):
+        # Regression: getpgid raises (leader vanished between poll and kill)
+        # → fall back to the leader handle, never killpg a recycled pid.
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.pid = 99999
+        mock_proc.wait.return_value = None
+        p.process = mock_proc
+        with patch("os.killpg") as mock_killpg, \
+             patch("os.getpgid", side_effect=ProcessLookupError()), \
+             patch("os.getpgrp", return_value=1000):
+            p._terminate()
+        mock_killpg.assert_not_called()
+
+    def test_falls_back_to_leader_signal_on_killpg_error(self, tmp_path):
+        # killpg itself errors (group already gone) → signal the leader.
+        p = ClaudeProcess("s", Timer(), tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.pid = 99999
+        mock_proc.wait.return_value = None
+        p.process = mock_proc
+        with patch("os.killpg", side_effect=OSError("no such group")), \
+             patch("os.getpgid", return_value=99999), \
+             patch("os.getpgrp", return_value=1000):
+            p._terminate()
+        sent = [c.args[0] for c in mock_proc.send_signal.call_args_list]
+        assert signal.SIGTERM in sent
 
 
 class TestConfiguredModel:
