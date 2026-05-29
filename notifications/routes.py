@@ -89,33 +89,41 @@ def _collect_due_reminders(notifications):
         ).fetchall()
 
         for r in rows:
-            if r["recurrence"]:
-                is_due, prev_occ = is_recurring_reminder_due(
-                    r["recurrence"], r["trigger_time"]
-                )
-                if is_due:
-                    conn.execute(
-                        "UPDATE reminders SET trigger_time = ? WHERE id = ?",
-                        (prev_occ, r["id"]),
+            # Per-row guard: a single malformed reminder (e.g. a bad `recurrence`
+            # cron expr → croniter raises, or an unparseable trigger_time) must
+            # not abort the whole poll and silently drop every *other* due
+            # reminder. Log it and keep going.
+            try:
+                if r["recurrence"]:
+                    is_due, prev_occ = is_recurring_reminder_due(
+                        r["recurrence"], r["trigger_time"]
                     )
-                    conn.commit()
+                    if is_due:
+                        conn.execute(
+                            "UPDATE reminders SET trigger_time = ? WHERE id = ?",
+                            (prev_occ, r["id"]),
+                        )
+                        conn.commit()
+                        notifications.append({
+                            "type": "reminder", "id": r["id"], "message": r["message"],
+                            "trigger_time": prev_occ, "created_at": r["created_at"],
+                        })
+                elif r["trigger_time"] <= now_iso:
+                    # Past the sticky window → mark fired=1 and stop returning.
+                    if r["trigger_time"] <= fire_cutoff_iso:
+                        conn.execute(
+                            "UPDATE reminders SET fired = 1 WHERE id = ?", (r["id"],)
+                        )
+                        conn.commit()
+                        if r["trigger_time"] < stale_cutoff_iso:
+                            continue  # Too old to bother delivering
                     notifications.append({
                         "type": "reminder", "id": r["id"], "message": r["message"],
-                        "trigger_time": prev_occ, "created_at": r["created_at"],
+                        "trigger_time": r["trigger_time"], "created_at": r["created_at"],
                     })
-            elif r["trigger_time"] <= now_iso:
-                # Past the sticky window → mark fired=1 and stop returning.
-                if r["trigger_time"] <= fire_cutoff_iso:
-                    conn.execute(
-                        "UPDATE reminders SET fired = 1 WHERE id = ?", (r["id"],)
-                    )
-                    conn.commit()
-                    if r["trigger_time"] < stale_cutoff_iso:
-                        continue  # Too old to bother delivering
-                notifications.append({
-                    "type": "reminder", "id": r["id"], "message": r["message"],
-                    "trigger_time": r["trigger_time"], "created_at": r["created_at"],
-                })
+            except Exception:
+                logger.exception("Skipping malformed reminder row (id=%s)",
+                                 r["id"] if "id" in r.keys() else "?")
 
 
 def _collect_chat_messages(notifications):

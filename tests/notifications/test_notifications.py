@@ -118,6 +118,22 @@ class TestNotificationsEndpoint:
         resp = client.get("/notifications/pending?fast=1")
         assert resp.get_json() == []
 
+    def test_malformed_reminder_does_not_suppress_others(self, client):
+        """A bad `recurrence` makes croniter raise; without the per-row guard
+        that aborted the whole poll and dropped every other due reminder."""
+        with notif_db.get_db() as conn:
+            conn.execute(
+                "INSERT INTO reminders (trigger_time, message, recurrence) "
+                "VALUES (?, ?, ?)",
+                ("2020-01-01T00:00:00", "bad cron", "not a cron expr"),
+            )
+            conn.commit()
+        past = (datetime.now() - timedelta(minutes=1)).isoformat()
+        client.post("/reminder", json={"trigger_time": past, "message": "good one"})
+        resp = client.get("/notifications/pending?fast=1")
+        msgs = [n.get("message") for n in resp.get_json() if n["type"] == "reminder"]
+        assert "good one" in msgs  # delivered despite the malformed sibling
+
 
 class TestSlackCollectorHelpers:
     def test_ack_creates_timestamp_file(self, tmp_path, monkeypatch):
