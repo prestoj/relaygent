@@ -90,7 +90,10 @@ fi
 # --- Hub auto-restart ---
 HP=$(python3 -c "import json; print(json.load(open('$CFG'))['hub']['port'])" 2>/dev/null || echo 8080)
 hub_alive=false
-curl -sf --max-time 1 "http://127.0.0.1:$HP/api/health" >/dev/null 2>&1 && hub_alive=true
+# Hub may serve HTTPS (TLS) or plain HTTP depending on config — probe both, else a
+# HTTPS-only hub looks "down" over HTTP and we spawn a doomed ws-server every cycle.
+{ curl -skf --max-time 1 "https://127.0.0.1:$HP/api/health" >/dev/null 2>&1 \
+  || curl -sf --max-time 1 "http://127.0.0.1:$HP/api/health" >/dev/null 2>&1; } && hub_alive=true
 if [ "$hub_alive" = false ] && [ -f "$REPO_DIR/hub/build/handler.js" ]; then
     HUB_CRASH_FILE="/tmp/relaygent-hub-last-start"
     hub_ok=true
