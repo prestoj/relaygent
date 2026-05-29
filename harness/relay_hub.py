@@ -27,6 +27,32 @@ def _hub_uses_launchagent() -> bool:
     return sys.platform == "darwin" and LAUNCHAGENT_PLIST.exists()
 
 
+def _hub_healthy(hub_port: str, timeout: float = 3.0) -> bool:
+    """Probe the hub's health endpoint. Returns True iff it responds 200.
+
+    The hub may serve HTTPS (TLS) or plain HTTP depending on config, so try
+    both. Used to detect a dead hub even when the build is current — e.g. after
+    a cgroup kill takes the relay-managed hub down without a rebuild trigger.
+    """
+    import ssl
+    import urllib.error
+    import urllib.request
+
+    https_ctx = ssl.create_default_context()
+    https_ctx.check_hostname = False
+    https_ctx.verify_mode = ssl.CERT_NONE
+    for scheme, ctx in (("https", https_ctx), ("http", None)):
+        try:
+            with urllib.request.urlopen(
+                f"{scheme}://127.0.0.1:{hub_port}/api/health", timeout=timeout, context=ctx
+            ) as resp:
+                if resp.status == 200:
+                    return True
+        except (urllib.error.URLError, OSError, ValueError):
+            continue
+    return False
+
+
 def _load_config() -> dict:
     """Load config values with sensible defaults."""
     config_file = Path.home() / ".relaygent" / "config.json"
@@ -66,7 +92,15 @@ def check_and_rebuild_hub() -> None:
         return
 
     if build_commit_file.exists() and build_commit_file.read_text().strip() == current:
-        log("Hub build is current, skipping rebuild")
+        hub_port = conf["hub_port"]
+        if _hub_healthy(hub_port):
+            log("Hub build is current and responding, skipping rebuild")
+            return
+        # Build is current but the hub isn't answering — it likely died with a
+        # relay/cgroup restart. Revive it without a needless rebuild.
+        log("Hub build is current but not responding — restarting hub")
+        _start_hub(_hub_uses_launchagent(), hub_port, conf["kb_dir"], data_dir,
+                   conf["notifications_port"], Path.home() / ".relaygent")
         return
 
     log("Hub build is stale — rebuilding...")

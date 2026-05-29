@@ -33,14 +33,33 @@ class TestCheckAndRebuildHub:
     def _build_run(self, rc=0):
         r = MagicMock(); r.returncode = rc; r.stderr = b""; return r
 
-    def test_skips_when_build_is_current(self, capsys):
+    def test_skips_when_build_is_current_and_healthy(self, capsys):
         commit_file = self.repo / "data" / "hub-build-commit"
         commit_file.write_text("abc1234")
-        with patch("relay_hub.subprocess.run", return_value=self._git_run("abc1234")) as mock_run:
+        with patch("relay_hub.subprocess.run", return_value=self._git_run("abc1234")) as mock_run, \
+             patch("relay_hub._hub_healthy", return_value=True), \
+             patch("relay_hub.subprocess.Popen") as mock_popen:
             check_and_rebuild_hub()
         calls = [str(c) for c in mock_run.call_args_list]
         assert not any("npm" in c for c in calls)
+        mock_popen.assert_not_called()  # healthy hub: no restart
         assert "skipping" in capsys.readouterr().out
+
+    def test_revives_hub_when_build_current_but_down(self, capsys):
+        # Build is current (no rebuild), but the hub isn't responding — e.g. it
+        # died with a relay/cgroup restart. Should restart the hub, not rebuild.
+        (self.repo / "data" / "hub-build-commit").write_text("abc1234")
+        proc = MagicMock(); proc.pid = 4321
+        with patch("relay_hub.subprocess.run", return_value=self._git_run("abc1234")) as mock_run, \
+             patch("relay_hub._hub_healthy", return_value=False), \
+             patch("relay_hub.subprocess.Popen", return_value=proc) as mock_popen:
+            check_and_rebuild_hub()
+        calls = [str(c) for c in mock_run.call_args_list]
+        assert not any("npm" in c for c in calls)  # no rebuild
+        mock_popen.assert_called_once()  # hub restarted
+        out = capsys.readouterr().out
+        assert "not responding" in out
+        assert "4321" in (self.home / ".relaygent" / "hub.pid").read_text()
 
     def test_rebuilds_when_no_commit_file(self):
         proc = MagicMock(); proc.pid = 9999
