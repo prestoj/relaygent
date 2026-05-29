@@ -46,6 +46,17 @@ export function safeResolve(relPath = '') {
 	const abs = path.resolve(root, relPath || '.');
 	const rel = path.relative(root, abs);
 	if (rel.startsWith('..') || path.isAbsolute(rel)) return { error: 'Invalid path' };
+	// Defense-in-depth: the lexical check above can't see symlinks. A symlinked segment
+	// inside the share could point outside it, so resolve the real path of the deepest
+	// existing ancestor and re-check containment. (The leaf may not exist yet on a
+	// create/move, hence walking up to the nearest real ancestor.)
+	try {
+		const realRoot = fs.realpathSync(root);
+		let probe = abs;
+		while (!fs.existsSync(probe) && path.dirname(probe) !== probe) probe = path.dirname(probe);
+		const realRel = path.relative(realRoot, fs.realpathSync(probe));
+		if (realRel.startsWith('..') || path.isAbsolute(realRel)) return { error: 'Invalid path' };
+	} catch { /* realpath failed (race/perms) — fall back to the lexical guard above */ }
 	return { path: abs };
 }
 

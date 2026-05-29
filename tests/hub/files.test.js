@@ -108,6 +108,24 @@ describe('files.js', () => {
 		assert.ok(files.safeResolve('a/../../..').error);
 	});
 
+	it('safeResolve rejects a symlink that escapes the share (realpath guard)', () => {
+		const root = files.getSharedDir();
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'files-outside-'));
+		try {
+			// A symlinked dir inside the share pointing outside it passes the lexical
+			// check but must be rejected once the real path is resolved.
+			fs.symlinkSync(outside, path.join(root, 'escape'));
+			assert.ok(files.safeResolve('escape').error, 'symlinked dir should be rejected');
+			assert.ok(files.safeResolve('escape/secret.txt').error, 'path through symlink rejected');
+			// A symlink to a sibling still inside the share stays allowed.
+			fs.mkdirSync(path.join(root, 'real'));
+			fs.symlinkSync(path.join(root, 'real'), path.join(root, 'inside'));
+			assert.ok(files.safeResolve('inside').path, 'in-share symlink allowed');
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true });
+		}
+	});
+
 	it('getFilePath rejects traversal/hidden, resolves valid (existence left to caller)', () => {
 		assert.ok(files.getFilePath('../hack').error);
 		assert.ok(files.getFilePath('.env').error);
