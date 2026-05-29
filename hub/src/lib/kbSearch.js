@@ -4,11 +4,12 @@ import path from 'path';
 
 /** Resolve slug to filepath, validated against KB_DIR */
 function safeSlugPath(slug) {
-	const kbDir = getKbDir();
-	const filepath = path.join(kbDir, `${slug}.md`);
-	const resolved = path.resolve(filepath);
-	if (!resolved.startsWith(path.resolve(kbDir))) throw new Error('Invalid slug');
-	return filepath;
+	const root = path.resolve(getKbDir());
+	const resolved = path.resolve(root, `${slug}.md`);
+	// Containment via path.relative, not startsWith (sibling-prefix escape). Matches kb.js.
+	const rel = path.relative(root, resolved);
+	if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('Invalid slug');
+	return resolved;
 }
 
 /** Search KB topics by query string */

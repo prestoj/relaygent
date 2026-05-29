@@ -7,12 +7,15 @@ import matter from 'gray-matter';
 const KB_DIR = getKbDir();
 
 function validateSlug(slug) {
-	const filepath = path.join(KB_DIR, `${slug}.md`);
-	const resolved = path.resolve(filepath);
-	if (!resolved.startsWith(path.resolve(KB_DIR))) {
+	const root = path.resolve(KB_DIR);
+	const resolved = path.resolve(KB_DIR, `${slug}.md`);
+	// Containment via path.relative, not startsWith (a sibling prefix like 'topics-evil'
+	// would escape a naive startsWith check). Matches kb.js safeSlugPath.
+	const rel = path.relative(root, resolved);
+	if (rel.startsWith('..') || path.isAbsolute(rel)) {
 		throw error(400, 'Invalid slug');
 	}
-	return filepath;
+	return resolved;
 }
 
 export function load({ params }) {

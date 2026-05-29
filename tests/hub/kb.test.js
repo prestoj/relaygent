@@ -83,6 +83,18 @@ test('getTopic: path traversal rejected', () => {
     assert.throws(() => getTopic('../../../etc/passwd'), /Invalid slug/);
 });
 
+test('getTopic: sibling-prefix escape rejected (path.relative, not startsWith)', () => {
+    // A slug pointing at a sibling dir whose name starts with the KB dir name would pass
+    // a naive startsWith(KB_DIR) check but must be rejected.
+    const sibling = `../${path.basename(tmpDir)}-evil/pwned`;
+    assert.throws(() => getTopic(sibling), /Invalid slug/);
+    assert.throws(() => saveTopic(sibling, { title: 'x' }, 'nope'), /Invalid slug/);
+    // legit nested slug (subdir, e.g. contacts/<name>) still resolves
+    fs.mkdirSync(path.join(tmpDir, 'contacts'), { recursive: true });
+    saveTopic('contacts/someone', { title: 'Someone' }, 'ok');
+    assert.ok(getTopic('contacts/someone'));
+});
+
 test('saveTopic: writes file and updates timestamp', () => {
     saveTopic('saved', { title: 'Saved Topic', created: '2026-01-01' }, 'Hello content.');
     const raw = fs.readFileSync(path.join(tmpDir, 'saved.md'), 'utf-8');

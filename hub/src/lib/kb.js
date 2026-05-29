@@ -15,14 +15,14 @@ const KB_DIR = process.env.RELAYGENT_KB_DIR || path.join(HUB_DIR, '..', 'knowled
 
 /** Get the KB directory path (for use by other modules) */
 export function getKbDir() { return KB_DIR; }
-/** Validate a slug resolves within KB_DIR (prevent path traversal) */
+/** Validate a slug resolves within KB_DIR (prevent path traversal + sibling-prefix escape) */
 function safeSlugPath(slug) {
-	const filepath = path.join(KB_DIR, `${slug}.md`);
-	const resolved = path.resolve(filepath);
-	if (!resolved.startsWith(path.resolve(KB_DIR))) {
-		throw new Error('Invalid slug');
-	}
-	return filepath;
+	const root = path.resolve(KB_DIR);
+	const resolved = path.resolve(KB_DIR, `${slug}.md`);
+	// path.relative containment, NOT startsWith — '../topics-evil/x' would pass startsWith('…/topics').
+	const rel = path.relative(root, resolved);
+	if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('Invalid slug');
+	return resolved;
 }
 
 /** Parse a markdown file with frontmatter */
