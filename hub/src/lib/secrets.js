@@ -21,7 +21,7 @@ const KEY_PATH = join(DIR, 'master.key');
 const ALG = 'aes-256-gcm';
 
 // A valid secret name: lowercase/uppercase letters, digits, underscore, dash.
-const NAME_RE = /^[A-Za-z0-9_-]{1,128}$/;
+const NAME_RE = /^[A-Za-z0-9_.-]{1,128}$/;
 export function isValidName(name) {
 	return typeof name === 'string' && NAME_RE.test(name);
 }
