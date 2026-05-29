@@ -1,5 +1,6 @@
 """Notification history logger — converts notifications to log entries."""
 
+import hashlib
 import json
 import logging
 
@@ -35,18 +36,24 @@ def log_notifications(notifications):
             desc = n.get("description", "")[:200]
             overdue = n.get("overdue", "")
             summary = f"{desc} ({overdue})" if overdue else desc
-            log_notification(
-                "task", "task", summary,
-                json.dumps(n), f"task-{hash(desc)}")
+            # Dedup on the firing time, not just the description: each cron/freq
+            # firing is a distinct history event. The task notification already
+            # carries a stable key in `timestamp` (task-<desc>-<fired_at>); fall
+            # back to building it from fired_at. (hash(desc) was wrong twice over:
+            # it collapsed every repeat firing to one row, and str hashing is
+            # PYTHONHASHSEED-randomized so keys weren't stable across restarts.)
+            key = n.get("timestamp") or f"task-{desc}-{n.get('fired_at', '')}"
+            log_notification("task", "task", summary, json.dumps(n), key)
         elif ntype in ("email", "github", "linear"):
             key = n.get("id", n.get("url", ""))
             log_notification(
                 ntype, ntype, n.get("title", n.get("message", ""))[:200],
                 json.dumps(n), f"{ntype}-{key}")
         else:
+            digest = hashlib.sha1(
+                json.dumps(n, sort_keys=True).encode()).hexdigest()[:16]
             log_notification(
-                ntype, ntype, str(n)[:200],
-                json.dumps(n), f"{ntype}-{hash(json.dumps(n, sort_keys=True))}")
+                ntype, ntype, str(n)[:200], json.dumps(n), f"{ntype}-{digest}")
     try:
         prune_notification_log()
     except Exception:
