@@ -1,16 +1,6 @@
 <script>
 	let { data } = $props();
 
-	const KIND_META = {
-		pr:      { label: 'PR',      color: '#8b5cf6' },
-		fix:     { label: 'fix',     color: '#ef4444' },
-		feature: { label: 'feature', color: '#3b82f6' },
-		ops:     { label: 'ops',     color: '#f59e0b' },
-		trade:   { label: 'trade',   color: '#22c55e' },
-		note:    { label: 'note',    color: '#6b7280' },
-	};
-	const meta = (k) => KIND_META[k] || KIND_META.note;
-
 	// Compare against LOCAL today/yesterday (not toISOString/UTC), matching the
 	// local-day grouping — otherwise evening entries label as "Yesterday".
 	const localYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -52,12 +42,12 @@
 				<ul>
 					{#each g.entries as e}
 						<li>
-							<span class="dot" style="background:{meta(e.kind).color}" title={meta(e.kind).label}></span>
+							<span class="dot"></span>
 							<div class="body">
 								<div class="line">
 									<span class="title">{e.title}</span>
 									{#if href(e.link)}<a class="link" href={href(e.link)} target="_blank" rel="noreferrer">{e.link.startsWith('#') || /^\d+$/.test(e.link) ? `#${e.link.replace('#','')}` : 'link'}</a>{/if}
-									<span class="tag" style="color:{meta(e.kind).color}">{meta(e.kind).label}</span>
+									{#if e.kind}<span class="tag">{e.kind}</span>{/if}
 									<span class="time">{time(e.ts)}</span>
 								</div>
 								{#if e.detail}<div class="detail">{e.detail}</div>{/if}
@@ -84,12 +74,12 @@
 	.day h2 .count { color: var(--text-muted); opacity: 0.6; font-weight: 400; margin-left: 0.3em; }
 	ul { list-style: none; margin: 0; padding: 0; }
 	li { display: flex; gap: 0.7em; padding: 0.5em 0; align-items: flex-start; }
-	.dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; margin-top: 0.45em; }
+	.dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 0.55em; background: var(--border); }
 	.body { min-width: 0; flex: 1; }
 	.line { display: flex; align-items: baseline; gap: 0.55em; flex-wrap: wrap; }
 	.title { color: var(--text); font-weight: 500; }
 	.link { font-family: monospace; font-size: 0.85em; }
-	.tag { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; opacity: 0.85; }
+	.tag { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 0.05em 0.4em; }
 	.time { color: var(--text-muted); font-size: 0.78em; margin-left: auto; white-space: nowrap; }
 	.detail { color: var(--text-muted); font-size: 0.88em; margin-top: 0.2em; line-height: 1.45; overflow-wrap: anywhere; }
 </style>

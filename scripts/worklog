@@ -8,11 +8,9 @@ Usage:
   worklog add "Shipped atomic hub deploy" --kind feature --link '#740' --detail "build to staging, swap"
   worklog "Trimmed SOXL +72%" --kind trade        # bare title => add
   worklog list [N]
-Kinds: pr fix feature ops trade note (default: note)
+--kind is a free-form, optional label (e.g. fix, feature, ops, trade — anything).
 """
 import json, os, sys, time
-
-KINDS = ["pr", "fix", "feature", "ops", "trade", "note"]
 
 
 def data_dir():
@@ -31,7 +29,7 @@ LOG = os.path.join(data_dir(), "worklog.jsonl")
 def add(args):
     if not args:
         print("worklog: title required", file=sys.stderr); sys.exit(1)
-    title, kind, detail, link = args[0], "note", "", ""
+    title, kind, detail, link = args[0], "", "", ""
     i = 1
     while i < len(args):
         a = args[i]
@@ -39,7 +37,7 @@ def add(args):
         elif a in ("--detail", "-d") and i + 1 < len(args): detail = args[i + 1]; i += 2
         elif a in ("--link", "-l") and i + 1 < len(args): link = args[i + 1]; i += 2
         else: i += 1
-    if kind not in KINDS: kind = "note"
+    kind = kind[:40]  # free-form label, optional
     entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S") + time.strftime("%z"),
              "kind": kind, "title": title[:300], "detail": detail[:2000], "link": link[:500]}
     os.makedirs(os.path.dirname(LOG), exist_ok=True)

@@ -11,14 +11,14 @@ function dataDir() {
 }
 const LOG_FILE = () => path.join(dataDir(), 'worklog.jsonl');
 
-// One log line = one accomplishment. `kind` drives the colored dot in the UI.
-export const KINDS = ['pr', 'fix', 'feature', 'ops', 'trade', 'note'];
+// One log line = one accomplishment. `kind` is a free-form label (optional) —
+// no fixed taxonomy, shown as a plain tag in the UI.
 
 export function appendEntry({ title, detail = '', kind = 'note', link = '', ts } = {}) {
 	if (!title || typeof title !== 'string') return { error: 'title required' };
 	const entry = {
 		ts: ts || new Date().toISOString(),
-		kind: KINDS.includes(kind) ? kind : 'note',
+		kind: String(kind || '').slice(0, 40),
 		title: title.slice(0, 300),
 		detail: String(detail || '').slice(0, 2000),
 		link: String(link || '').slice(0, 500),
