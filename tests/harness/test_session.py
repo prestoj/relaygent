@@ -102,6 +102,17 @@ class TestCheckNotifications:
         cache_file.write_text("NOT JSON")
         assert mgr._check_notifications() == []
 
+    def test_seen_timestamps_bounded(self, timer, cache_file, monkeypatch):
+        """Dedup set is FIFO-bounded so a long-lived session can't grow it forever."""
+        monkeypatch.setattr("session.SEEN_TIMESTAMPS_MAX", 5)
+        mgr = SleepManager(timer)
+        for i in range(20):
+            cache_file.write_text(json.dumps(msg_notif(f"t{i}", "x")))
+            assert len(mgr._check_notifications()) == 1  # each is genuinely new
+        assert len(mgr._seen_timestamps) <= 5
+        assert "t0" not in mgr._seen_timestamps   # oldest evicted
+        assert "t19" in mgr._seen_timestamps      # newest retained
+
 
 class TestSlackDedupPersistence:
     def test_slack_keys_persist_across_sleep(self, timer, cache_file):
@@ -150,7 +161,7 @@ class TestWaitForWake:
                           [{"type": "message", "messages": [{"timestamp": "t2", "content": "hi"}]}]])
         def fake_check(self):
             r = next(responses, [])
-            if r and r[0]["type"] == "reminder": self._seen_timestamps.add("reminder-99")
+            if r and r[0]["type"] == "reminder": self._seen_timestamps["reminder-99"] = None
             return r
         cache_file.write_text("[]")
         with patch.object(SleepManager, "_check_notifications", fake_check), \

@@ -22,6 +22,8 @@ MIN_SUCCESSOR_TIME = 10 * 60    # Don't spawn successor with <10 min remaining
 CONTEXT_WINDOW = 1000000        # Opus 4.7 context window size (1M as of CLI 2.1.76)
 UPTIME_WARN_THRESHOLD = 7 * 86400  # Warn (don't rotate) past 7d: long-lived relays have
                                    # historically degraded task-wakes (runbook-wake-bug-followup)
+SEEN_TIMESTAMPS_MAX = 2000         # Cap the sleep-poll dedup set; FIFO-evict oldest keys so a
+                                   # long-lived relay session doesn't grow it without bound
 
 # Log settings
 LOG_MAX_SIZE = 512000           # 500KB
