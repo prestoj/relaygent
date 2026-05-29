@@ -131,12 +131,19 @@ class TestCollect:
             f"- [ ] Backup | type: recurring | freq: daily | last: {recent}"
         ]) == []
 
-    def test_dedup_within_freq_period(self, _isolated):
+    def test_sticky_reemits_within_window_stable_timestamp(self, _isolated):
+        """Within the sticky window the firing re-emits on each poll (keeps the
+        poller cache populated, mirroring _cron_task); the stable `timestamp`
+        is what the wake loop + history logger dedup on, so the user isn't
+        spammed. (Previously freq emitted once then deduped, so a single-poll
+        firing could be missed entirely.)"""
         _write_tasks(_isolated, [
             "- [ ] Check logs | type: recurring | freq: daily | last: never"
         ])
-        assert len(_collect()) == 1
-        assert _collect() == []  # second call deduped
+        n1 = _collect()
+        n2 = _collect()
+        assert len(n1) == 1 and len(n2) == 1
+        assert n1[0]["timestamp"] == n2[0]["timestamp"]  # same firing
 
     def test_overdue_string_minutes(self, _isolated):
         t = (datetime.now() - timedelta(days=1, minutes=30)).isoformat()
@@ -183,3 +190,65 @@ class TestCollect:
 
     def test_empty_tasks_file(self, _isolated):
         assert _collect(_isolated, [""]) == []
+
+
+def _freq(now, notified, last="never", freq="daily", desc="T"):
+    from unittest.mock import patch
+    t = {"description": desc, "type": "recurring", "freq": freq,
+         "cron": "", "last": last}
+    with patch.object(tc, "_rewrite_last") as rw:
+        result = tc._freq_task(t, "/tmp/ignored.md", notified, now,
+                               now.timestamp() * 1000)
+    return result, rw
+
+
+class TestFreqStickyWindow:
+    """Regression: a freq task emitted for a single poll then advanced `last:`,
+    so a firing could be missed. They now mirror _cron_task's sticky window."""
+
+    def test_first_run_emits_and_sets_sticky(self):
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        notified = {}
+        (fire_dt, emit), rw = _freq(now, notified)
+        assert emit is True and fire_dt == now
+        assert isinstance(notified["T"], dict)
+        assert notified["T"]["fired_at"] == "2026-05-29 09:00"
+        rw.assert_not_called()  # last: not advanced during the window
+
+    def test_reemits_within_window_with_pinned_firing(self):
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        notified = {}
+        _freq(now, notified)
+        later = now + timedelta(seconds=60)  # still inside the 300s window
+        (fire_dt, emit), rw = _freq(later, notified, last="never")
+        assert emit is True and fire_dt == now  # pinned, not `later`
+        rw.assert_not_called()
+
+    def test_advances_and_stops_after_window(self):
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        notified = {}
+        _freq(now, notified)
+        after = now + timedelta(seconds=tc.STICKY_SECONDS + 1)
+        (fire_dt, emit), rw = _freq(after, notified, last="never")
+        assert emit is False and fire_dt is None
+        rw.assert_called_once()       # last: advanced once
+        assert "T" not in notified    # sticky cleared
+
+    def test_not_due_does_not_emit(self):
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        last = (now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+        (fire_dt, emit), _ = _freq(now, {}, last=last, freq="daily")
+        assert emit is False and fire_dt is None
+
+    def test_due_after_interval_emits(self):
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        last = (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M")
+        (fire_dt, emit), _ = _freq(now, {}, last=last, freq="daily")
+        assert emit is True
+
+    def test_legacy_int_sticky_tolerated(self):
+        """Older NOTIFIED_FILE entries stored an int; must not crash."""
+        now = datetime(2026, 5, 29, 9, 0, 0)
+        notified = {"T": 1716900000000}
+        (fire_dt, emit), _ = _freq(now, notified, last="never")
+        assert emit is True and isinstance(notified["T"], dict)
