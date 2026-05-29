@@ -41,7 +41,7 @@ if not servers:
     print("No MCP servers configured."); sys.exit(0)
 # Categorize: built-in vs custom
 builtin = {"hub-chat", "relaygent-notifications", "computer-use",
-           "secrets", "email", "slack", "linear"}
+           "secrets", "email", "slack"}
 print(f"\033[0;34m{len(servers)} MCP server(s) registered:\033[0m\n")
 for name, cfg in sorted(servers.items()):
     cmd = cfg.get("command", "?")

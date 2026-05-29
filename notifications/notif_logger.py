@@ -44,7 +44,7 @@ def log_notifications(notifications):
             # PYTHONHASHSEED-randomized so keys weren't stable across restarts.)
             key = n.get("timestamp") or f"task-{desc}-{n.get('fired_at', '')}"
             log_notification("task", "task", summary, json.dumps(n), key)
-        elif ntype in ("email", "github", "linear"):
+        elif ntype in ("email", "github"):
             key = n.get("id", n.get("url", ""))
             log_notification(
                 ntype, ntype, n.get("title", n.get("message", ""))[:200],

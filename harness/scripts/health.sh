@@ -66,17 +66,6 @@ else
 fi
 
 # Integrations
-if [ -f "$HOME/.relaygent/linear/api-key" ]; then
-    KEY=$(cat "$HOME/.relaygent/linear/api-key")
-    if curl -sf --max-time 3 -H "Authorization: $KEY" -H "Content-Type: application/json" \
-        -d '{"query":"{ viewer { id } }"}' https://api.linear.app/graphql >/dev/null 2>&1; then
-        echo -e "  Linear API: ${GREEN}authenticated${NC}"
-    else
-        echo -e "  Linear API: ${RED}auth failed${NC}"; ALL_OK=false
-    fi
-else
-    echo -e "  Linear API: ${YELLOW}not configured${NC}"
-fi
 if command -v gh &>/dev/null; then
     if gh auth status &>/dev/null 2>&1; then
         echo -e "  GitHub CLI: ${GREEN}authenticated${NC}"
