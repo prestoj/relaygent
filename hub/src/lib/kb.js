@@ -17,12 +17,17 @@ const KB_DIR = process.env.RELAYGENT_KB_DIR || path.join(HUB_DIR, '..', 'knowled
 export function getKbDir() { return KB_DIR; }
 /** Validate a slug resolves within KB_DIR (prevent path traversal) */
 function safeSlugPath(slug) {
-	const filepath = path.join(KB_DIR, `${slug}.md`);
-	const resolved = path.resolve(filepath);
-	if (!resolved.startsWith(path.resolve(KB_DIR))) {
+	const root = path.resolve(KB_DIR);
+	const resolved = path.resolve(KB_DIR, `${slug}.md`);
+	// Containment via path.relative, NOT startsWith: a naive startsWith(root) lets a
+	// sibling prefix escape (slug '../topics-evil/x' → '…/topics-evil/x.md' passes
+	// startsWith('…/topics')). saveTopic/deleteTopic write through here, so this guards
+	// writes too.
+	const rel = path.relative(root, resolved);
+	if (rel.startsWith('..') || path.isAbsolute(rel)) {
 		throw new Error('Invalid slug');
 	}
-	return filepath;
+	return resolved;
 }
 
 /** Parse a markdown file with frontmatter */
