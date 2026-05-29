@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import LogViewer from '$lib/components/LogViewer.svelte';
 	import RelayControls from '$lib/components/RelayControls.svelte';
-	import SecretsPanel from '$lib/components/SecretsPanel.svelte';
+	import SettingsLinks from '$lib/components/SettingsLinks.svelte';
 	import { theme, setTheme, THEME_OPTIONS } from '$lib/theme.svelte.js';
 	let { data } = $props();
 	let services = $state(data.services);
@@ -64,6 +64,8 @@
 	<p class="hint">Complete all checks for the best experience</p>
 </section>
 {/if}
+
+<SettingsLinks />
 
 <RelayControls />
 
@@ -152,8 +154,6 @@
 	</div>
 	<p class="hint">Change with <code>relaygent config set &lt;key&gt; &lt;value&gt;</code></p>
 </section>
-
-<SecretsPanel />
 
 <section class="card">
 	<h2 class="logs-toggle" onclick={() => showLogs = !showLogs}>{showLogs ? 'Logs \u25B2' : 'Logs \u25BC'}</h2>

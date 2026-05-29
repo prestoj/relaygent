@@ -20,7 +20,7 @@
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
-	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
+	let pageName = $derived({kb:'KB',tasks:'Tasks',sessions:'Sessions',files:'Files',settings:'Settings',secrets:'Secrets',intent:'Intent',help:'Help',chat:'Chat',screen:'Screen'}[$page.url.pathname.split('/')[1]] || '');
 	let isRootPage = $derived($page.url.pathname === '/');
 	let isChatPage = $derived($page.url.pathname === '/chat');
 	let isFullPage = $derived(isRootPage || isChatPage);
@@ -58,15 +58,12 @@
 		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMenu}>Activity</a>
 		<a href="/chat" class:active={isActive('/chat')} onclick={closeMenu}>Chat{#if unreadChat > 0}<span class="unread-badge">{unreadChat}</span>{/if}</a>
 		<a href="/screen" class:active={isActive('/screen')} onclick={closeMenu}>Screen</a>
-		<a href="/intent" class:active={isActive('/intent')} onclick={closeMenu}>Intent</a>
 		<a href="/kb" class:active={isActive('/kb')} onclick={closeMenu}>KB</a>
 		<a href="/tasks" class:active={isActive('/tasks')} onclick={() => { dueTasks = 0; closeMenu(); }}>
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
-		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
-		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
 		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="logout-btn" type="submit">Logout</button></form>{/if}
 	</div>
 </nav>
