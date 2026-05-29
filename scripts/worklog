@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""worklog — log a relaygent accomplishment to the hub Worklog page.
+
+Appends one JSON line to <data>/worklog.jsonl (same file the hub reads). No hub
+dependency — works even if the hub is down.
+
+Usage:
+  worklog add "Shipped atomic hub deploy" --kind feature --link '#740' --detail "build to staging, swap"
+  worklog "Trimmed SOXL +72%" --kind trade        # bare title => add
+  worklog list [N]
+Kinds: pr fix feature ops trade note (default: note)
+"""
+import json, os, sys, time
+
+KINDS = ["pr", "fix", "feature", "ops", "trade", "note"]
+
+
+def data_dir():
+    if os.environ.get("RELAYGENT_DATA_DIR"):
+        return os.environ["RELAYGENT_DATA_DIR"]
+    try:
+        cfg = json.load(open(os.path.expanduser("~/.relaygent/config.json")))
+        return cfg.get("paths", {}).get("data") or os.path.expanduser("~/data")
+    except Exception:
+        return os.path.expanduser("~/data")
+
+
+LOG = os.path.join(data_dir(), "worklog.jsonl")
+
+
+def add(args):
+    if not args:
+        print("worklog: title required", file=sys.stderr); sys.exit(1)
+    title, kind, detail, link = args[0], "note", "", ""
+    i = 1
+    while i < len(args):
+        a = args[i]
+        if a in ("--kind", "-k") and i + 1 < len(args): kind = args[i + 1]; i += 2
+        elif a in ("--detail", "-d") and i + 1 < len(args): detail = args[i + 1]; i += 2
+        elif a in ("--link", "-l") and i + 1 < len(args): link = args[i + 1]; i += 2
+        else: i += 1
+    if kind not in KINDS: kind = "note"
+    entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S") + time.strftime("%z"),
+             "kind": kind, "title": title[:300], "detail": detail[:2000], "link": link[:500]}
+    os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    with open(LOG, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+    print(f"logged [{kind}] {title}")
+
+
+def lst(args):
+    n = int(args[0]) if args and args[0].isdigit() else 20
+    try:
+        lines = [l for l in open(LOG).read().splitlines() if l.strip()]
+    except OSError:
+        print("(empty)"); return
+    for l in lines[-n:]:
+        try:
+            e = json.loads(l)
+            print(f"{e['ts'][:16]}  [{e['kind']:>7}]  {e['title']}" + (f"  ({e['link']})" if e.get('link') else ""))
+        except Exception:
+            pass
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); sys.exit(0)
+    cmd = sys.argv[1]
+    if cmd == "add": add(sys.argv[2:])
+    elif cmd == "list": lst(sys.argv[2:])
+    else: add(sys.argv[1:])  # bare title => add
+
+
+if __name__ == "__main__":
+    main()
