@@ -61,6 +61,13 @@ def send_slack_alert(message: str) -> None:
         params = urllib.parse.urlencode({"token": token, "channel": channel, "text": message}).encode()
         req = urllib.request.Request("https://slack.com/api/chat.postMessage", data=params,
                                      headers={"Content-Type": "application/x-www-form-urlencoded"})
-        urllib.request.urlopen(req, timeout=5)
-    except (urllib.error.URLError, OSError):
-        log("Slack alert failed (token or network issue)")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read().decode())
+        # Slack returns HTTP 200 even on failure (channel_not_found, invalid_auth,
+        # rate_limited, …) with ok=false. Without inspecting it the alert silently
+        # vanishes — exactly when a crash alert most needs to get through. Log the
+        # error + channel so a broken alert path is at least visible in the relay log.
+        if not body.get("ok"):
+            log(f"Slack alert NOT delivered: {body.get('error', 'unknown')} (channel={channel!r})")
+    except (urllib.error.URLError, OSError, json.JSONDecodeError) as e:
+        log(f"Slack alert failed (token or network issue): {e}")
