@@ -142,8 +142,6 @@ def _collect_chat_messages(notifications):
         logger.warning("Failed to check hub chat for unread messages", exc_info=True)
 
 
-import linear_ack  # noqa: E402,F401 — registers Flask route on import
-
 _COLLECTORS = collector_registry.discover()
 logger.info(
     "Loaded %d notification collectors: %s",

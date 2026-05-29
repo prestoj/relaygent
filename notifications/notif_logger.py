@@ -38,7 +38,7 @@ def log_notifications(notifications):
             log_notification(
                 "task", "task", summary,
                 json.dumps(n), f"task-{hash(desc)}")
-        elif ntype in ("email", "github", "linear"):
+        elif ntype in ("email", "github"):
             key = n.get("id", n.get("url", ""))
             log_notification(
                 ntype, ntype, n.get("title", n.get("message", ""))[:200],
