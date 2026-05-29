@@ -35,6 +35,7 @@ function delUrl(name) {
 test('isValidName accepts sane names, rejects junk', () => {
 	assert.ok(secrets.isValidName('STRIPE_KEY'));
 	assert.ok(secrets.isValidName('my-secret-1'));
+	assert.ok(secrets.isValidName('github.password'));  // legacy dotted keys
 	assert.ok(!secrets.isValidName(''));
 	assert.ok(!secrets.isValidName('has space'));
 	assert.ok(!secrets.isValidName('../etc/passwd'));
