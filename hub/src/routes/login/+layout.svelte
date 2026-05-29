@@ -1,15 +1,13 @@
 <script>
 	import { browser } from '$app/environment';
+	import { initTheme, isDark } from '$lib/theme.svelte.js';
 	let { children } = $props();
-	let darkMode = $state(false);
-	if (browser) {
-		const stored = localStorage.getItem('darkMode');
-		darkMode = stored !== null ? stored === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-	}
-	$effect(() => { if (browser) document.body.classList.toggle('dark-mode', darkMode); });
+	initTheme();
+	let dark = $derived(isDark());
+	$effect(() => { if (browser) document.body.classList.toggle('dark-mode', dark); });
 </script>
 
-<div class="login-wrapper" class:dark={darkMode}>
+<div class="login-wrapper" class:dark>
 	{@render children()}
 </div>
 

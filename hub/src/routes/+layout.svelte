@@ -5,23 +5,18 @@
 	import { page } from '$app/stores';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import ActivitySidebar from '$lib/components/ActivitySidebar.svelte';
+	import { initTheme, isDark } from '$lib/theme.svelte.js';
 	let { children, data } = $props();
-	let darkMode = $state(false);
 	let menuOpen = $state(false);
 	let dueTasks = $state(data.dueTasks || 0);
 	let unreadChat = $state(0);
 	$effect(() => { dueTasks = data.dueTasks || 0; });
 
-	if (browser) {
-		const stored = localStorage.getItem('darkMode');
-		darkMode = stored !== null ? stored === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-	}
-	$effect(() => { if (browser) document.body.classList.toggle('dark-mode', darkMode); });
-
-	function toggleDark() {
-		darkMode = !darkMode;
-		if (browser) { localStorage.setItem('darkMode', darkMode); document.body.classList.toggle('dark-mode', darkMode); }
-	}
+	// Theme is chosen in Settings (light/dark/auto). Apply the effective state to
+	// the DOM; this re-runs when the pref OR the live device preference changes.
+	initTheme();
+	let dark = $derived(isDark());
+	$effect(() => { if (browser) document.body.classList.toggle('dark-mode', dark); });
 
 	function closeMenu() { menuOpen = false; }
 	function isActive(href) { return $page.url.pathname === href || (href !== '/' && $page.url.pathname.startsWith(href)); }
@@ -51,7 +46,7 @@
 
 <svelte:head><title>{pageName ? `Relaygent · ${pageName}` : 'Relaygent'}</title><link rel="icon" href="/favicon.svg" /></svelte:head>
 
-<div class="app-wrapper" class:dark={darkMode}>
+<div class="app-wrapper" class:dark>
 <nav>
 	<a href="/" class="brand">Relaygent{#if data.hostname}<span class="hostname">{data.hostname}</span>{/if}</a>
 	<button class="hamburger" onclick={() => menuOpen = !menuOpen} aria-label="Toggle menu">
@@ -72,9 +67,6 @@
 		<a href="/sessions" class:active={isActive('/sessions')} onclick={closeMenu}>Sessions</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		<a href="/help" class:active={isActive('/help')} onclick={closeMenu}>Help</a>
-		<button class="theme-toggle" onclick={toggleDark} aria-label="Toggle dark mode" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-			{darkMode ? '☀️' : '🌙'}
-		</button>
 		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="logout-btn" type="submit">Logout</button></form>{/if}
 	</div>
 </nav>
@@ -104,12 +96,6 @@
 	.links a.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link); padding-bottom: 0.1em; text-decoration: none; }
 	.hamburger { display: none; }
 	.unread-badge { display: inline-block; background: var(--error); color: white; font-size: 0.65em; font-weight: 700; padding: 0.1em 0.35em; border-radius: 8px; margin-left: 0.3em; vertical-align: middle; line-height: 1.4; }
-	.theme-toggle {
-		background: none; border: none; cursor: pointer;
-		font-size: 1.15em; padding: 0.15em 0.3em; border-radius: 4px; line-height: 1;
-		transition: transform 0.2s;
-	}
-	.theme-toggle:hover { transform: scale(1.2); }
 	.logout-btn {
 		background: none; border: 1px solid var(--border); cursor: pointer;
 		font-size: 0.85em; padding: 0.25em 0.5em; border-radius: 4px; color: var(--text-muted);
@@ -147,7 +133,6 @@
 		}
 		.links a:hover { background: var(--code-bg); text-decoration: none; }
 		.links a.active { background: var(--code-bg); border-bottom: none; border-left: 3px solid var(--link); font-weight: 600; }
-		.theme-toggle { padding: 0.6em 1.5em; text-align: center; border: none; }
 		.logout-btn { padding: 0.6em 1.5em; text-align: left; border: none; }
 		.page-content { margin: 1em auto; padding: 0 1em; }
 	}

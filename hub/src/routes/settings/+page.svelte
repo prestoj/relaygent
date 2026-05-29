@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import LogViewer from '$lib/components/LogViewer.svelte';
 	import RelayControls from '$lib/components/RelayControls.svelte';
+	import { theme, setTheme, THEME_OPTIONS } from '$lib/theme.svelte.js';
 	let { data } = $props();
 	let services = $state(data.services);
 	let restarting = $state(false), restartMsg = $state('');
@@ -64,6 +65,19 @@
 {/if}
 
 <RelayControls />
+
+<section class="card">
+	<h2>Appearance</h2>
+	<div class="grid">
+		<div class="label">Theme</div>
+		<div class="value">
+			<select class="theme-select" value={theme.pref} onchange={(e) => setTheme(e.currentTarget.value)}>
+				{#each THEME_OPTIONS as opt}<option value={opt}>{opt[0].toUpperCase() + opt.slice(1)}</option>{/each}
+			</select>
+		</div>
+	</div>
+	<p class="hint">“Auto” follows your device's light / dark setting.</p>
+</section>
 
 <section class="card">
 	<h2>System</h2>
@@ -150,6 +164,7 @@
 	.grid { display: grid; grid-template-columns: 10em 1fr; gap: 0.35em 1em; font-size: 0.9em; }
 	.label { color: var(--text-muted); }  .value { color: var(--text); }  .mono { font-family: monospace; font-size: 0.9em; }
 	.hint { font-size: 0.78em; color: var(--text-muted); margin: 0.75em 0 0; }
+	.theme-select { padding: 0.25em 0.5em; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.85em; cursor: pointer; }
 	.svc-list { display: flex; flex-direction: column; gap: 0.5em; }
 	.svc-row { display: flex; align-items: center; gap: 0.6em; font-size: 0.9em; }
 	.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
