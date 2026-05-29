@@ -23,7 +23,8 @@ export function GET({ url }) {
 	if (!fs.existsSync(result.path)) return new Response('File not found', { status: 404 });
 
 	const thumbDir = getThumbDir();
-	const thumbName = name + '.jpg';
+	// Flatten any subpath so the cache stays directly under .thumbnails.
+	const thumbName = name.replace(/[\\/]/g, '__') + '.jpg';
 	const thumbPath = path.join(thumbDir, thumbName);
 
 	// Return cached thumbnail if newer than the video
