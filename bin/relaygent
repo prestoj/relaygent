@@ -48,7 +48,6 @@ show_help() {
         "discover" "Detect languages, tools, repos — write machine.md"
     echo -e "\n${CYAN}Other:${NC}"
     printf "$F" "test [suite]" "Run test suite (harness, hub, notifications, ...)" \
-        "archive-linear" "Archive old Linear issues (--dry-run, --days N)" \
         "completions" "Output shell completions (eval in .bashrc/.zshrc)" \
         "version" "Show version info"
     echo -e "\n${CYAN}Quick Start:${NC}"
@@ -70,7 +69,6 @@ case "${1:-help}" in
     tasks) python3 "$SCRIPT_DIR/harness/scripts/tasks.py" "${@:2}" ;;
     test) bash "$SCRIPT_DIR/test.sh" "${@:2}" ;;
     config|mcp|orient|check|doctor|update|health|clean-logs|cleanup|changelog|digest|history|recap|search|session|setup-tls|discover|backup|restore|kb-lint|bg) bash "$SCRIPT_DIR/harness/scripts/$1.sh" "${@:2}" ;;
-    archive-linear) node "$SCRIPT_DIR/linear/auto-archive.mjs" "${@:2}" ;;
     set-password) node "$SCRIPT_DIR/hub/set-password.mjs" "${@:2}" ;;
     install-services)
         source "$SCRIPT_DIR/harness/scripts/lib.sh"
