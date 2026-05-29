@@ -6,10 +6,31 @@ Extracted from jsonl_checks.py. Used by process.py before resuming sessions.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from config import log
 from jsonl_checks import find_jsonl_path
+
+
+def _atomic_rewrite(path: Path, lines: list[str]) -> None:
+    """Rewrite `path` atomically: write a sibling temp file then os.replace it in.
+
+    The naive `open(path, "w")` truncates the real JSONL up front, so a crash or
+    SIGKILL mid-write (this runs just before resume, near process teardown) would
+    leave the resumable session file truncated/corrupted. os.replace is atomic on
+    POSIX, so a failure leaves the original wholly intact.
+    """
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.writelines(lines)
+        os.replace(tmp, path)
+    except OSError:
+        try: os.unlink(tmp)
+        except OSError: pass
+        raise
 
 
 def _has_image(line: str) -> bool:
@@ -54,7 +75,7 @@ def strip_old_images(session_id: str, workspace: Path, keep_last: int = 5) -> in
         to_strip = set(img_indices[:-keep_last]) if len(img_indices) > keep_last else set()
         if not to_strip: return 0
         new_lines = [_strip_images_from_line(l) if i in to_strip else l for i, l in enumerate(lines)]
-        with open(jsonl, "w") as f: f.writelines(new_lines)
+        _atomic_rewrite(jsonl, new_lines)
         return len(to_strip)
     except OSError: return 0
 
@@ -72,6 +93,6 @@ def strip_all_images(session_id: str, workspace: Path) -> int:
         if not img_indices: return 0
         to_strip = set(img_indices)
         new_lines = [_strip_images_from_line(l) if i in to_strip else l for i, l in enumerate(lines)]
-        with open(jsonl, "w") as f: f.writelines(new_lines)
+        _atomic_rewrite(jsonl, new_lines)
         return len(to_strip)
     except OSError: return 0
