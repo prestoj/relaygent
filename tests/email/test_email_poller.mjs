@@ -113,6 +113,9 @@ test("poll writes cache with from and subject", async () => {
 	assert.equal(data.emails.length, 2);
 	assert.ok(data.emails.some(e => e.from.includes("Alice") && e.subject === "Hi"));
 	assert.ok(data.emails.some(e => e.from.includes("Bob") && e.subject === "Yo"));
+	// Each entry carries the stable Gmail message id — the unique dedup key that
+	// keeps a same-poll batch (all sharing received_at) from collapsing to one.
+	assert.deepEqual(data.emails.map(e => e.id).sort(), ["m1", "m2"]);
 });
 
 test("poll saves timestamp after each run", async () => {

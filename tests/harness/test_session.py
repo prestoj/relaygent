@@ -61,6 +61,20 @@ class TestExtractTimestamps:
         assert mgr._extract_timestamps(n2) == {ts2}
         assert mgr._extract_timestamps(n1) != mgr._extract_timestamps(n2)
 
+    def test_email_dedup_prefers_message_id(self, mgr):
+        """A poll batch stamps every email with the SAME received_at (so the
+        `timestamp` field collides); the per-message `dedup` key (Gmail msg id)
+        keeps them distinct so SleepManager doesn't drop all but one."""
+        n = {"type": "email", "messages": [
+            {"timestamp": 100, "dedup": "msg-a"},
+            {"timestamp": 100, "dedup": "msg-b"},
+        ]}
+        assert mgr._extract_timestamps(n) == {"msg-a", "msg-b"}
+
+    def test_dedup_falls_back_to_timestamp(self, mgr):
+        """Messages without a `dedup` field key on `timestamp` as before."""
+        assert mgr._extract_timestamps({"messages": [{"timestamp": "t1"}]}) == {"t1"}
+
 
 class TestCheckNotifications:
     def test_returns_new_notifications(self, mgr, cache_file):

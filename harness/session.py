@@ -69,7 +69,7 @@ class SleepManager:
 
     def _extract_timestamps(self, notif: dict) -> set:
         """Extract dedup keys from a notification."""
-        timestamps = {m["timestamp"] for m in notif.get("messages", []) if m.get("timestamp")}
+        timestamps = {m.get("dedup") or m["timestamp"] for m in notif.get("messages", []) if m.get("timestamp")}
         if notif.get("type") == "reminder":
             timestamps.add(f"reminder-{notif.get('id')}")
         if notif.get("type") == "task" and notif.get("timestamp"):

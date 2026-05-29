@@ -105,23 +105,68 @@ class TestCollect:
         assert notifications[0]["count"] == 1
         assert notifications[0]["previews"][0]["from"] == "new@test.com"
 
-    def test_advances_ack_after_collect(self, _isolated):
+    def test_collect_does_not_advance_ack(self, _isolated):
+        """collect() surfaces but must NOT advance the watermark — that's the
+        consume-ack's job (hook/endpoint). A background poll reaching no agent
+        turn must never advance, else the mail is silently dropped."""
         cache, _ = _isolated
         cache.write_text(json.dumps({"emails": [
             {"from": "a@b.com", "subject": "X", "received_at": 500},
         ]}))
         ec.collect([])
-        assert ec._get_ack_ts() == pytest.approx(500.0)
+        assert ec._get_ack_ts() == 0.0
 
-    def test_dedup_second_collect_empty(self, _isolated):
+    def test_collect_surfaces_ack_ts_watermark(self, _isolated):
+        """The notification carries the exact watermark (max over ALL unacked,
+        not just the 5 previewed) for the consumer to advance to."""
+        cache, _ = _isolated
+        cache.write_text(json.dumps({"emails": [
+            {"from": "a@b.com", "subject": "X", "received_at": 300},
+            {"from": "c@d.com", "subject": "Y", "received_at": 700},
+        ]}))
+        notifications = []
+        ec.collect(notifications)
+        assert notifications[0]["ack_ts"] == 700
+
+    def test_resurfaces_until_acked(self, _isolated):
+        """Un-acked mail re-surfaces on every collect (consume-gated, like chat
+        staying unread) and stops only once the watermark is advanced."""
         cache, _ = _isolated
         cache.write_text(json.dumps({"emails": [
             {"from": "a@b.com", "subject": "X", "received_at": 100},
         ]}))
-        ec.collect([])
+        first = []
+        ec.collect(first)
+        assert len(first) == 1
+        second = []  # no intervening ack → still surfaces
+        ec.collect(second)
+        assert len(second) == 1
+        ec._advance_ack(first[0]["ack_ts"])  # consume-ack to surfaced watermark
+        third = []
+        ec.collect(third)
+        assert third == []
+
+    def test_dedup_key_uses_message_id(self, _isolated):
+        """Same received_at (one poll batch), distinct ids → distinct dedup keys,
+        so SleepManager can't collapse a batch to one fingerprint."""
+        cache, _ = _isolated
+        cache.write_text(json.dumps({"emails": [
+            {"id": "msg-aaa", "from": "a@b.com", "subject": "X", "received_at": 100},
+            {"id": "msg-bbb", "from": "c@d.com", "subject": "Y", "received_at": 100},
+        ]}))
         notifications = []
         ec.collect(notifications)
-        assert notifications == []
+        msgs = notifications[0]["messages"]
+        assert {m["dedup"] for m in msgs} == {"msg-aaa", "msg-bbb"}
+
+    def test_dedup_key_falls_back_without_id(self, _isolated):
+        cache, _ = _isolated
+        cache.write_text(json.dumps({"emails": [
+            {"from": "a@b.com", "subject": "X", "received_at": 100},
+        ]}))
+        notifications = []
+        ec.collect(notifications)
+        assert notifications[0]["messages"][0]["dedup"] == "100:a@b.com:X"
 
     def test_previews_capped_at_5(self, _isolated):
         cache, _ = _isolated

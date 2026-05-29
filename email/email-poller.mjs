@@ -78,7 +78,7 @@ export async function poll(gmailOverride = null) {
 				const hs = d.data.payload?.headers || [];
 				const hmap = Object.fromEntries(hs.map(x => [x.name.toLowerCase(), x.value || ""]));
 				if (AUTOMATED_HEADERS.some(h => hmap[h]) || BULK_PRECEDENCE.has((hmap["precedence"] || "").toLowerCase())) continue;
-				emails.push({ from: hmap["from"] || "?", subject: hmap["subject"] || "(no subject)", received_at: now });
+				emails.push({ id: m.id, from: hmap["from"] || "?", subject: hmap["subject"] || "(no subject)", received_at: now });
 			} catch {}
 		}
 

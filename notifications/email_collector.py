@@ -83,8 +83,16 @@ def collect(notifications: list) -> None:
     if not emails:
         return
 
+    # Watermark to advance to once a consumer actually handles these emails — but
+    # do NOT advance it here. Surfacing on a background poll (the poller's ~10s
+    # full poll) does not mean any agent turn saw it: an email arriving while the
+    # relay is in an active session could have its watermark advanced by a poll
+    # that reached no PostToolUse, silently dropping it. Instead the consume-ack
+    # (check-notifications hook after injecting, or POST /ack-email with this ts)
+    # advances `.email_ack_ts` — mirroring how chat/Slack stay unread until read.
+    # Safe to ack to a single max: received_at is the poller's monotonic poll
+    # stamp (not the mail's own date), so there are no out-of-order stragglers.
     max_ts = max(e.get("received_at", 0) for e in emails)
-    _advance_ack(max_ts)
 
     resolved: dict[str, tuple[str | None, str | None]] = {}
     def _resolve(from_addr: str) -> tuple[str | None, str | None]:
@@ -103,6 +111,13 @@ def collect(notifications: list) -> None:
             # Without it every email burst hashes to "email-email-N" and
             # subsequent same-count bursts get dropped forever.
             "timestamp": e.get("received_at", 0),
+            # `dedup` overrides `timestamp` as the per-message dedup key. The
+            # poller stamps every email in one batch with the SAME received_at
+            # (it's the poll time, not the mail's date), so without a unique key
+            # a whole batch collapses to one fingerprint and SleepManager drops
+            # all but one. The Gmail message id is unique+stable; fall back to a
+            # from/subject composite for legacy cache entries lacking an id.
+            "dedup": e.get("id") or f"{e.get('received_at', 0)}:{e.get('from', '')}:{e.get('subject', '')}",
         }
         if name:
             out["sender_name"] = name
@@ -116,6 +131,11 @@ def collect(notifications: list) -> None:
         "type": "email",
         "source": "email",
         "count": len(emails),
+        # Exact watermark a consumer should advance `.email_ack_ts` to once it
+        # has surfaced these emails to an agent turn (max over ALL unacked, not
+        # just the 5 previewed). Acking to this — never to now() — is what makes
+        # the once-only guarantee hold without skipping a not-yet-surfaced mail.
+        "ack_ts": max_ts,
         "messages": messages,
         # `previews` kept for backwards-compat with any consumer still
         # reading the old shape; new code should use `messages`.
