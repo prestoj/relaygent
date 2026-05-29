@@ -154,3 +154,30 @@ class TestStripAllImages:
         sid, ws, write, read = session
         stripped = strip_all_images("nonexistent-id", ws)
         assert stripped == 0
+
+
+class TestAtomicRewrite:
+    def _has_image(self, entries):
+        return any(
+            isinstance(s, dict) and s.get("type") == "image"
+            for e in entries
+            for item in e.get("message", {}).get("content", []) or []
+            if isinstance(item, dict) and item.get("type") == "tool_result"
+            for s in item.get("content", []) or []
+        )
+
+    def test_no_tmp_file_left_after_strip(self, session, tmp_path):
+        sid, ws, write, read = session
+        write([_img_entry(i) for i in range(5)])
+        assert strip_all_images(sid, ws) == 5
+        assert list(tmp_path.rglob("*.tmp")) == []  # temp swapped in, not orphaned
+
+    def test_original_preserved_on_replace_failure(self, session, tmp_path):
+        """If os.replace fails mid-rewrite, the original JSONL must be intact
+        (not truncated) and no temp file left behind."""
+        sid, ws, write, read = session
+        write([_img_entry(i) for i in range(5)])
+        with patch("jsonl_images.os.replace", side_effect=OSError("disk full")):
+            assert strip_all_images(sid, ws) == 0
+        assert self._has_image(read())               # original untouched
+        assert list(tmp_path.rglob("*.tmp")) == []   # temp cleaned up
