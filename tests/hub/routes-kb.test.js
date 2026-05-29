@@ -37,6 +37,12 @@ test('load: throws 400 for path traversal', () => {
 	assert.throws(() => load({ params: { slug: '../../../etc/passwd' } }), { status: 400 });
 });
 
+test('load: throws 400 for sibling-prefix escape', () => {
+	// Sibling dir sharing the KB_DIR name prefix would pass a naive startsWith check.
+	const sibling = `../${path.basename(tmpDir)}-evil/x`;
+	assert.throws(() => load({ params: { slug: sibling } }), { status: 400 });
+});
+
 test('load: returns topic and rawContent for existing topic', () => {
 	writeTopic('existing.md', '---\ntitle: Existing\n---\n\nHello.\n');
 	const result = load({ params: { slug: 'existing' } });
