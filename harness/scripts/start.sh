@@ -50,7 +50,10 @@ elif [ "$(uname)" = "Linux" ]; then
         echo -e "  Computer-use: ${YELLOW}missing deps:${missing}${NC}"
         echo -e "    ${YELLOW}Install: sudo apt install xdotool scrot wmctrl imagemagick python3-pyatspi at-spi2-core${NC}"
     elif [ -z "${DISPLAY:-}" ]; then
-        if command -v Xvfb &>/dev/null; then
+        if systemctl --user is-active --quiet relaygent-xvfb.service 2>/dev/null; then
+            export DISPLAY=:99
+            echo -e "  Xvfb: ${GREEN}managed by relaygent-xvfb.service${NC} (DISPLAY=:99)"
+        elif command -v Xvfb &>/dev/null; then
             export DISPLAY=:99
             Xvfb :99 -screen 0 1024x768x24 -nolisten tcp >> "$REPO_DIR/logs/relaygent-xvfb.log" 2>&1 &
             echo $! > "$PID_DIR/xvfb.pid"
@@ -61,16 +64,20 @@ elif [ "$(uname)" = "Linux" ]; then
         fi
     fi
     if [ -n "${DISPLAY:-}" ]; then
-        clear_stale_port "$HS_PORT" "Computer-use" || port_ok=false
-        if [ "$port_ok" = true ]; then
-            start_service "Computer-use (port $HS_PORT)" "computer-use" \
-                env DISPLAY="${DISPLAY:-:0}" python3 "$REPO_DIR/computer-use/linux-server.py"
-            sleep 0.5
-            if ! curl -sf --max-time 2 "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
-                echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
+        if systemctl --user is-active --quiet relaygent-computer-use.service 2>/dev/null; then
+            echo -e "  Computer-use (port $HS_PORT): ${GREEN}managed by systemd${NC}"
+        else
+            clear_stale_port "$HS_PORT" "Computer-use" || port_ok=false
+            if [ "$port_ok" = true ]; then
+                start_service "Computer-use (port $HS_PORT)" "computer-use" \
+                    env DISPLAY="${DISPLAY:-:0}" python3 "$REPO_DIR/computer-use/linux-server.py"
+                sleep 0.5
+                if ! curl -sf --max-time 2 "http://localhost:$HS_PORT/health" >/dev/null 2>&1; then
+                    echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
+                fi
             fi
         fi
-        # VNC server for noVNC hub integration
+        # VNC server for noVNC hub integration (skips if :5900 already bound by relaygent-vnc.service)
         if command -v x11vnc &>/dev/null && ! ss -tln | grep -q ':5900 '; then
             start_service "VNC (port 5900)" "x11vnc" \
                 x11vnc -display "${DISPLAY:-:0}" -rfbport 5900 -localhost -nopw -shared -forever -noxdamage
