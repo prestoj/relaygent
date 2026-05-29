@@ -7,7 +7,13 @@
 #   scripts/hub-rebuild-if-stale.sh --force   # rebuild regardless
 #
 # Launchd: run as a periodic job (e.g. every 5 min) to keep hub current.
-# The hub goes down for ~30s during rebuild.
+#
+# Atomic deploy: the build runs into a staging dir (hub/build.staging) while the
+# live hub keeps serving the OLD build, then the staging dir is swapped into place
+# and the hub is restarted. Downtime is ~1s (the swap + restart), not the ~30s
+# build, and the live build/ is never half-written — this kills the rebuild race
+# that intermittently served broken/missing JS chunks. A failed build leaves the
+# running hub untouched on its old build.
 
 set -euo pipefail
 
@@ -38,22 +44,29 @@ fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuilding hub (was: ${BUILT:0:8}, now: ${HEAD:0:8})" | tee -a "$LOG"
 
-# Use bootout/bootstrap (not stop/start) — KeepAlive:true means stop immediately restarts
 HUB_PLIST="$HOME/Library/LaunchAgents/com.relaygent.hub.plist"
 GUID="gui/$(id -u)"
+STAGING="$REPO_DIR/hub/build.staging"
+
+# Build into a staging dir while the live hub keeps serving the old build.
+rm -rf "$STAGING"
+if ! HUB_BUILD_OUT="build.staging" npm run build --prefix "$REPO_DIR/hub" >> "$LOG" 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuild FAILED — hub still serving old build." | tee -a "$LOG"
+    rm -rf "$STAGING"
+    exit 1
+fi
+
+# Build succeeded: swap staging into place and restart. Use bootout/bootstrap (not
+# stop/start) — KeepAlive:true means stop immediately restarts.
 launchctl bootout "$GUID" "$HUB_PLIST" 2>/dev/null || true
 # Wait for port to be free (hub has 3s shutdown timeout)
 for i in 1 2 3 4 5; do
     lsof -ti:${PORT:-8080} >/dev/null 2>&1 || break
     sleep 1
 done
-
-if npm run build --prefix "$REPO_DIR/hub" >> "$LOG" 2>&1; then
-    echo "$HEAD" > "$BUILD_COMMIT"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuild complete." | tee -a "$LOG"
-    launchctl bootstrap "$GUID" "$HUB_PLIST"
-else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuild FAILED — restarting with old build." | tee -a "$LOG"
-    launchctl bootstrap "$GUID" "$HUB_PLIST"
-    exit 1
-fi
+rm -rf "$REPO_DIR/hub/build.old"
+mv "$REPO_DIR/hub/build" "$REPO_DIR/hub/build.old" 2>/dev/null || true
+mv "$STAGING" "$REPO_DIR/hub/build"
+echo "$HEAD" > "$BUILD_COMMIT"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuild complete (atomic swap)." | tee -a "$LOG"
+launchctl bootstrap "$GUID" "$HUB_PLIST"

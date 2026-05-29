@@ -1,5 +1,7 @@
 node_modules/
 build/
+build.staging/
+build.old/
 .svelte-kit/
 __pycache__/
 *.pyc
