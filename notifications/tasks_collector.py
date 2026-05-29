@@ -108,6 +108,24 @@ def _parse_dt(s):
         except ValueError: return None
 
 
+def _sticky_emit(notified, desc, fire_dt, now_ms, tasks_file):
+    """Re-emit `fire_dt` on every poll for STICKY_SECONDS, then advance `last:`
+    and stop. Keeps the firing in the poller cache long enough for the wake
+    loop + PostToolUse hook to catch it; the stable per-firing `timestamp`
+    lets the wake/history layers dedup so the user isn't spammed."""
+    fired_str = fire_dt.strftime("%Y-%m-%d %H:%M")
+    sticky = notified.get(desc)
+    sticky = sticky if isinstance(sticky, dict) else {}
+    if sticky.get("fired_at") != fired_str:
+        notified[desc] = {"first_emit_ms": now_ms, "fired_at": fired_str}
+        return fire_dt, True
+    if now_ms - sticky.get("first_emit_ms", 0) < STICKY_SECONDS * 1000:
+        return fire_dt, True
+    _rewrite_last(tasks_file, desc, fired_str)
+    del notified[desc]
+    return None, False
+
+
 def _cron_task(t, tasks_file, notified, now, now_ms):
     """Cron-scheduled task. `last: never` → seed to now so only future
     firings count (avoids a new task reading as "24h overdue")."""
@@ -117,50 +135,33 @@ def _cron_task(t, tasks_file, notified, now, now_ms):
         return None, False
     last_dt = _parse_dt(last)
     fire_dt = _last_cron_fire(expr, last_dt, now) if last_dt else None
-
-    sticky = notified.get(desc) or {}
-    if not isinstance(sticky, dict): sticky = {}
-    sticky_fired = sticky.get("fired_at")
-    sticky_ms = sticky.get("first_emit_ms", 0)
-
     if not fire_dt:
-        if desc in notified:
-            del notified[desc]
-            return None, False
+        if desc in notified: del notified[desc]
         return None, False
-
-    fired_str = fire_dt.strftime("%Y-%m-%d %H:%M")
-    if sticky_fired != fired_str:
-        notified[desc] = {"first_emit_ms": now_ms, "fired_at": fired_str}
-        return fire_dt, True
-    if now_ms - sticky_ms < STICKY_SECONDS * 1000:
-        return fire_dt, True
-    # sticky window done — advance last:, stop emitting
-    _rewrite_last(tasks_file, desc, fired_str)
-    del notified[desc]
-    return None, False
+    return _sticky_emit(notified, desc, fire_dt, now_ms, tasks_file)
 
 
 def _freq_task(t, tasks_file, notified, now, now_ms):
-    """Handle coarse-freq task. Returns (fire_dt_or_None, should_emit)."""
+    """Coarse-freq task with the same sticky emit window as _cron_task
+    (previously emitted for a single poll → a firing could be missed). The
+    firing time is pinned across the window via sticky (`last: never` would
+    otherwise drift with `now`)."""
     last = t["last"]; desc = t["description"]; freq = t["freq"]
-    if not last or last == "never":
-        fire_dt = now
+    sticky = notified.get(desc)
+    sticky_fired = sticky.get("fired_at") if isinstance(sticky, dict) else None
+    if sticky_fired:
+        fire_dt = _parse_dt(sticky_fired)
+    elif not last or last == "never":
+        fire_dt = now  # first run — due immediately
     else:
         last_dt = _parse_dt(last)
         if not last_dt: return None, False
         next_due = last_dt + timedelta(milliseconds=_freq_ms(freq))
-        if next_due > now: return None, False
-        fire_dt = next_due
-    last_notified_ms = notified.get(desc, 0)
-    if isinstance(last_notified_ms, dict):
-        last_notified_ms = last_notified_ms.get("first_emit_ms", 0)
-    if now_ms - last_notified_ms < _freq_ms(freq):
+        fire_dt = next_due if next_due <= now else None
+    if not fire_dt:
+        if desc in notified: del notified[desc]
         return None, False
-    notified[desc] = now_ms
-    # Advance last: so tasks.md shows a real firing time, not a stale "never".
-    _rewrite_last(tasks_file, desc, fire_dt.strftime("%Y-%m-%d %H:%M"))
-    return fire_dt, True
+    return _sticky_emit(notified, desc, fire_dt, now_ms, tasks_file)
 
 
 def collect(notifications):
