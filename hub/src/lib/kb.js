@@ -15,18 +15,13 @@ const KB_DIR = process.env.RELAYGENT_KB_DIR || path.join(HUB_DIR, '..', 'knowled
 
 /** Get the KB directory path (for use by other modules) */
 export function getKbDir() { return KB_DIR; }
-/** Validate a slug resolves within KB_DIR (prevent path traversal) */
+/** Validate a slug resolves within KB_DIR (prevent path traversal + sibling-prefix escape) */
 function safeSlugPath(slug) {
 	const root = path.resolve(KB_DIR);
 	const resolved = path.resolve(KB_DIR, `${slug}.md`);
-	// Containment via path.relative, NOT startsWith: a naive startsWith(root) lets a
-	// sibling prefix escape (slug '../topics-evil/x' → '…/topics-evil/x.md' passes
-	// startsWith('…/topics')). saveTopic/deleteTopic write through here, so this guards
-	// writes too.
+	// path.relative containment, NOT startsWith — '../topics-evil/x' would pass startsWith('…/topics').
 	const rel = path.relative(root, resolved);
-	if (rel.startsWith('..') || path.isAbsolute(rel)) {
-		throw new Error('Invalid slug');
-	}
+	if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('Invalid slug');
 	return resolved;
 }
 
