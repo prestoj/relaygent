@@ -20,6 +20,7 @@ try:
 except (FileNotFoundError, json.JSONDecodeError, ValueError):
     seen = set()
 seen_added = []
+email_ack = 0.0  # Highest email watermark surfaced this turn → durably acked below.
 try:
     with open(os.environ['CACHE_FILE']) as f: data = json.load(f)
     parts = []
@@ -31,6 +32,8 @@ try:
             parts.append('REMINDER DUE: \"' + n.get('message', '') + '\"')
         elif n.get('type') == 'email':
             count = n.get('count', 0)
+            try: email_ack = max(email_ack, float(n.get('ack_ts', 0) or 0))
+            except (TypeError, ValueError): pass
             noun = 'email' if count == 1 else 'emails'
             msgs = n.get('messages') or n.get('previews') or []
             if msgs:
@@ -119,6 +122,18 @@ try:
             tmp = SEEN_FILE + '.tmp'
             with open(tmp, 'w') as f: json.dump(trimmed, f)
             os.rename(tmp, SEEN_FILE)
+    if email_ack > 0:
+        # Consume-ack email: this hook fires post-tool-use, so surfacing here
+        # means an agent turn saw the mail. Advance the durable watermark to the
+        # exact surfaced ack_ts (never now()), monotonically — email's consume gate.
+        ap = os.path.expanduser('~/.relaygent/gmail/.email_ack_ts')
+        try: cur = float(open(ap).read().strip() or 0)
+        except (OSError, ValueError): cur = 0.0
+        if email_ack > cur:
+            try:
+                os.makedirs(os.path.dirname(ap), exist_ok=True)
+                with open(ap, 'w') as f: f.write(f'{email_ack:.3f}')
+            except OSError: pass
 except Exception as e:
     import sys; print(f'WARNING: notification cache parse error: {e}', file=sys.stderr)
 " 2>>/tmp/relaygent-hook-errors.log)
