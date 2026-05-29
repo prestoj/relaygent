@@ -3,7 +3,6 @@
 	const links = [
 		{ href: '/intent', label: 'Intent', desc: "Preston's current priorities & direction" },
 		{ href: '/sessions', label: 'Sessions', desc: 'Past relay sessions & stats' },
-		{ href: '/secrets', label: 'Secrets', desc: 'Share secrets with Claude (encrypted)' },
 		{ href: '/help', label: 'Help', desc: 'Hub features & shortcuts' },
 	];
 </script>

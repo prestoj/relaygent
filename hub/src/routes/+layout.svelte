@@ -63,6 +63,7 @@
 			Tasks{#if dueTasks > 0}<span class="unread-badge">{dueTasks}</span>{/if}
 		</a>
 		<a href="/files" class:active={isActive('/files')} onclick={closeMenu}>Files</a>
+		<a href="/secrets" class:active={isActive('/secrets')} onclick={closeMenu}>Secrets</a>
 		<a href="/settings" class:active={isActive('/settings')} onclick={closeMenu}>Settings</a>
 		{#if data.authEnabled}<form method="POST" action="/api/auth" style="margin:0;display:inline"><button class="logout-btn" type="submit">Logout</button></form>{/if}
 	</div>
