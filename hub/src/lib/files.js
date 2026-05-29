@@ -4,7 +4,8 @@ import path from 'path';
 const REPO_DIR = path.join(import.meta.dirname, '..', '..', '..');
 const SHARED_DIR = path.join(process.env.RELAYGENT_DATA_DIR || path.join(REPO_DIR, 'data'), 'shared');
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+// Upload cap, overridable via RELAYGENT_MAX_UPLOAD_BYTES (default 50MB).
+const MAX_FILE_SIZE = parseInt(process.env.RELAYGENT_MAX_UPLOAD_BYTES || '', 10) || 50 * 1024 * 1024;
 const FORBIDDEN = /[/\\<>:"|?*\x00-\x1f]/;
 
 export function getSharedDir() {

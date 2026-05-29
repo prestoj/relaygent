@@ -14,6 +14,9 @@ import os from 'node:os';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stream-upload-test-'));
 process.env.RELAYGENT_DATA_DIR = tmpDir;
+// Small cap so the size-limit path is exercised without a 50MB upload.
+const MAX_UPLOAD = 1024;
+process.env.RELAYGENT_MAX_UPLOAD_BYTES = String(MAX_UPLOAD);
 
 const { handleStreamUpload } = await import(
 	'../../hub/src/lib/streamUpload.js?t=' + Date.now()
@@ -130,4 +133,27 @@ test('overwrite existing file', async () => {
 	assert.equal(res.status, 201);
 	const content = fs.readFileSync(path.join(sharedDir, 'overwrite.txt'), 'utf8');
 	assert.equal(content, 'version 2');
+});
+
+test('exceeding size limit: rejects and cleans up partial file', async () => {
+	const name = 'too-big.bin';
+	const big = Buffer.alloc(MAX_UPLOAD * 2, 0x61); // 2x the cap
+	const result = await new Promise((resolve) => {
+		const req = http.request(`${BASE}/?name=${name}`, { method: 'POST' }, (res) => {
+			let data = '';
+			res.on('data', c => { data += c; });
+			res.on('end', () => {
+				let body = {}; try { body = JSON.parse(data); } catch {}
+				resolve({ status: res.statusCode, body });
+			});
+		});
+		// Aborting the request mid-stream may surface as a client socket reset —
+		// that's an acceptable outcome (the upload was rejected either way).
+		req.on('error', () => resolve({ status: 'reset' }));
+		req.write(big);
+		req.end();
+	});
+	if (result.status !== 'reset') assert.equal(result.status, 413, 'oversized upload should 413');
+	await new Promise(r => setTimeout(r, 100)); // let cleanup settle
+	assert.ok(!fs.existsSync(path.join(sharedDir, name)), 'oversized file should be removed');
 });
