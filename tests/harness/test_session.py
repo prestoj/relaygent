@@ -11,6 +11,7 @@ from session import SleepManager, SleepResult, MAX_CACHE_STALE, _is_sleep_timeou
 def timer():
     t = MagicMock()
     t.is_expired.return_value = False
+    t.elapsed.return_value = 0
     return t
 
 @pytest.fixture
