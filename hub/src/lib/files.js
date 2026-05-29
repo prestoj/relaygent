@@ -2,7 +2,10 @@ import fs from 'fs';
 import path from 'path';
 
 const REPO_DIR = path.join(import.meta.dirname, '..', '..', '..');
-const SHARED_DIR = path.join(process.env.RELAYGENT_DATA_DIR || path.join(REPO_DIR, 'data'), 'shared');
+// File-share root. RELAYGENT_SHARED_DIR lets it live somewhere intuitive (e.g. ~/shared)
+// instead of being pinned under the data dir. Falls back to <data>/shared for compatibility.
+const SHARED_DIR = process.env.RELAYGENT_SHARED_DIR
+	|| path.join(process.env.RELAYGENT_DATA_DIR || path.join(REPO_DIR, 'data'), 'shared');
 
 // Upload cap, overridable via RELAYGENT_MAX_UPLOAD_BYTES (default 50MB).
 const MAX_FILE_SIZE = parseInt(process.env.RELAYGENT_MAX_UPLOAD_BYTES || '', 10) || 50 * 1024 * 1024;
