@@ -70,6 +70,11 @@ elif [ "$(uname)" = "Linux" ]; then
                 echo -e "    ${YELLOW}Warning: server started but /health not responding${NC}"
             fi
         fi
+        # VNC server for noVNC hub integration
+        if command -v x11vnc &>/dev/null && ! ss -tln | grep -q ':5900 '; then
+            start_service "VNC (port 5900)" "x11vnc" \
+                x11vnc -display "${DISPLAY:-:0}" -rfbport 5900 -localhost -nopw -shared -forever -noxdamage
+        fi
     fi
 else
     echo -e "  Computer-use: ${YELLOW}unavailable (unsupported platform)${NC}"
