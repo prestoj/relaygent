@@ -157,6 +157,21 @@ test('PATCH: moves a file into a folder', async () => {
 	assert.ok(fs.existsSync(path.join(sharedDir, 'newfolder', 'm.txt')));
 });
 
+test('PATCH: returns 409 when destination already exists', async () => {
+	fs.writeFileSync(path.join(sharedDir, 'c1.txt'), 'x');
+	fs.writeFileSync(path.join(sharedDir, 'c2.txt'), 'y');
+	const res = await PATCH(makeUrl('', { from: 'c1.txt', to: 'c2.txt' }));
+	assert.equal(res.status, 409);
+	const data = await res.json();
+	assert.ok(/already exists/i.test(data.error));
+	assert.ok(fs.existsSync(path.join(sharedDir, 'c1.txt')), 'source untouched on collision');
+});
+
+test('PATCH: returns 404 when source does not exist', async () => {
+	const res = await PATCH(makeUrl('', { from: 'ghost.txt', to: 'ghost2.txt' }));
+	assert.equal(res.status, 404);
+});
+
 test('DELETE: refuses a non-empty folder without recursive (409)', async () => {
 	const res = await DEL(makeUrl('', { name: 'newfolder' }));
 	assert.equal(res.status, 409);

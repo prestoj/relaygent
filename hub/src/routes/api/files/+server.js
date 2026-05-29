@@ -62,7 +62,12 @@ export function PATCH({ url }) {
 	const from = url.searchParams.get('from');
 	const to = url.searchParams.get('to');
 	const result = renameEntry(from, to);
-	return result.error ? json({ error: result.error }, { status: 400 }) : json({ ok: true });
+	if (result.error) {
+		const status = result.error === 'Destination already exists' ? 409
+			: /not found/i.test(result.error) ? 404 : 400;
+		return json({ error: result.error }, { status });
+	}
+	return json({ ok: true });
 }
 
 /** DELETE /api/files?name=path[&recursive=1] — delete a file or folder */
