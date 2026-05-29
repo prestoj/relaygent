@@ -87,6 +87,8 @@ do_install() {
         <string>$KB_DIR</string>
         <key>RELAYGENT_DATA_DIR</key>
         <string>$DATA_DIR</string>
+        <key>RELAYGENT_SHARED_DIR</key>
+        <string>${SHARED_DIR:-$HOME/shared}</string>
         <key>RELAY_STATUS_FILE</key>
         <string>$DATA_DIR/relay-status.json</string>
         <key>RELAYGENT_NOTIFICATIONS_PORT</key>
