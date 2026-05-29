@@ -56,15 +56,31 @@ class ClaudeProcess:
         except (OSError, ValueError): pass
         return get_context_fill_from_jsonl(self.session_id, self.workspace)
 
+    def _kill_group(self, sig: int) -> None:
+        """Signal Claude's whole process group — leader AND its MCP-server
+        children (start_new_session=True makes leader pid == pgid). Reaches
+        the children even after the leader exits (pgid lives while any child
+        does). Falls back to the leader alone if the group lookup fails."""
+        if not self.process: return
+        try: os.killpg(self.process.pid, sig)
+        except (OSError, ProcessLookupError, TypeError):
+            try: self.process.send_signal(sig)
+            except (OSError, ProcessLookupError, ValueError): pass
+
     def _terminate(self) -> None:
-        if not self.process or self.process.poll() is not None: return
-        log("Terminating Claude process...")
-        self.process.terminate()
-        try: self.process.wait(timeout=5); return
-        except subprocess.TimeoutExpired: pass
-        # Kill entire process group (Claude + MCP servers) since start_new_session=True
-        try: os.killpg(self.process.pid, signal.SIGKILL)
-        except (OSError, ProcessLookupError, TypeError): self.process.kill()
+        if not self.process: return
+        if self.process.poll() is None:
+            log("Terminating Claude process...")
+            # SIGTERM the whole group, not just the leader: the MCP servers
+            # share Claude's process group, so signalling only the leader
+            # leaves them orphaned to accumulate across resume cycles.
+            self._kill_group(signal.SIGTERM)
+            try: self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired: pass
+        # Always sweep the group with SIGKILL — reaps MCP children that
+        # outlived the leader's exit (graceful end-of-turn or SIGTERM),
+        # which is the actual orphan-accumulation path across resumes.
+        self._kill_group(signal.SIGKILL)
         try: self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             log("WARNING: Process did not die")

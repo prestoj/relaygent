@@ -122,48 +122,68 @@ class TestTerminate:
         p = ClaudeProcess("s", Timer(), tmp_path)
         p._terminate()  # Should not raise
 
-    def test_noop_when_already_exited(self, tmp_path):
+    def test_sweeps_group_when_already_exited(self, tmp_path):
+        # Regression: even when the leader has already exited (the common
+        # resume path — --print Claude exits at end of turn), its MCP-server
+        # children share the process group and must be SIGKILL-swept, or they
+        # orphan and accumulate across resume cycles.
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = 0  # Already exited
+        mock_proc.pid = 99999
         p.process = mock_proc
-        p._terminate()
-        mock_proc.terminate.assert_not_called()
+        with patch("os.killpg") as mock_killpg:
+            p._terminate()
+            # Leader already dead → no SIGTERM, but the group is swept.
+            mock_killpg.assert_called_once_with(99999, signal.SIGKILL)
 
-    def test_terminates_running_process(self, tmp_path):
+    def test_terminates_running_process_via_group(self, tmp_path):
+        # Running leader: SIGTERM the whole group (not just the leader), then
+        # SIGKILL-sweep the group to reap any lingering MCP children.
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None  # Still running
+        mock_proc.pid = 99999
         mock_proc.wait.return_value = None
         p.process = mock_proc
-        p._terminate()
-        mock_proc.terminate.assert_called_once()
+        with patch("os.killpg") as mock_killpg:
+            p._terminate()
+        assert mock_killpg.call_args_list == [
+            ((99999, signal.SIGTERM),), ((99999, signal.SIGKILL),)
+        ]
+        # The leader is signalled via the group, never via terminate().
+        mock_proc.terminate.assert_not_called()
 
-    def test_kills_on_timeout(self, tmp_path):
+    def test_kills_group_on_timeout(self, tmp_path):
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_proc.pid = 99999
+        # SIGTERM wait times out → escalate to SIGKILL group, then reap.
         mock_proc.wait.side_effect = [
             subprocess.TimeoutExpired("claude", 5), None
         ]
         p.process = mock_proc
         with patch("os.killpg") as mock_killpg:
             p._terminate()
-            mock_killpg.assert_called_once_with(99999, signal.SIGKILL)
+        assert mock_killpg.call_args_list == [
+            ((99999, signal.SIGTERM),), ((99999, signal.SIGKILL),)
+        ]
 
-    def test_falls_back_to_kill_on_killpg_error(self, tmp_path):
+    def test_falls_back_to_leader_signal_on_killpg_error(self, tmp_path):
+        # If the group lookup fails (e.g. group already gone), fall back to
+        # signalling just the leader so we don't leave it running.
         p = ClaudeProcess("s", Timer(), tmp_path)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_proc.pid = 99999
-        mock_proc.wait.side_effect = [
-            subprocess.TimeoutExpired("claude", 5), None
-        ]
+        mock_proc.wait.return_value = None
         p.process = mock_proc
         with patch("os.killpg", side_effect=OSError("no such group")):
             p._terminate()
-            mock_proc.kill.assert_called_once()
+        # send_signal is the generic per-leader fallback (SIGTERM then SIGKILL).
+        sent = [c.args[0] for c in mock_proc.send_signal.call_args_list]
+        assert signal.SIGTERM in sent and signal.SIGKILL in sent
 
 
 class TestConfiguredModel:
