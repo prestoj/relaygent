@@ -28,11 +28,6 @@ if command -v gh &>/dev/null; then
     else ck_warn "GitHub CLI" "installed but not authenticated — run: gh auth login"; fi
 else ck_warn "GitHub CLI" "not installed (optional — needed for GitHub notifications)"; fi
 
-# --- Linear ---
-LINEAR_KEY="$HOME/.relaygent/linear/api-key"
-if [ -f "$LINEAR_KEY" ] && [ -s "$LINEAR_KEY" ]; then ck_ok "Linear" "API key configured"
-else ck_warn "Linear" "no API key (optional — needed for issue tracking)"; fi
-
 # --- CLAUDE.md ---
 _CMD_FILE="$HOME/CLAUDE.md"; [ ! -f "$_CMD_FILE" ] && _CMD_FILE="$REPO_DIR/CLAUDE.md"
 if [ -f "$_CMD_FILE" ]; then
