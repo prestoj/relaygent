@@ -15,7 +15,7 @@ process.env.RELAYGENT_DATA_DIR = tmpDir;
 const sharedDir = path.join(tmpDir, 'shared');
 fs.mkdirSync(sharedDir, { recursive: true });
 
-const { GET, DELETE: DEL } = await import('../../hub/src/routes/api/files/+server.js');
+const { GET, DELETE: DEL, POST, PATCH } = await import('../../hub/src/routes/api/files/+server.js');
 
 function makeUrl(endpoint, params = {}) {
 	const u = new URL(`http://localhost/api/files${endpoint}`);
@@ -52,12 +52,13 @@ test('GET: excludes hidden files', async () => {
 	assert.ok(!names.includes('.secret'));
 });
 
-test('GET: excludes directories', async () => {
+test('GET: includes directories with isDir flag', async () => {
 	fs.mkdirSync(path.join(sharedDir, 'subdir'), { recursive: true });
 	const res = GET();
 	const data = await res.json();
-	const names = data.files.map(f => f.name);
-	assert.ok(!names.includes('subdir'));
+	const dir = data.files.find(f => f.name === 'subdir');
+	assert.ok(dir, 'folder should appear in listing');
+	assert.equal(dir.isDir, true);
 });
 
 test('GET: lists multiple files', async () => {
@@ -126,6 +127,45 @@ test('DELETE: file no longer appears in GET after deletion', async () => {
 test('DELETE: returns 400 for filename with invalid chars', async () => {
 	const res = await DEL(makeUrl('', { name: 'file<script>.txt' }));
 	assert.equal(res.status, 400);
+});
+
+// --- POST (mkdir) / PATCH (rename, move) / DELETE (folder) ---
+
+test('POST ?dir: creates a folder', async () => {
+	const res = await POST({ url: makeUrl('', { dir: 'newfolder' }).url, request: {} });
+	assert.equal(res.status, 201);
+	assert.ok(fs.existsSync(path.join(sharedDir, 'newfolder')));
+});
+
+test('POST ?dir: rejects traversal', async () => {
+	const res = await POST({ url: makeUrl('', { dir: '../escape' }).url, request: {} });
+	assert.equal(res.status, 400);
+});
+
+test('PATCH: renames a file', async () => {
+	fs.writeFileSync(path.join(sharedDir, 'r1.txt'), 'x');
+	const res = await PATCH(makeUrl('', { from: 'r1.txt', to: 'r2.txt' }));
+	assert.equal(res.status, 200);
+	assert.ok(!fs.existsSync(path.join(sharedDir, 'r1.txt')));
+	assert.ok(fs.existsSync(path.join(sharedDir, 'r2.txt')));
+});
+
+test('PATCH: moves a file into a folder', async () => {
+	fs.writeFileSync(path.join(sharedDir, 'm.txt'), 'x');
+	const res = await PATCH(makeUrl('', { from: 'm.txt', to: 'newfolder/m.txt' }));
+	assert.equal(res.status, 200);
+	assert.ok(fs.existsSync(path.join(sharedDir, 'newfolder', 'm.txt')));
+});
+
+test('DELETE: refuses a non-empty folder without recursive (409)', async () => {
+	const res = await DEL(makeUrl('', { name: 'newfolder' }));
+	assert.equal(res.status, 409);
+});
+
+test('DELETE: removes a folder recursively', async () => {
+	const res = await DEL(makeUrl('', { name: 'newfolder', recursive: '1' }));
+	assert.equal(res.status, 200);
+	assert.ok(!fs.existsSync(path.join(sharedDir, 'newfolder')));
 });
 
 // Cleanup

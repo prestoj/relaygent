@@ -102,10 +102,21 @@ test('invalid filename with path traversal: returns 400', async () => {
 	assert.ok(res.body.error);
 });
 
-test('invalid filename with slash: returns 400', async () => {
-	const res = await upload('sub/file.txt', 'data');
+test('nested upload: creates parent folder, returns 201 with path + leaf name', async () => {
+	const res = await upload('sub/dir/file.txt', 'nested data');
+	assert.equal(res.status, 201);
+	assert.equal(res.body.name, 'file.txt', 'name is the leaf');
+	assert.equal(res.body.path, 'sub/dir/file.txt', 'path is the full relative path');
+	const filePath = path.join(sharedDir, 'sub', 'dir', 'file.txt');
+	assert.ok(fs.existsSync(filePath), 'parent dirs auto-created');
+	assert.equal(fs.readFileSync(filePath, 'utf8'), 'nested data');
+});
+
+test('nested traversal via segment: returns 400', async () => {
+	const res = await upload('sub/../../escape.txt', 'evil');
 	assert.equal(res.status, 400);
 	assert.ok(res.body.error);
+	assert.ok(!fs.existsSync(path.join(sharedDir, '..', 'escape.txt')));
 });
 
 test('hidden filename: returns 400', async () => {

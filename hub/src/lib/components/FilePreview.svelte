@@ -6,6 +6,8 @@
 	let previewText = $state('');
 	let loading = $state(false);
 	let currentName = $state('');
+	// URLs key off the full relative path (folder support); display/type stay on the leaf name.
+	let src = $derived(file?.path ?? file?.name);
 
 	$effect(() => {
 		if (file && file.name !== currentName) {
@@ -13,7 +15,7 @@
 			previewText = '';
 			if (isText(file.name)) {
 				loading = true;
-				fetch(`/api/files/view?name=${encodeURIComponent(file.name)}`)
+				fetch(`/api/files/view?name=${encodeURIComponent(file.path ?? file.name)}`)
 					.then(r => r.text()).then(t => { previewText = t; loading = false; })
 					.catch(() => { previewText = 'Failed to load file'; loading = false; });
 			}
@@ -44,7 +46,7 @@
 			<button class="nav-btn" onclick={() => nav(-1)} title="Previous (←)">&#8592;</button>
 			<strong class="modal-title">{file.name}</strong>
 			<div class="header-actions">
-				<a href={dlUrl(file.name)} class="nav-btn" download title="Download">↓</a>
+				<a href={dlUrl(src)} class="nav-btn" download title="Download">↓</a>
 				<button class="nav-btn" onclick={() => nav(1)} title="Next (→)">&#8594;</button>
 				<button class="nav-btn close" onclick={onclose} title="Close (Esc)">×</button>
 			</div>
@@ -52,11 +54,11 @@
 		<div class="modal-body">
 			{#if isVideo(file.name)}
 				<!-- svelte-ignore a11y_media_has_caption -->
-				<video src={viewUrl(file.name)} controls autoplay onended={() => nav(1)}></video>
+				<video src={viewUrl(src)} controls autoplay onended={() => nav(1)}></video>
 			{:else if isAudio(file.name)}
-				<audio src={viewUrl(file.name)} controls autoplay></audio>
+				<audio src={viewUrl(src)} controls autoplay></audio>
 			{:else if isImage(file.name)}
-				<img src={viewUrl(file.name)} alt={file.name} />
+				<img src={viewUrl(src)} alt={file.name} />
 			{:else if loading}
 				<p class="muted">Loading...</p>
 			{:else if isMd(file.name)}
@@ -64,7 +66,7 @@
 			{:else if isText(file.name)}
 				<pre>{previewText}</pre>
 			{:else}
-				<p class="muted">No preview available. <a href={dlUrl(file.name)} download>Download</a></p>
+				<p class="muted">No preview available. <a href={dlUrl(src)} download>Download</a></p>
 			{/if}
 		</div>
 	</div>
