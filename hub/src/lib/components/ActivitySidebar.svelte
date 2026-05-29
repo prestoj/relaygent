@@ -140,11 +140,16 @@
 	.tn { font-weight: 600; font-family: monospace; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.file .tn { color: #3b82f6; } .bash .tn { color: #f59e0b; } .mcp .tn { color: #8b5cf6; } .other .tn { color: #6b7280; }
 	.ti { color: var(--text-muted); font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-	.tx { color: var(--text); word-break: break-word; }
+	/* min-width:0 lets this grid cell shrink below its content's min-content width;
+	   without it the 1fr track grows past the 320px sidebar and overflow:hidden
+	   clips the text (long words / listicles). overflow-wrap:anywhere breaks long tokens. */
+	.tx { color: var(--text); min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 	.tx :global(p) { margin: 0.2em 0; }
-	.tx :global(code) { font-size: 0.9em; background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+	.tx :global(ul), .tx :global(ol) { margin: 0.2em 0; padding-left: 1.2em; }
+	.tx :global(li) { margin: 0.1em 0; }
+	.tx :global(code) { font-size: 0.9em; background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
 	.tx :global(pre) { background: var(--code-bg); padding: 0.5em; border-radius: 4px; overflow-x: auto; margin: 0.3em 0; }
-	.tx :global(pre code) { background: none; padding: 0; }
+	.tx :global(pre code) { background: none; padding: 0; overflow-wrap: normal; }
 	.detail { grid-column: 1 / -1; margin-top: 0.3em; }
 	.detail-pre { font-size: 0.82em; background: var(--code-bg); padding: 0.4em 0.6em; border-radius: 4px;
 		white-space: pre-wrap; word-break: break-all; max-height: 12em; overflow-y: auto; margin: 0.2em 0; }
