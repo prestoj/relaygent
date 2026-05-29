@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import (
-    SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, UPTIME_WARN_THRESHOLD,
+    SEEN_TIMESTAMPS_MAX, SLEEP_DEBOUNCE, SLEEP_POLL_INTERVAL, UPTIME_WARN_THRESHOLD,
     URGENT_NOTIFICATION_TYPES, Timer, log, set_status,
 )
 from notify_format import format_notifications
@@ -41,7 +41,9 @@ class SleepManager:
 
     def __init__(self, timer: Timer):
         self.timer = timer
-        self._seen_timestamps = set()
+        # Ordered dict used as a bounded set (key -> None). dict_keys supports set
+        # ops for the membership test; insertion order lets us FIFO-evict the oldest.
+        self._seen_timestamps: dict = {}
         self._cache_missing_since: float | None = None
         self._uptime_warned = False
 
@@ -56,9 +58,13 @@ class SleepManager:
         new_notifications = []
         for notif in notifications:
             ts = self._extract_timestamps(notif)
-            if ts - self._seen_timestamps:
-                self._seen_timestamps.update(ts)
+            if ts - self._seen_timestamps.keys():
+                self._seen_timestamps.update((k, None) for k in ts)
                 new_notifications.append(notif)
+        # Bound the dedup set: FIFO-evict oldest keys past the cap so a long-lived
+        # relay session doesn't accumulate them forever (slow leak + slowing polls).
+        while len(self._seen_timestamps) > SEEN_TIMESTAMPS_MAX:
+            del self._seen_timestamps[next(iter(self._seen_timestamps))]
         return new_notifications
 
     def _extract_timestamps(self, notif: dict) -> set:
