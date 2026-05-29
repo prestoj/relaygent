@@ -20,6 +20,8 @@ INCOMPLETE_BASE_DELAY = 5       # Base delay for incomplete exit backoff (second
 CONTEXT_THRESHOLD = 85          # % context fill to trigger wrap-up warning
 MIN_SUCCESSOR_TIME = 10 * 60    # Don't spawn successor with <10 min remaining
 CONTEXT_WINDOW = 1000000        # Opus 4.7 context window size (1M as of CLI 2.1.76)
+UPTIME_WARN_THRESHOLD = 7 * 86400  # Warn (don't rotate) past 7d: long-lived relays have
+                                   # historically degraded task-wakes (runbook-wake-bug-followup)
 
 # Log settings
 LOG_MAX_SIZE = 512000           # 500KB
