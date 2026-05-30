@@ -10,6 +10,7 @@ tasks_file = sys.argv[1]
 freqs = {'6h': 0.25, '12h': 0.5, 'daily': 1, '2d': 2, '3d': 3, 'weekly': 7, 'monthly': 30}
 now = datetime.now()
 due = []  # (severity_ratio, display_string)
+cron_skipped = False  # set if cron tasks were hidden because croniter is unavailable
 try:
     with open(tasks_file) as f: lines = f.readlines()
 except OSError:
@@ -35,6 +36,7 @@ for line in lines:
         try:
             from croniter import croniter
         except ImportError:
+            cron_skipped = True
             continue
         if not last or last == 'never':
             due.append((99.0, desc))
@@ -86,3 +88,6 @@ if due:
         print(f'  \u2022 {d}')
 else:
     print('\n\033[0;34mTasks:\033[0m nothing due')
+if cron_skipped:
+    print('  \033[0;90m(cron-scheduled tasks hidden here: croniter not installed for this python; '
+          'the live wake path uses notifications/.venv and still fires them)\033[0m')
