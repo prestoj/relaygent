@@ -73,6 +73,11 @@ fi
 echo -e "  Rebuilding hub..."
 if (cd "$REPO_DIR/hub" && npx vite build >/dev/null 2>&1); then
     echo -e "  Hub: ${GREEN}built${NC}"
+    # Resolve DATA_DIR from config paths.data the SAME way the reader does
+    # (hub-rebuild-if-stale.sh:21) — load_config runs below this block, so
+    # DATA_DIR isn't set yet, and $REPO_DIR/data is wrong on boxes where
+    # paths.data differs from the repo dir (writer/reader would diverge).
+    DATA_DIR=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
     git -C "$REPO_DIR" rev-parse HEAD > "$DATA_DIR/hub-build-commit" 2>/dev/null || true
 else
     echo -e "  Hub: ${RED}build failed — check logs${NC}"
