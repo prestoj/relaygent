@@ -63,6 +63,17 @@ jobs:
       - name: Run notifications tests
         run: pytest tests/notifications/ -v
 
+  test-notifications-js:
+    name: Notifications tests (JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run notifications JS tests
+        run: node --test tests/notifications/test_socket_listener.mjs tests/notifications/test_next_task.mjs
+
   lint-python:
     name: Python syntax check
     runs-on: ubuntu-latest

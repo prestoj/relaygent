@@ -29,7 +29,7 @@ export const tools = [
   },
   {
     name: "get_next_task",
-    description: "Pull the next task from the backlog. Priority order: overdue recurring tasks → in-progress arcs from HANDOFF → active projects → curiosities → groom-the-backlog fallback. Use when wait_for_user times out (or proactively when no user interaction is pending) to work on something useful instead of idling. Returns {id, source, description, suggested_next_step}.",
+    description: "Pull the next task from the backlog. Priority order: one-off tasks.md items → in-progress arcs from HANDOFF → active projects → curiosities → groom-the-backlog fallback. (Recurring cron tasks self-fire via the wake path when they're actually due, so they're intentionally NOT surfaced here — that avoids returning a not-due cron task, e.g. a weekday-only job on a weekend, as idle work.) Use when wait_for_user times out (or proactively when no user interaction is pending) to work on something useful instead of idling. Returns {id, source, description, suggested_next_step}.",
     inputSchema: {
       type: "object",
       properties: {},

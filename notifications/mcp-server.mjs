@@ -13,6 +13,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "./mcp-tools.mjs";
+import { pickNextTask } from "./next-task.mjs";
 
 const API_PORT = process.env.RELAYGENT_NOTIFICATIONS_PORT || "8083";
 const API_URL = `http://127.0.0.1:${API_PORT}`;
@@ -31,38 +32,6 @@ function text(msg) {
   return { content: [{ type: "text", text: msg }] };
 }
 
-async function pickNextTask() {
-  const fs = await import("node:fs/promises");
-  const os = await import("node:os");
-  const path = await import("node:path");
-  const topics = path.join(os.homedir(), "knowledge/topics");
-  const readSafe = async (p) => { try { return await fs.readFile(p, "utf8"); } catch { return ""; } };
-
-  // 1. tasks.md — unchecked `- [ ]` items
-  const tasks = await readSafe(path.join(topics, "tasks.md"));
-  const taskMatch = tasks.split("\n").find(l => /^-\s*\[\s\]/.test(l));
-  if (taskMatch) return { source: "tasks.md", description: taskMatch.replace(/^-\s*\[\s\]\s*/, "").trim() };
-
-  // 2. HANDOFF.md — first line under "Open Threads" starting with "-"
-  const handoff = await readSafe(path.join(topics, "HANDOFF.md"));
-  const openSection = handoff.split(/^##+\s*Open Threads/im)[1] || "";
-  const openItem = openSection.split("\n").find(l => /^-\s+\S/.test(l));
-  if (openItem) return { source: "HANDOFF.md open threads", description: openItem.replace(/^-\s+/, "").trim() };
-
-  // 3. projects.md — first active project bullet
-  const projects = await readSafe(path.join(topics, "projects.md"));
-  const projActive = projects.split(/^##+\s*Active/im)[1] || "";
-  const projItem = projActive.split("\n").find(l => /^-\s+\*\*/.test(l));
-  if (projItem) return { source: "projects.md active", description: projItem.replace(/^-\s+/, "").trim() };
-
-  // 4. curiosities.md — first active question
-  const curios = await readSafe(path.join(topics, "curiosities.md"));
-  const curActive = curios.split(/^##+\s*Active Questions/im)[1] || "";
-  const curItem = curActive.split("\n").find(l => /^-\s+\*\*/.test(l));
-  if (curItem) return { source: "curiosities.md", description: curItem.replace(/^-\s+/, "").trim() };
-
-  return null;
-}
 
 const server = new Server(
   { name: "relaygent-notifications", version: "1.0.0" },
@@ -127,7 +96,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return text(
               `Task from ${task.source}: ${task.description}\n` +
               (task.suggested_next_step ? `Suggested next step: ${task.suggested_next_step}\n` : "") +
-              `(Backlog priority: tasks.md > HANDOFF open threads > projects.md > curiosities.md > groom)`
+              `(Backlog priority: one-off tasks > HANDOFF open threads > projects.md > curiosities.md > groom. ` +
+              `Recurring cron tasks self-fire when due and aren't surfaced here.)`
             );
           }
           return text("All backlog sources empty. Task: groom the backlog — add items to ~/knowledge/topics/{tasks,projects,curiosities}.md.");
