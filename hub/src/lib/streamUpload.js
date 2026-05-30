@@ -21,6 +21,18 @@ export function handleStreamUpload(req, res) {
 	const ws = fs.createWriteStream(dest);
 	let bytes = 0;
 	let aborted = false;
+	let succeeded = false;
+
+	// Remove the file once the write stream is fully closed, unless the upload
+	// completed successfully. Cleaning up on 'close' — rather than with an inline
+	// unlinkSync at abort/error time — fixes a race: createWriteStream opens the
+	// file asynchronously, so if the abort fires before the open completes, an
+	// inline unlink no-ops (ENOENT) and the open then leaves a 0-byte orphan.
+	// 'close' always fires after the fd is resolved, so cleanup is reliable.
+	ws.on('close', () => {
+		if (succeeded) return;
+		try { fs.unlinkSync(dest); } catch {}
+	});
 
 	// Enforce MAX_FILE_SIZE on the stream: this raw handler bypasses SvelteKit's
 	// BODY_SIZE_LIMIT, so without this an unbounded upload could fill the disk.
@@ -30,7 +42,6 @@ export function handleStreamUpload(req, res) {
 			aborted = true;
 			req.unpipe(ws);
 			ws.destroy();
-			try { fs.unlinkSync(dest); } catch {}
 			respond(res, 413, { error: `File exceeds ${MAX_FILE_SIZE}-byte limit` });
 			req.destroy();
 		}
@@ -40,6 +51,7 @@ export function handleStreamUpload(req, res) {
 	ws.on('finish', () => {
 		if (aborted) return;
 		const stat = fs.statSync(dest);
+		succeeded = true;
 		respond(res, 201, {
 			name: path.basename(name), path: name,
 			size: stat.size, modified: stat.mtime.toISOString(), isDir: false,
@@ -48,14 +60,12 @@ export function handleStreamUpload(req, res) {
 
 	ws.on('error', (e) => {
 		if (aborted) return;
-		try { fs.unlinkSync(dest); } catch {}
 		respond(res, 500, { error: e.message || 'Upload failed' });
 	});
 
 	req.on('error', (e) => {
 		if (aborted) return;
 		ws.destroy();
-		try { fs.unlinkSync(dest); } catch {}
 		respond(res, 500, { error: e.message || 'Upload failed' });
 	});
 }
