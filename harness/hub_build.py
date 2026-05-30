@@ -8,6 +8,7 @@ portable (macOS has no flock(1)), so both sides use a lock *directory* of the sa
 name (~/.relaygent/hub-rebuild.lock).
 """
 
+import os
 import shutil
 import ssl
 import time
@@ -40,12 +41,18 @@ def hub_build_lock(lock_dir: Path):
             except OSError:
                 age = 0
             if age > LOCK_STALE_SECS:
-                shutil.rmtree(lock_dir, ignore_errors=True)
+                # Steal atomically: os.rename succeeds for exactly one racer (the
+                # source vanishes for the loser, raising), so two simultaneous
+                # stealers can't both delete + re-acquire (a double-rmtree TOCTOU
+                # that would re-open the very race this lock closes).
+                dead = lock_dir.with_name(f"{lock_dir.name}.dead.{os.getpid()}")
                 try:
+                    os.rename(lock_dir, dead)
+                    shutil.rmtree(dead, ignore_errors=True)
                     lock_dir.mkdir()
                     acquired = True
                 except OSError:
-                    pass
+                    pass  # lost the steal race, or another racer re-created it
         yield acquired
     finally:
         if acquired:

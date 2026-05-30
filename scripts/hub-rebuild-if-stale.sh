@@ -51,8 +51,16 @@ LOCK_STALE_SECS=300  # > build timeout (never steal a live build); self-heals a 
 if ! mkdir "$LOCK" 2>/dev/null; then
     lock_mtime=$(stat -f %m "$LOCK" 2>/dev/null || stat -c %Y "$LOCK" 2>/dev/null || echo 0)
     if [ $(( $(date +%s) - lock_mtime )) -gt "$LOCK_STALE_SECS" ]; then
-        rm -rf "$LOCK"  # stale lock from a crashed rebuild
-        mkdir "$LOCK" 2>/dev/null || { echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hub rebuild lock busy — skipping." | tee -a "$LOG"; exit 0; }
+        # Steal a stale lock atomically: `mv` succeeds for exactly one racer (the source
+        # vanishes for the loser), avoiding a double-rm TOCTOU where two stealers both
+        # re-acquire and rebuild concurrently — the very race this lock closes.
+        if mv "$LOCK" "$LOCK.dead.$$" 2>/dev/null; then
+            rm -rf "$LOCK.dead.$$"
+            mkdir "$LOCK" 2>/dev/null || { echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hub rebuild lock busy — skipping." | tee -a "$LOG"; exit 0; }
+        else
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another hub rebuild in progress (lost steal) — skipping." | tee -a "$LOG"
+            exit 0
+        fi
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another hub rebuild in progress — skipping." | tee -a "$LOG"
         exit 0
