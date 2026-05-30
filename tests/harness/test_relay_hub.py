@@ -219,3 +219,77 @@ class TestLinuxSIGTERM:
             check_and_rebuild_hub()
         mock_popen.assert_called_once()
         assert not (self.repo / "data" / "hub-build-commit").exists()
+
+
+class TestRebuildLockAndCache:
+    """The rebuild lock (serializing against the 5-min autobuild) and the
+    .svelte-kit cache clear that together prevent the stale-manifest 500."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("relay_hub.REPO_DIR", tmp_path)
+        self.repo = tmp_path
+        self.home = tmp_path / "home"; self.home.mkdir()
+        (self.home / ".relaygent").mkdir()
+        for d in ("data", "hub", "logs"): (tmp_path / d).mkdir()
+        monkeypatch.setattr("relay_hub.Path.home", lambda: self.home)
+        monkeypatch.setattr("relay_hub._hub_uses_launchagent", lambda: False)
+        monkeypatch.setattr("relay_hub.time.sleep", lambda _: None)
+        self.lock = self.home / ".relaygent" / "hub-rebuild.lock"
+
+    def _git_run(self, head="newhead"):
+        r = MagicMock(); r.stdout = head; r.returncode = 0; return r
+
+    def _build_run(self, rc=0):
+        r = MagicMock(); r.returncode = rc; r.stderr = b""; return r
+
+    def test_clears_svelte_kit_before_build(self):
+        cache = self.repo / "hub" / ".svelte-kit"
+        cache.mkdir(); (cache / "stale.js").write_text("old")
+        proc = MagicMock(); proc.pid = 1
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), self._build_run()]), \
+             patch("relay_hub.subprocess.Popen", return_value=proc):
+            check_and_rebuild_hub()
+        assert not cache.exists()  # stale cache removed before the (mocked) build
+
+    def test_releases_lock_after_successful_rebuild(self):
+        proc = MagicMock(); proc.pid = 1
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), self._build_run()]), \
+             patch("relay_hub.subprocess.Popen", return_value=proc):
+            check_and_rebuild_hub()
+        assert not self.lock.exists()  # lock released in finally
+
+    def test_releases_lock_even_on_build_failure(self):
+        r = MagicMock(); r.returncode = 1; r.stderr = b"err"
+        proc = MagicMock(); proc.pid = 1
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), r]), \
+             patch("relay_hub.subprocess.Popen", return_value=proc):
+            check_and_rebuild_hub()
+        assert not self.lock.exists()  # a failed build must not wedge future rebuilds
+
+    def test_skips_rebuild_when_lock_held(self, capsys):
+        # Simulate the autobuild holding the lock: a fresh (non-stale) lock dir.
+        self.lock.mkdir()
+        proc = MagicMock(); proc.pid = 7
+        with patch("relay_hub.subprocess.run", return_value=self._git_run()) as mock_run, \
+             patch("relay_hub._hub_healthy", return_value=False), \
+             patch("relay_hub.subprocess.Popen", return_value=proc) as mock_popen:
+            check_and_rebuild_hub()
+        calls = [str(c) for c in mock_run.call_args_list]
+        assert not any("npm" in c for c in calls)   # did NOT rebuild
+        mock_popen.assert_called_once()              # but ensured the hub is running
+        assert "already in progress" in capsys.readouterr().out
+        assert self.lock.exists()                    # someone else's lock left intact
+
+    def test_steals_stale_lock(self):
+        import os, time as _t
+        self.lock.mkdir()
+        old = _t.time() - 600  # older than _LOCK_STALE_SECS
+        os.utime(self.lock, (old, old))
+        proc = MagicMock(); proc.pid = 1
+        with patch("relay_hub.subprocess.run", side_effect=[self._git_run(), self._build_run()]) as mock_run, \
+             patch("relay_hub.subprocess.Popen", return_value=proc):
+            check_and_rebuild_hub()
+        calls = [str(c) for c in mock_run.call_args_list]
+        assert any("npm" in c for c in calls)  # stale lock stolen → rebuild proceeded
+        assert (self.repo / "data" / "hub-build-commit").read_text().strip() == "newhead"

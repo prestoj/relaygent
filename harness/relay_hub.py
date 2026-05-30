@@ -2,16 +2,24 @@
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from config import REPO_DIR, log
 
 LAUNCHAGENT_LABEL = "com.relaygent.hub"
 LAUNCHAGENT_PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LAUNCHAGENT_LABEL}.plist"
+
+# A rebuild that crashes mid-flight could leave the lock dir behind; treat a lock
+# older than this as stale and steal it. Comfortably above the 120s build timeout
+# (so a live build is never stolen from) yet short enough that a wedged lock
+# self-heals within one 5-min autobuild cycle.
+_LOCK_STALE_SECS = 300
 
 
 def _launchctl(*args, timeout=10) -> bool:
@@ -25,6 +33,47 @@ def _launchctl(*args, timeout=10) -> bool:
 
 def _hub_uses_launchagent() -> bool:
     return sys.platform == "darwin" and LAUNCHAGENT_PLIST.exists()
+
+
+def _hub_build_lock_dir() -> Path:
+    return Path.home() / ".relaygent" / "hub-rebuild.lock"
+
+
+@contextmanager
+def _hub_build_lock():
+    """Serialize hub rebuilds between the relay (here, on session start) and the
+    5-min autobuild (scripts/hub-rebuild-if-stale.sh). Both write hub/build/, and
+    when they overlap the result is a build/ whose manifest references a JS chunk
+    the other build never emitted — a 500-on-every-page stale manifest (the bug
+    this guards against). mkdir is the atomic acquire primitive and is portable:
+    macOS has no flock(1), so both sides use a lock *directory* of the same name.
+
+    Yields True if the lock was acquired (caller should rebuild), False if another
+    rebuild already holds it (caller should skip and let that one land).
+    """
+    lock = _hub_build_lock_dir()
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    acquired = False
+    try:
+        try:
+            lock.mkdir()
+            acquired = True
+        except FileExistsError:
+            try:
+                age = time.time() - lock.stat().st_mtime
+            except OSError:
+                age = 0
+            if age > _LOCK_STALE_SECS:
+                shutil.rmtree(lock, ignore_errors=True)
+                try:
+                    lock.mkdir()
+                    acquired = True
+                except OSError:
+                    pass
+        yield acquired
+    finally:
+        if acquired:
+            shutil.rmtree(lock, ignore_errors=True)
 
 
 def _hub_healthy(hub_port: str, timeout: float = 3.0) -> bool:
@@ -76,9 +125,14 @@ def _load_config() -> dict:
 
 
 def check_and_rebuild_hub() -> None:
-    """Rebuild hub if build is stale (git HEAD differs from last built commit)."""
+    """Rebuild hub if build is stale (git HEAD differs from last built commit).
+
+    Rebuilds run under a cross-process lock shared with the 5-min autobuild so
+    the two never write hub/build/ at the same time (the stale-manifest race).
+    """
     conf = _load_config()
     data_dir = conf["data_dir"]
+    hub_port = conf["hub_port"]
     build_commit_file = Path(data_dir) / "hub-build-commit"
     try:
         current = subprocess.run(
@@ -91,21 +145,44 @@ def check_and_rebuild_hub() -> None:
     if not current:
         return
 
-    if build_commit_file.exists() and build_commit_file.read_text().strip() == current:
-        hub_port = conf["hub_port"]
-        if _hub_healthy(hub_port):
-            log("Hub build is current and responding, skipping rebuild")
-            return
-        # Build is current but the hub isn't answering — it likely died with a
-        # relay/cgroup restart. Revive it without a needless rebuild.
-        log("Hub build is current but not responding — restarting hub")
-        _start_hub(_hub_uses_launchagent(), hub_port, conf["kb_dir"], data_dir,
-                   conf["notifications_port"], Path.home() / ".relaygent")
+    # Fast path: build current and hub responding — no work, no lock needed.
+    if (build_commit_file.exists()
+            and build_commit_file.read_text().strip() == current
+            and _hub_healthy(hub_port)):
+        log("Hub build is current and responding, skipping rebuild")
         return
 
+    # Stale, or current-but-down: take the rebuild lock so we don't collide with
+    # the autobuild. If it's held, another rebuild is in flight — skip and just
+    # make sure the hub is running; the in-flight build will become current soon.
+    with _hub_build_lock() as acquired:
+        if not acquired:
+            log("Hub rebuild already in progress (autobuild) — skipping")
+            if not _hub_healthy(hub_port):
+                _start_hub(_hub_uses_launchagent(), hub_port, conf["kb_dir"], data_dir,
+                           conf["notifications_port"], Path.home() / ".relaygent")
+            return
+
+        # Re-read inside the lock — the autobuild may have just finished.
+        built = build_commit_file.read_text().strip() if build_commit_file.exists() else ""
+        if built == current:
+            if _hub_healthy(hub_port):
+                log("Hub build is current and responding, skipping rebuild")
+                return
+            log("Hub build is current but not responding — restarting hub")
+            _start_hub(_hub_uses_launchagent(), hub_port, conf["kb_dir"], data_dir,
+                       conf["notifications_port"], Path.home() / ".relaygent")
+            return
+
+        _rebuild_hub(conf, current, build_commit_file)
+
+
+def _rebuild_hub(conf: dict, current: str, build_commit_file: Path) -> None:
+    """Rebuild the hub from source. Caller must hold the rebuild lock."""
     log("Hub build is stale — rebuilding...")
     hub_port = conf["hub_port"]
     kb_dir = conf["kb_dir"]
+    data_dir = conf["data_dir"]
     notifications_port = conf["notifications_port"]
     pid_dir = Path.home() / ".relaygent"
 
@@ -133,6 +210,11 @@ def check_and_rebuild_hub() -> None:
         hub_pid_file.unlink(missing_ok=True)
 
     hub_dir = REPO_DIR / "hub"
+    # Clear the SvelteKit incremental cache before building. A stale .svelte-kit
+    # can yield a build/ whose manifest imports a chunk hash the build didn't
+    # emit → ERR_MODULE_NOT_FOUND → 500 on every page. A clean cache makes the
+    # build self-consistent.
+    shutil.rmtree(hub_dir / ".svelte-kit", ignore_errors=True)
     result = subprocess.run(
         ["npm", "run", "build", "--prefix", str(hub_dir)],
         capture_output=True, timeout=120
