@@ -42,6 +42,39 @@ if [ "$FORCE" != "--force" ] && [ "$HEAD" = "$BUILT" ]; then
     exit 0
 fi
 
+# Serialize against the relay's session-start rebuild (harness/relay_hub.py). Both
+# write hub/build/, and overlapping rebuilds can leave build/ referencing a chunk the
+# other build never emitted — a 500-on-every-page stale manifest. mkdir is the atomic
+# lock primitive (portable — macOS has no flock(1)); the relay side locks the same dir.
+LOCK="$HOME/.relaygent/hub-rebuild.lock"
+LOCK_STALE_SECS=300  # > build timeout (never steal a live build); self-heals a wedged lock in one autobuild cycle
+if ! mkdir "$LOCK" 2>/dev/null; then
+    lock_mtime=$(stat -f %m "$LOCK" 2>/dev/null || stat -c %Y "$LOCK" 2>/dev/null || echo 0)
+    if [ $(( $(date +%s) - lock_mtime )) -gt "$LOCK_STALE_SECS" ]; then
+        # Steal a stale lock atomically: `mv` succeeds for exactly one racer (the source
+        # vanishes for the loser), avoiding a double-rm TOCTOU where two stealers both
+        # re-acquire and rebuild concurrently — the very race this lock closes.
+        if mv "$LOCK" "$LOCK.dead.$$" 2>/dev/null; then
+            rm -rf "$LOCK.dead.$$"
+            mkdir "$LOCK" 2>/dev/null || { echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hub rebuild lock busy — skipping." | tee -a "$LOG"; exit 0; }
+        else
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another hub rebuild in progress (lost steal) — skipping." | tee -a "$LOG"
+            exit 0
+        fi
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another hub rebuild in progress — skipping." | tee -a "$LOG"
+        exit 0
+    fi
+fi
+trap 'rm -rf "$LOCK"' EXIT
+
+# Re-check staleness now that we hold the lock — a rebuild we were racing may have
+# just landed the current commit while we waited.
+BUILT=$(cat "$BUILD_COMMIT" 2>/dev/null || echo "")
+if [ "$FORCE" != "--force" ] && [ "$HEAD" = "$BUILT" ]; then
+    exit 0  # trap releases the lock
+fi
+
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuilding hub (was: ${BUILT:0:8}, now: ${HEAD:0:8})" | tee -a "$LOG"
 
 HUB_PLIST="$HOME/Library/LaunchAgents/com.relaygent.hub.plist"
@@ -49,7 +82,9 @@ GUID="gui/$(id -u)"
 STAGING="$REPO_DIR/hub/build.staging"
 
 # Build into a staging dir while the live hub keeps serving the old build.
-rm -rf "$STAGING"
+# Clear the SvelteKit incremental cache first — a stale .svelte-kit can yield a
+# manifest that imports a chunk hash the build didn't emit (ERR_MODULE_NOT_FOUND).
+rm -rf "$STAGING" "$REPO_DIR/hub/.svelte-kit"
 if ! HUB_BUILD_OUT="build.staging" npm run build --prefix "$REPO_DIR/hub" >> "$LOG" 2>&1; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Rebuild FAILED — hub still serving old build." | tee -a "$LOG"
     rm -rf "$STAGING"
