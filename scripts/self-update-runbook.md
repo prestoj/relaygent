@@ -12,9 +12,11 @@ Identify yourself by hostname (`hostname`): `unsupervised` = **agent-two**, `sup
 **agent-one**. Your **partner** is the other one. This is off-hours by design — keep it quiet
 unless something is wrong.
 
-## Two modes — read the task line that woke you
+## Modes — read the task line that woke you
 
-The `tasks.md` entry says either **update** or **partner-check** in its description. Do that mode.
+The `tasks.md` entry says **update**, **partner-check**, or **full-update** in its description. Do
+that mode. **update**/**partner-check** are the *daily* lightweight cycle; **full-update** is the
+*weekly* full-stack sweep (Mode C) that also updates the OS, browsers, and other tooling.
 
 ---
 
@@ -61,6 +63,53 @@ The `tasks.md` entry says either **update** or **partner-check** in its descript
 3. **Down** (Tailscale node offline, or partner reported a failed update / silent past slot) → **Rescue**.
 
 ---
+
+## Mode C — FULL-UPDATE (weekly full-stack sweep)
+
+Same staggered + partner-rescue discipline as Mode A, but it also updates the OS and tooling, so
+it can require a **reboot**. Preston's rule (2026-06-02): keep the whole stack current — OS, Claude
+CLI, relaygent, browsers, and any other tools — but **HOLD major release upgrades** (Ubuntu
+24.04→24.10, macOS 26→27) for a manual call. The script encodes that: it never runs
+`do-release-upgrade` / a major `softwareupdate` jump.
+
+1. **Pre-check your partner** (same as Mode A — Tailscale `active` + healthy #general line).
+2. **Run** `relaygent full-update` and capture output. It applies apt/`softwareupdate` (point +
+   security + within-release only), kernel + NVIDIA module (Linux), Ollama, browsers, then the
+   standard daily update (repo/CLI/hub/services), and prints a **summary** with a `✓/✗/⚠` per step.
+3. **Read the summary.** Fix any `✗` (autonomous on hub/notifications/package ops; never the relay).
+4. **If the summary says `*** REBOOT REQUIRED ***`** — the script does NOT reboot itself. You do it,
+   coordinated:
+   a. Confirm your **partner is healthy** (it's your rescuer while you're down) — Health signals below.
+   b. Post a heads-up to #general: `agent-X: full-update done, rebooting for kernel/OS — back in ~3-5 min`.
+   c. **Reboot — platform-specific:**
+      - **Linux**: `sudo reboot`. The apt/kernel update is already installed; the reboot just
+        activates the new kernel. Services auto-recover (systemd --user lingering units).
+      - **macOS**: do NOT `sudo reboot` for an OS update — the update is only *staged*, and the
+        actual install happens AT restart via a special boot that needs a **volume-owner
+        credential** (Apple Silicon; plain `sudo` reaches "Prepared" then silently exits without
+        rebooting). Pull vault `system_password` INLINE (never log it) and run:
+        ```
+        PW=$(node -e "import('file:///Users/claude/projects/relaygent/secrets/vault.mjs').then(v=>process.stdout.write(v.getSecret('system_password')))")
+        printf '%s\n' "$PW" | sudo -n /usr/sbin/softwareupdate -i -r -R --user claude --stdinpass --agree-to-license
+        ```
+        `-r` installs recommended only (a major macOS jump stays held); `-R` restarts when done.
+        Services auto-recover via LaunchAgents — **but only because auto-login is enabled.**
+      - **macOS PREREQUISITE — auto-login MUST be enabled** (no FileVault): macOS GUI LaunchAgents
+        (relay/hub/Tailscale) only start once a user logs into the desktop, so a reboot with no
+        auto-login STRANDS the Mac at the login window — relay/hub/Tailscale never start (only sshd
+        + mDNS, which are system daemons, come up). This bit agent-two on 2026-06-02. The
+        `full-update` summary asserts auto-login before flagging the reboot; if it warns it's OFF,
+        fix it first. Recovery + the auto-login setup (write `/etc/kcpassword` by hand —
+        `sysadminctl`'s pw step errors:22) is in MEMORY "Rescuing agent-two's Mac".
+   d. **After reboot, verify GPUs**: `nvidia-smi`. If "No devices found" but `lspci` shows them, the
+      kernel out-paced the NVIDIA module — `sudo apt install linux-modules-nvidia-<DRV>-open-$(uname -r)`
+      then `sudo modprobe nvidia` (see MEMORY "NVIDIA driver / kernel mismatch").
+   e. Post the all-clear line to #general once services are confirmed healthy.
+5. **Report + land on new code**: one #general line with the summary gist; if HEAD/CLI advanced, write
+   HANDOFF.md and `retire` so the successor starts on the new code (same as Mode A step 5).
+
+If a **major release** is available (held by design), don't apply it — surface it to Preston with the
+version and the ~downtime, and let him make the call.
 
 ## Health signals (READ THIS — the hub curl lies cross-machine)
 
