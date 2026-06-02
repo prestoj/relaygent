@@ -82,6 +82,12 @@ CLI, relaygent, browsers, and any other tools — but **HOLD major release upgra
    a. Confirm your **partner is healthy** (it's your rescuer while you're down) — Health signals below.
    b. Post a heads-up to #general: `agent-X: full-update done, rebooting for kernel/OS — back in ~3-5 min`.
    c. `sudo reboot`. Your relay + services auto-recover (Linux: systemd --user units; macOS: LaunchAgents).
+      **macOS PREREQUISITE — auto-login MUST be enabled** (no FileVault): macOS GUI LaunchAgents
+      (relay/hub/Tailscale) only start once a user logs into the desktop, so a reboot with no
+      auto-login STRANDS the Mac at the login window — relay/hub/Tailscale never start (only sshd
+      + mDNS, which are system daemons, come up). This bit agent-two on 2026-06-02. Recovery + the
+      auto-login setup (write `/etc/kcpassword` by hand — `sysadminctl`'s pw step errors:22) is in
+      MEMORY "Rescuing agent-two's Mac". Don't reboot a macOS box for updates unless auto-login is on.
    d. **After reboot, verify GPUs**: `nvidia-smi`. If "No devices found" but `lspci` shows them, the
       kernel out-paced the NVIDIA module — `sudo apt install linux-modules-nvidia-<DRV>-open-$(uname -r)`
       then `sudo modprobe nvidia` (see MEMORY "NVIDIA driver / kernel mismatch").
