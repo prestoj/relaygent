@@ -21,15 +21,81 @@ record() { SUMMARY+=("$1"); }
 OS="$(uname)"
 note "${CYAN}Relaygent full-stack update — $OS — $(date)${NC}"
 
-# ---------- Platform: macOS (agent-two owns this branch) ----------
+# ---------- Platform: macOS (agent-two / unsupervised) ----------
 if [ "$OS" = "Darwin" ]; then
-    note "${YELLOW}macOS branch — owned by agent-two (stub).${NC}"
-    # TODO(agent-two): fill in —
-    #   - softwareupdate -l; apply ONLY items WITHOUT a major-version jump (hold 26->27)
-    #   - brew update && brew upgrade && brew cleanup
-    #   - Chrome / other browsers; npm globals / other CLI tools
-    #   - set REBOOT_NEEDED=true if softwareupdate flags a restart
-    record "⚠ macOS full-stack steps not yet implemented (agent-two branch)"
+    # 1) Homebrew — formulae + casks (the bulk of CLI tools + GUI apps). No reboot, no creds.
+    if command -v brew >/dev/null 2>&1; then
+        note "${CYAN}[brew] update + upgrade + cleanup${NC}"
+        brew update >/dev/null 2>&1 || true
+        N=$(brew outdated --quiet 2>/dev/null | grep -c .)
+        if brew upgrade >/dev/null 2>&1; then
+            brew upgrade --cask >/dev/null 2>&1 || true
+            brew cleanup >/dev/null 2>&1 || true
+            record "✓ brew: upgrade OK ($N formulae were outdated) + casks + cleanup"
+        else
+            record "✗ brew upgrade failed — run 'brew upgrade' manually"
+        fi
+    fi
+
+    # 2) npm globals — keep CLI tools current. EXCLUDE @anthropic-ai/claude-code (the daily
+    #    update below owns the Claude CLI via `claude update`; double-updating fights pinning)
+    #    and npm itself. /opt/homebrew node_modules is claude-owned, so no sudo needed.
+    if command -v npm >/dev/null 2>&1; then
+        note "${CYAN}[npm] update global packages (excluding claude-code + npm)${NC}"
+        PKGS=$(npm ls -g --depth=0 --parseable 2>/dev/null | tail -n +2 | sed "s#.*/node_modules/##" \
+               | grep -vE '^(@anthropic-ai/claude-code|npm)$')
+        if [ -n "$PKGS" ] && npm update -g $PKGS >/dev/null 2>&1; then
+            record "✓ npm: $(echo "$PKGS" | grep -c .) globals updated (claude-code via daily update)"
+        else
+            record "⚠ npm globals update had issues — check 'npm outdated -g'"
+        fi
+    fi
+
+    # 3) Chrome — not a brew cask + no Keystone updater on this box, so it can't be driven
+    #    from the CLI; report the version so drift stays visible (Chrome self-updates in-app).
+    CHROME_APP="/Applications/Google Chrome.app"
+    if [ -d "$CHROME_APP" ]; then
+        CHROME_V=$(defaults read "$CHROME_APP/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null)
+        record "ℹ Chrome $CHROME_V (self-updates in-app; no CLI updater installed)"
+    fi
+
+    # 4) softwareupdate — point + security ONLY. MAJOR macOS upgrades (26->27) are HELD:
+    #    `-r`/--recommended never includes them, and we also detect + surface any offered.
+    #    This script never installs an OS update that needs a restart, nor reboots — that
+    #    install+restart needs a volume-owner credential (Apple Silicon), so the AGENT does
+    #    it in the coordinated reboot step (runbook Mode C). Non-restart recommended updates
+    #    (Safari, CLI tools, config-data) ARE applied here.
+    note "${CYAN}[softwareupdate] scanning (~30-60s)...${NC}"
+    SWU=$(/usr/sbin/softwareupdate -l 2>&1)
+    CUR_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+    HELD=""
+    for m in $(echo "$SWU" | grep -i 'Title: macOS' | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+'); do
+        [ "$m" -gt "$CUR_MAJOR" ] 2>/dev/null && HELD="macOS $m"
+    done
+    [ -n "$HELD" ] && record "⚠ HELD major upgrade available ($HELD) — surface to Preston, do NOT auto-apply"
+
+    if echo "$SWU" | grep -qi 'No new software available'; then
+        record "✓ softwareupdate: macOS $CUR_MAJOR up to date"
+    elif echo "$SWU" | grep -qiE 'action: restart|\[restart\]'; then
+        # A recommended update needs a restart → defer install+restart to the agent (Mode C).
+        record "⚠ macOS update needs a restart — agent applies via credentialed restart (Mode C)"
+        REBOOT_NEEDED=true
+        # Reboot guard (agent-one's insurance): if auto-login is off, the post-reboot box strands
+        # at the login window (no GUI -> no LaunchAgents). Warn LOUDLY so the agent doesn't reboot.
+        AL=$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null)
+        if [ "$AL" = "claude" ] && [ -f /etc/kcpassword ]; then
+            record "✓ reboot-safe: auto-login enabled (claude) — box self-recovers after restart"
+        else
+            record "‼ AUTO-LOGIN OFF — DO NOT REBOOT: box will strand at login window. Enable auto-login first (MEMORY 'Rescuing the Mac')."
+        fi
+    else
+        note "${CYAN}[softwareupdate] applying recommended (non-restart) updates${NC}"
+        if sudo -n /usr/sbin/softwareupdate -i -r --no-scan >/dev/null 2>&1; then
+            record "✓ softwareupdate: recommended (non-restart) updates applied"
+        else
+            record "⚠ softwareupdate -i -r failed — run manually"
+        fi
+    fi
 
 # ---------- Platform: Linux (agent-one / supervised) ----------
 elif [ "$OS" = "Linux" ]; then
@@ -99,6 +165,14 @@ if [ "$REBOOT_NEEDED" = true ]; then
     note "\n${YELLOW}*** REBOOT REQUIRED ***${NC}"
     note "  A reboot bounces all services + this relay session. Do NOT reboot blindly."
     note "  Agent: follow self-update-runbook.md 'Mode C' — confirm partner healthy (it"
-    note "  rescues you), post a heads-up to #general, then: ${CYAN}sudo reboot${NC}"
-    note "  After reboot verify both GPUs: ${CYAN}nvidia-smi${NC} (if missing, see MEMORY nvidia/kernel fix)."
+    note "  rescues you), post a heads-up to #general, then reboot:"
+    if [ "$OS" = "Darwin" ]; then
+        note "  macOS: do NOT 'sudo reboot' (it won't apply the STAGED OS update). The install"
+        note "  happens AT restart and needs a volume-owner credential. First assert auto-login is"
+        note "  ON (claude) — see the summary above — then pull vault 'system_password' INLINE:"
+        note "    ${CYAN}printf '%s\\n' \"\$PW\" | sudo -n /usr/sbin/softwareupdate -i -r -R --user claude --stdinpass --agree-to-license${NC}"
+        note "  (-r = recommended only, so a major macOS jump stays held; -R restarts when done.)"
+    else
+        note "  Linux: ${CYAN}sudo reboot${NC} — then verify both GPUs: ${CYAN}nvidia-smi${NC} (if missing, see MEMORY nvidia/kernel fix)."
+    fi
 fi
