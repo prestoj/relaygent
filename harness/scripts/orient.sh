@@ -140,9 +140,12 @@ if m:
 PYEOF
 fi
 
-# Due tasks
+# Due tasks — prefer the notifications venv python (it has croniter, so cron-scheduled
+# tasks are evaluated and overdue ones surface; system python3 lacks it and hides them).
 if [ -f "$TASKS_FILE" ]; then
-    DUE_TASKS=$(python3 "$SCRIPT_DIR/due-tasks.py" "$TASKS_FILE" 2>/dev/null)
+    DUE_PY="python3"
+    [ -x "$REPO_DIR/notifications/.venv/bin/python3" ] && DUE_PY="$REPO_DIR/notifications/.venv/bin/python3"
+    DUE_TASKS=$("$DUE_PY" "$SCRIPT_DIR/due-tasks.py" "$TASKS_FILE" 2>/dev/null)
     [ -n "$DUE_TASKS" ] && echo "$DUE_TASKS"
 fi
 
