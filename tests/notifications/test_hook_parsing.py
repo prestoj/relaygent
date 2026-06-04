@@ -233,6 +233,69 @@ class TestChat:
         assert "3 unread chat message(s)" in stdout
 
 
+def _run_parser_home(cache_data, home):
+    """Run notif-context.py with an explicit (caller-owned) HOME so the test can
+    inspect the watermark files the hook writes. Returns stdout (stripped)."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(cache_data, f)
+        f.flush()
+        try:
+            r = subprocess.run(
+                ["python3", NOTIF_CONTEXT],
+                env={**os.environ, "CACHE_FILE": f.name, "HOME": home},
+                capture_output=True, text=True, timeout=5,
+            )
+            return r.stdout.strip()
+        finally:
+            os.unlink(f.name)
+
+
+def _gh_notif(count=1, contents=("[PR] org/repo: Fix (review requested)",), ack_ts="2026-03-01T00:00:00Z"):
+    return {
+        "type": "message", "source": "github", "count": count,
+        "messages": [{"timestamp": ack_ts, "content": c} for c in contents],
+        "ack_ts": ack_ts,
+    }
+
+
+class TestGithub:
+    def test_github_single_display(self):
+        stdout, _ = _run_parser([_gh_notif()])
+        assert "1 GitHub notification:" in stdout
+        assert "[PR] org/repo: Fix (review requested)" in stdout
+
+    def test_github_plural_and_previews(self):
+        stdout, _ = _run_parser([_gh_notif(count=3, contents=(
+            "[PR] a: one (new comment)", "[issue] b: two (you were mentioned)"))])
+        assert "3 GitHub notifications:" in stdout
+        assert "one" in stdout and "two" in stdout
+        assert " | " in stdout  # previews joined
+
+    def test_github_no_messages(self):
+        stdout, _ = _run_parser([{"type": "message", "source": "github", "count": 2, "messages": []}])
+        assert "2 GitHub notifications" in stdout
+
+    def test_github_writes_consumed_watermark(self, tmp_path):
+        home = str(tmp_path)
+        _run_parser_home([_gh_notif(ack_ts="2026-03-05T12:00:00Z")], home)
+        wm = tmp_path / ".relaygent" / "github" / ".consumed_ts"
+        assert wm.read_text() == "2026-03-05T12:00:00Z"
+
+    def test_github_watermark_monotonic(self, tmp_path):
+        home = str(tmp_path)
+        wm = tmp_path / ".relaygent" / "github"
+        wm.mkdir(parents=True)
+        (wm / ".consumed_ts").write_text("2026-04-01T00:00:00Z")
+        # Surfacing an OLDER ack_ts must NOT regress the watermark.
+        _run_parser_home([_gh_notif(ack_ts="2026-03-05T12:00:00Z")], home)
+        assert (wm / ".consumed_ts").read_text() == "2026-04-01T00:00:00Z"
+
+    def test_github_empty_ack_ts_does_not_write(self, tmp_path):
+        home = str(tmp_path)
+        _run_parser_home([_gh_notif(ack_ts="")], home)
+        assert not (tmp_path / ".relaygent" / "github" / ".consumed_ts").exists()
+
+
 class TestMixed:
     def test_reminder_plus_slack_plus_email(self):
         data = [

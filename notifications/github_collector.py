@@ -13,9 +13,17 @@ from flask import jsonify
 
 logger = logging.getLogger(__name__)
 
-_LAST_CHECK_FILE = os.path.join(
-    os.path.expanduser("~"), ".relaygent", "github", ".last_check_ts"
+# Local consume watermark, advanced by the notification hook on consume (a turn
+# saw the notif), NOT here on surface. Mirrors email's `.email_ack_ts`. See
+# [[github-consume-gating-design]] / [[notifications-delivery-model]]. The old
+# `.last_check_ts` (surface-advanced) caused at-most-once loss: a notif surfaced
+# on a background poll no turn ever saw moved `since` past it → dropped next poll.
+_CONSUMED_FILE = os.path.join(
+    os.path.expanduser("~"), ".relaygent", "github", ".consumed_ts"
 )
+
+# First-poll lookback floor (no watermark yet) — bounds the initial API response.
+_INITIAL_LOOKBACK_S = 7 * 24 * 3600
 
 # Notification reasons that are worth waking the agent for
 _WAKE_REASONS = {
@@ -55,26 +63,16 @@ def _gh_api(endpoint, params=None):
         return None
 
 
-def _load_last_check():
-    """Read last check timestamp. Returns ISO string or None."""
+def _load_consumed():
+    """Read the consume watermark (max updated_at a turn has seen). ISO-Z or None.
+
+    Written ONLY by the notification hook on consume — never advanced here.
+    """
     try:
-        if os.path.exists(_LAST_CHECK_FILE):
-            with open(_LAST_CHECK_FILE) as f:
-                return f.read().strip() or None
+        with open(_CONSUMED_FILE) as f:
+            return f.read().strip() or None
     except OSError:
-        pass
-    return None
-
-
-def _save_last_check():
-    """Save current time as last check timestamp."""
-    try:
-        os.makedirs(os.path.dirname(_LAST_CHECK_FILE), exist_ok=True)
-        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with open(_LAST_CHECK_FILE, "w") as f:
-            f.write(ts)
-    except OSError as e:
-        logger.warning("Failed to write GitHub last-check: %s", e)
+        return None
 
 
 def _format_notification(notif):
@@ -100,49 +98,67 @@ def _format_notification(notif):
 
 
 def collect(notifications):
-    """Check GitHub for unread notifications since last check."""
+    """Surface unread GitHub notifications newer than the consume watermark.
+
+    Gates SOLELY on the local consume watermark (`updated_at > consumed`), NOT on
+    the remote `unread` flag. The wake-ack (`ack()` below, called on wake before
+    any turn consumes) does a remote mark-ALL-read, so an `unread` sub-filter would
+    drop anything acked-but-not-yet-consumed (e.g. items past the [:10] cap, or
+    arriving between poll and wake-ack). The local watermark is the only gate; the
+    remote read-state is now cosmetic. See [[github-consume-gating-design]].
+    """
     if not _gh_available():
         return
 
-    last_check = _load_last_check()
-    params = {}
-    if last_check:
-        params["since"] = last_check
+    consumed = _load_consumed()
+    # `since` bounds the API response. Use the watermark if we have one, else a
+    # rolling lookback floor so the first poll isn't unbounded.
+    since = consumed or time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - _INITIAL_LOOKBACK_S)
+    )
 
-    data = _gh_api("notifications", params)
+    data = _gh_api("notifications", {"since": since})
     if data is None:
-        # Transient API error (gh failure/timeout/bad JSON). Do NOT advance
-        # `since` — otherwise notifications that arrived during the outage are
-        # excluded from the next poll and lost forever. Retry next poll.
+        # Transient API error (gh failure/timeout/bad JSON). Retry next poll.
         return
     if not isinstance(data, list):
-        _save_last_check()
         return
 
-    # Filter for actionable notifications
+    # Actionable AND strictly newer than what a turn has already consumed.
+    # ISO-8601-Z strings compare lexicographically == chronologically.
     relevant = [
         n for n in data
-        if n.get("reason") in _WAKE_REASONS and n.get("unread", True)
+        if n.get("reason") in _WAKE_REASONS
+        and (not consumed or n.get("updated_at", "") > consumed)
     ]
-
     if not relevant:
-        _save_last_check()
         return
 
     messages = []
+    ack_ts = ""
     for n in relevant[:10]:  # Cap at 10 to avoid flooding
+        updated = n.get("updated_at") or ""
+        # Per-message dedup key: prefer updated_at; fall back to the thread id if
+        # a thread ever lacks it (note 2) so distinct threads never collapse to
+        # one empty-string key in the SleepManager's _extract_timestamps.
         messages.append({
-            "timestamp": n.get("updated_at", ""),
+            "timestamp": updated or ("id:" + str(n.get("id", ""))),
             "content": _format_notification(n),
         })
+        # Watermark advances on REAL ISO timestamps only — never the id fallback
+        # (an "id:..." string sorts above ISO dates and would freeze the gate).
+        if updated > ack_ts:
+            ack_ts = updated
 
     notifications.append({
         "type": "message",
         "source": "github",
         "count": len(relevant),
         "messages": messages,
+        # Max updated_at surfaced this batch → the hook advances `.consumed_ts`
+        # to this on consume (PostToolUse). Persist nothing forward from here.
+        "ack_ts": ack_ts,
     })
-    _save_last_check()
 
 
 def ack():

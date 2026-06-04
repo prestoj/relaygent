@@ -7,6 +7,7 @@ except (FileNotFoundError, json.JSONDecodeError, ValueError):
     seen = set()
 seen_added = []
 email_ack = 0.0  # Highest email watermark surfaced this turn → durably acked below.
+github_ack = ''  # Max GitHub updated_at (ISO-Z) surfaced this turn → durably acked below.
 try:
     with open(os.environ['CACHE_FILE']) as f: data = json.load(f)
     parts = []
@@ -97,6 +98,16 @@ try:
                     parts.append(line)
                 else:
                     parts.append(f'{count} new {noun}')
+            elif src == 'github':
+                try: github_ack = max(github_ack, n.get('ack_ts', '') or '')
+                except TypeError: pass
+                noun = 'GitHub notification' if count == 1 else 'GitHub notifications'
+                msgs = n.get('messages', [])
+                previews = [m.get('content', '') for m in msgs[:3] if m.get('content')]
+                if previews:
+                    parts.append(f'{count} {noun}: ' + ' | '.join(previews))
+                else:
+                    parts.append(f'{count} {noun}')
             else:
                 parts.append(f'{count} unread chat message(s) — check with read_messages')
     if parts:
@@ -119,6 +130,19 @@ try:
             try:
                 os.makedirs(os.path.dirname(ap), exist_ok=True)
                 with open(ap, 'w') as f: f.write(f'{email_ack:.3f}')
+            except OSError: pass
+    if github_ack:
+        # Consume-ack GitHub: surfacing here (PostToolUse) means a turn saw it.
+        # Advance the durable watermark to the exact surfaced max updated_at
+        # (ISO-Z string compare = chronological), monotonically — GitHub's
+        # consume gate. The collector reads this as its `since` floor.
+        gp = os.path.expanduser('~/.relaygent/github/.consumed_ts')
+        try: gcur = open(gp).read().strip()
+        except OSError: gcur = ''
+        if github_ack > gcur:
+            try:
+                os.makedirs(os.path.dirname(gp), exist_ok=True)
+                with open(gp, 'w') as f: f.write(github_ack)
             except OSError: pass
 except Exception as e:
     import sys; print(f'WARNING: notification cache parse error: {e}', file=sys.stderr)
