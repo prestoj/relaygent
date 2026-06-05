@@ -41,7 +41,16 @@ fi
 # Update Claude Code CLI (fast no-op when already latest)
 if command -v npm >/dev/null 2>&1; then
     PREV_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
-    NPM_CMD="npm"; [ "$(uname)" = "Linux" ] && command -v sudo >/dev/null 2>&1 && NPM_CMD="sudo npm"
+    # The global install may be root-owned (macOS Homebrew npm at /opt/homebrew, or Linux
+    # system npm). If the npm global module dir isn't writable and passwordless sudo is
+    # available, use sudo — otherwise `npm install -g` fails and 2>/dev/null swallows it, so
+    # the CLI silently never updates. The old check only added sudo on Linux, which left the
+    # macOS box stuck on a stale CLI while daily updates reported success.
+    NPM_CMD="npm"
+    NPM_MODULES="$(npm prefix -g 2>/dev/null)/lib/node_modules"
+    if [ ! -w "$NPM_MODULES" ] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+        NPM_CMD="sudo npm"
+    fi
     if $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null; then
         NEW_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
         if [ "$PREV_VER" != "$NEW_VER" ]; then
