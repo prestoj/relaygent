@@ -71,6 +71,19 @@ ${env_extra}
 </dict>
 </plist>
 EOF
+    # The relay can't safely reload itself: install-launchagents often runs *inside* the
+    # relay's own launchd job (e.g. during `relaygent update`). `bootout` of
+    # com.relaygent.relay SIGKILLs this very process tree before the next `bootstrap`
+    # line runs, leaving the relay down with no KeepAlive to revive it — the bug that
+    # stranded the Mac relay 04:00:56 → 19:03 on 2026-06-04 (plist rewritten, job never
+    # re-loaded). So when the relay is already loaded, only refresh the plist on disk;
+    # the running relay keeps going and the new plist applies on its next respawn
+    # (retire / 24h roll / login / reboot). When it's NOT loaded we fall through and
+    # bootstrap it — which also revives a relay that's down for any reason.
+    if [ "$label" = "com.relaygent.relay" ] && launchctl print "$GUID/$label" &>/dev/null; then
+        echo -e "  ${label}: ${GREEN}plist refreshed${NC} ${YELLOW}(running relay left intact; applies on next respawn)${NC}"
+        return 0
+    fi
     launchctl bootout "$GUID" "$plist" 2>/dev/null || true
     launchctl bootstrap "$GUID" "$plist"
     echo -e "  ${label}: ${GREEN}installed${NC}"
