@@ -15,8 +15,17 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG_FILE="$HOME/.relaygent/config.json"
 AGENTS_DIR="$HOME/Library/LaunchAgents"
 NODE="$(command -v node 2>/dev/null || echo "/opt/homebrew/bin/node")"
-PYTHON3="$(command -v python3 2>/dev/null || echo "/usr/bin/python3")"
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+# Resolve Python >=3.10 (handoff.py's `X | None` TypeErrors on 3.9). Plist must NOT use
+# system python (/usr/bin/python3=3.9.6) or the relay crash-loops on a clean spawn (2026-06-07).
+find_python3() {
+    local c p
+    for c in python3.14 python3.13 python3.12 python3.11 python3.10 /opt/homebrew/bin/python3 /usr/local/bin/python3 python3; do
+        p="$(command -v "$c" 2>/dev/null)" && "$p" -c 'import sys;sys.exit(0 if sys.version_info[:2]>=(3,10) else 1)' 2>/dev/null && { echo "$p"; return 0; }
+    done; return 1
+}
+PYTHON3="$(find_python3)" || { echo -e "${RED}No Python >=3.10 found — relay harness requires it (brew install python@3.12)${NC}" >&2; exit 1; }
 
 if [ "$(uname)" != "Darwin" ]; then
     echo -e "${YELLOW}LaunchAgents are macOS-only.${NC}"
