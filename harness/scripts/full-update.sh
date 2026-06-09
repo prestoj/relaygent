@@ -28,12 +28,31 @@ if [ "$OS" = "Darwin" ]; then
         note "${CYAN}[brew] update + upgrade + cleanup${NC}"
         brew update >/dev/null 2>&1 || true
         N=$(brew outdated --quiet 2>/dev/null | grep -c .)
+        NODE_MAJOR_BEFORE=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
         if brew upgrade >/dev/null 2>&1; then
             brew upgrade --cask >/dev/null 2>&1 || true
             brew cleanup >/dev/null 2>&1 || true
             record "✓ brew: upgrade OK ($N formulae were outdated) + casks + cleanup"
         else
             record "✗ brew upgrade failed — run 'brew upgrade' manually"
+        fi
+        # A Node MAJOR bump (e.g. v25->v26) changes the V8 ABI (NODE_MODULE_VERSION) and
+        # breaks the hub's native better-sqlite3 — chat-db routes 500 while /api/health stays
+        # 200 (the s199 incident). The daily hub rebuild below is `vite build` (JS only) and
+        # won't refetch the prebuilt binary, so heal it HERE: on a major change, reinstall the
+        # hub's deps so better-sqlite3's prebuilt matches the new ABI.
+        NODE_MAJOR_AFTER=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
+        if [ -n "$NODE_MAJOR_BEFORE" ] && [ -n "$NODE_MAJOR_AFTER" ] && [ "$NODE_MAJOR_BEFORE" != "$NODE_MAJOR_AFTER" ]; then
+            note "${YELLOW}[node] major $NODE_MAJOR_BEFORE -> $NODE_MAJOR_AFTER — reinstalling hub native deps${NC}"
+            # ~/.npm cache is sometimes root-owned (breaks npm) — fix non-fatally first.
+            if [ -d "$HOME/.npm" ] && [ ! -w "$HOME/.npm" ]; then
+                sudo -n /usr/sbin/chown -R "$(id -u):$(id -g)" "$HOME/.npm" 2>/dev/null || true
+            fi
+            if (cd "$REPO_DIR/hub" && npm install >/dev/null 2>&1); then
+                record "↻ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: reinstalled hub native deps (better-sqlite3 ABI match)"
+            else
+                record "‼ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER but 'npm install' in hub FAILED — hub chat will 500 (s199). Run: cd hub && npm install"
+            fi
         fi
     fi
 
