@@ -28,12 +28,33 @@ if [ "$OS" = "Darwin" ]; then
         note "${CYAN}[brew] update + upgrade + cleanup${NC}"
         brew update >/dev/null 2>&1 || true
         N=$(brew outdated --quiet 2>/dev/null | grep -c .)
+        NODE_MAJOR_BEFORE=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
         if brew upgrade >/dev/null 2>&1; then
             brew upgrade --cask >/dev/null 2>&1 || true
             brew cleanup >/dev/null 2>&1 || true
             record "✓ brew: upgrade OK ($N formulae were outdated) + casks + cleanup"
         else
             record "✗ brew upgrade failed — run 'brew upgrade' manually"
+        fi
+        # A Node MAJOR bump (v25->v26) changes the V8 ABI and breaks the hub's native
+        # better-sqlite3 (chat-db routes 500 while /api/health stays 200 — the s199 incident).
+        # The daily hub rebuild is `vite build` (JS only) and won't refetch the binary, so heal
+        # HERE. `npm install` ALONE is lockfile-based, not ABI-aware — it no-ops when node_modules
+        # survives the bump, so prebuild-install never re-runs (#765). `npm rebuild` re-runs it
+        # unconditionally; then load-verify under the new node so the success line can't lie.
+        NODE_MAJOR_AFTER=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
+        if [ -n "$NODE_MAJOR_BEFORE" ] && [ -n "$NODE_MAJOR_AFTER" ] && [ "$NODE_MAJOR_BEFORE" != "$NODE_MAJOR_AFTER" ]; then
+            note "${YELLOW}[node] major $NODE_MAJOR_BEFORE -> $NODE_MAJOR_AFTER — rebuilding hub better-sqlite3${NC}"
+            # ~/.npm cache is sometimes root-owned (breaks npm) — fix non-fatally first.
+            if [ -d "$HOME/.npm" ] && [ ! -w "$HOME/.npm" ]; then
+                sudo -n /usr/sbin/chown -R "$(id -u):$(id -g)" "$HOME/.npm" 2>/dev/null || true
+            fi
+            ( cd "$REPO_DIR/hub" && npm install >/dev/null 2>&1; npm rebuild better-sqlite3 >/dev/null 2>&1 )
+            if (cd "$REPO_DIR/hub" && node -e "new (require('better-sqlite3'))(':memory:').close()" >/dev/null 2>&1); then
+                record "↻ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: hub better-sqlite3 rebuilt + load-verified for new ABI"
+            else
+                record "‼ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: better-sqlite3 won't load (ABI) — hub chat 500s (s199). Fix: cd hub && npm rebuild better-sqlite3 (or bump it, cf #763)."
+            fi
         fi
     fi
 
