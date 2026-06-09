@@ -36,22 +36,24 @@ if [ "$OS" = "Darwin" ]; then
         else
             record "✗ brew upgrade failed — run 'brew upgrade' manually"
         fi
-        # A Node MAJOR bump (e.g. v25->v26) changes the V8 ABI (NODE_MODULE_VERSION) and
-        # breaks the hub's native better-sqlite3 — chat-db routes 500 while /api/health stays
-        # 200 (the s199 incident). The daily hub rebuild below is `vite build` (JS only) and
-        # won't refetch the prebuilt binary, so heal it HERE: on a major change, reinstall the
-        # hub's deps so better-sqlite3's prebuilt matches the new ABI.
+        # A Node MAJOR bump (v25->v26) changes the V8 ABI and breaks the hub's native
+        # better-sqlite3 (chat-db routes 500 while /api/health stays 200 — the s199 incident).
+        # The daily hub rebuild is `vite build` (JS only) and won't refetch the binary, so heal
+        # HERE. `npm install` ALONE is lockfile-based, not ABI-aware — it no-ops when node_modules
+        # survives the bump, so prebuild-install never re-runs (#765). `npm rebuild` re-runs it
+        # unconditionally; then load-verify under the new node so the success line can't lie.
         NODE_MAJOR_AFTER=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
         if [ -n "$NODE_MAJOR_BEFORE" ] && [ -n "$NODE_MAJOR_AFTER" ] && [ "$NODE_MAJOR_BEFORE" != "$NODE_MAJOR_AFTER" ]; then
-            note "${YELLOW}[node] major $NODE_MAJOR_BEFORE -> $NODE_MAJOR_AFTER — reinstalling hub native deps${NC}"
+            note "${YELLOW}[node] major $NODE_MAJOR_BEFORE -> $NODE_MAJOR_AFTER — rebuilding hub better-sqlite3${NC}"
             # ~/.npm cache is sometimes root-owned (breaks npm) — fix non-fatally first.
             if [ -d "$HOME/.npm" ] && [ ! -w "$HOME/.npm" ]; then
                 sudo -n /usr/sbin/chown -R "$(id -u):$(id -g)" "$HOME/.npm" 2>/dev/null || true
             fi
-            if (cd "$REPO_DIR/hub" && npm install >/dev/null 2>&1); then
-                record "↻ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: reinstalled hub native deps (better-sqlite3 ABI match)"
+            ( cd "$REPO_DIR/hub" && npm install >/dev/null 2>&1; npm rebuild better-sqlite3 >/dev/null 2>&1 )
+            if (cd "$REPO_DIR/hub" && node -e "new (require('better-sqlite3'))(':memory:').close()" >/dev/null 2>&1); then
+                record "↻ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: hub better-sqlite3 rebuilt + load-verified for new ABI"
             else
-                record "‼ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER but 'npm install' in hub FAILED — hub chat will 500 (s199). Run: cd hub && npm install"
+                record "‼ Node $NODE_MAJOR_BEFORE→$NODE_MAJOR_AFTER: better-sqlite3 won't load (ABI) — hub chat 500s (s199). Fix: cd hub && npm rebuild better-sqlite3 (or bump it, cf #763)."
             fi
         fi
     fi
