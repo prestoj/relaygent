@@ -40,23 +40,37 @@ fi
 
 # Update Claude Code CLI (fast no-op when already latest)
 if command -v npm >/dev/null 2>&1; then
-    PREV_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
-    # The global install may be root-owned (macOS Homebrew npm at /opt/homebrew, or Linux
-    # system npm). If the npm global module dir isn't writable and passwordless sudo is
-    # available, use sudo — otherwise `npm install -g` fails and 2>/dev/null swallows it, so
-    # the CLI silently never updates. The old check only added sudo on Linux, which left the
-    # macOS box stuck on a stale CLI while daily updates reported success.
-    NPM_CMD="npm"
-    NPM_MODULES="$(npm prefix -g 2>/dev/null)/lib/node_modules"
-    if [ ! -w "$NPM_MODULES" ] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-        NPM_CMD="sudo npm"
-    fi
-    if $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null; then
-        NEW_VER=$(claude --version 2>/dev/null | head -1 || echo "unknown")
+    PREV_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
+    # Registry latest, so we can VERIFY the install actually landed (not just trust the exit
+    # code — --quiet + 2>/dev/null hide failures). Empty on network hiccup → we skip the
+    # latest-comparison and fall back to "did the version change" reporting.
+    LATEST_VER=$(npm view @anthropic-ai/claude-code version 2>/dev/null || echo "")
+    if [ -n "$LATEST_VER" ] && [ "$PREV_VER" = "$LATEST_VER" ]; then
+        echo -e "  Claude Code: ${GREEN}$PREV_VER (latest)${NC}"
+    else
+        # Pick sudo up front if the global module dir isn't writable (Linux system npm).
+        NPM_MODULES="$(npm prefix -g 2>/dev/null)/lib/node_modules"
+        NPM_CMD="npm"
+        if [ ! -w "$NPM_MODULES" ] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            NPM_CMD="sudo npm"
+        fi
+        $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null || true
+        NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
+        # Sudo fallback: even when the global dir TESTS writable, a plain `npm install -g`
+        # can EACCES on macOS (npm renames the running binary's package dir; #762's
+        # writability check misses this) — leaving the Mac silently stuck on a stale CLI.
+        # If the version didn't reach latest and we haven't tried sudo yet, retry with sudo.
+        if [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ] && [ "$NPM_CMD" = "npm" ] \
+           && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            sudo npm install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null || true
+            NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
+        fi
         if [ "$PREV_VER" != "$NEW_VER" ]; then
             echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
+        elif [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ]; then
+            echo -e "  Claude Code: ${YELLOW}$NEW_VER — FAILED to reach $LATEST_VER (check npm perms)${NC}"
         else
-            echo -e "  Claude Code: ${GREEN}$PREV_VER (latest)${NC}"
+            echo -e "  Claude Code: ${GREEN}$NEW_VER (latest)${NC}"
         fi
     fi
 fi
