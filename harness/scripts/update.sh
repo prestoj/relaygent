@@ -54,7 +54,10 @@ if command -v npm >/dev/null 2>&1; then
         if [ ! -w "$NPM_MODULES" ] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
             NPM_CMD="sudo npm"
         fi
-        $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null || true
+        # Capture npm's stderr so the FAILED-to-reach branch can show WHY (EACCES / network /
+        # disk) instead of just "check npm perms" — saves a manual re-run during an incident.
+        NPM_ERR=$(mktemp 2>/dev/null || echo "/tmp/relaygent-npm-err.$$")
+        $NPM_CMD install -g @anthropic-ai/claude-code@latest --quiet 2>"$NPM_ERR" || true
         NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
         # Sudo fallback: even when the global dir TESTS writable, a plain `npm install -g`
         # can EACCES on macOS (npm renames the running binary's package dir; #762's
@@ -62,16 +65,18 @@ if command -v npm >/dev/null 2>&1; then
         # If the version didn't reach latest and we haven't tried sudo yet, retry with sudo.
         if [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ] && [ "$NPM_CMD" = "npm" ] \
            && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-            sudo npm install -g @anthropic-ai/claude-code@latest --quiet 2>/dev/null || true
+            sudo npm install -g @anthropic-ai/claude-code@latest --quiet 2>"$NPM_ERR" || true
             NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
         fi
         if [ "$PREV_VER" != "$NEW_VER" ]; then
             echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
         elif [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ]; then
             echo -e "  Claude Code: ${YELLOW}$NEW_VER — FAILED to reach $LATEST_VER (check npm perms)${NC}"
+            [ -s "$NPM_ERR" ] && tail -3 "$NPM_ERR" | sed 's/^/    npm: /'
         else
             echo -e "  Claude Code: ${GREEN}$NEW_VER (latest)${NC}"
         fi
+        rm -f "$NPM_ERR"
     fi
 fi
 
