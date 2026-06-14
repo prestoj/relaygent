@@ -36,12 +36,19 @@ if [ "$OS" = "Darwin" ]; then
         else
             record "✗ brew upgrade failed — run 'brew upgrade' manually"
         fi
-        # A Node MAJOR bump (v25->v26) changes the V8 ABI and breaks the hub's native
-        # better-sqlite3 (chat-db routes 500 while /api/health stays 200 — the s199 incident).
-        # The daily hub rebuild is `vite build` (JS only) and won't refetch the binary, so heal
-        # HERE. `npm install` ALONE is lockfile-based, not ABI-aware — it no-ops when node_modules
-        # survives the bump, so prebuild-install never re-runs (#765). `npm rebuild` re-runs it
-        # unconditionally; then load-verify under the new node so the success line can't lie.
+        # A node-major bump can leave `node` UNLINKED (`/opt/homebrew/bin/node` vanishes) →
+        # fails brew upgrade + blanks NODE_MAJOR_AFTER (skips the ABI heal). Relink (2026-06-14):
+        if ! command -v node >/dev/null 2>&1 && brew list --versions node >/dev/null 2>&1; then
+            note "${YELLOW}[node] keg left unlinked by brew upgrade — relinking${NC}"
+            brew link --overwrite node >/dev/null 2>&1 || true
+            if command -v node >/dev/null 2>&1; then
+                record "↻ node keg was left unlinked by brew upgrade — relinked ($(node --version 2>/dev/null))"
+            else
+                record "‼ node keg unlinked AND relink failed — run 'brew link --overwrite node' (hub can't restart without it)"
+            fi
+        fi
+        # A Node MAJOR bump changes the V8 ABI → hub's native better-sqlite3 won't load (chat-db
+        # 500s, health stays 200 — s199). `npm rebuild` re-runs prebuild (not `npm install`, #765):
         NODE_MAJOR_AFTER=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo "")
         if [ -n "$NODE_MAJOR_BEFORE" ] && [ -n "$NODE_MAJOR_AFTER" ] && [ "$NODE_MAJOR_BEFORE" != "$NODE_MAJOR_AFTER" ]; then
             note "${YELLOW}[node] major $NODE_MAJOR_BEFORE -> $NODE_MAJOR_AFTER — rebuilding hub better-sqlite3${NC}"
@@ -58,9 +65,7 @@ if [ "$OS" = "Darwin" ]; then
         fi
     fi
 
-    # 2) npm globals — keep CLI tools current. EXCLUDE @anthropic-ai/claude-code (the daily
-    #    update below owns the Claude CLI via `claude update`; double-updating fights pinning)
-    #    and npm itself. /opt/homebrew node_modules is claude-owned, so no sudo needed.
+    # 2) npm globals — current CLI tools; EXCLUDE @anthropic-ai/claude-code (daily owns the CLI) + npm.
     if command -v npm >/dev/null 2>&1; then
         note "${CYAN}[npm] update global packages (excluding claude-code + npm)${NC}"
         PKGS=$(npm ls -g --depth=0 --parseable 2>/dev/null | tail -n +2 | sed "s#.*/node_modules/##" \
@@ -72,20 +77,15 @@ if [ "$OS" = "Darwin" ]; then
         fi
     fi
 
-    # 3) Chrome — not a brew cask + no Keystone updater on this box, so it can't be driven
-    #    from the CLI; report the version so drift stays visible (Chrome self-updates in-app).
+    # 3) Chrome — no brew cask / Keystone here; just report the version (Chrome self-updates in-app).
     CHROME_APP="/Applications/Google Chrome.app"
     if [ -d "$CHROME_APP" ]; then
         CHROME_V=$(defaults read "$CHROME_APP/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null)
         record "ℹ Chrome $CHROME_V (self-updates in-app; no CLI updater installed)"
     fi
 
-    # 4) softwareupdate — point + security ONLY. MAJOR macOS upgrades (26->27) are HELD:
-    #    `-r`/--recommended never includes them, and we also detect + surface any offered.
-    #    This script never installs an OS update that needs a restart, nor reboots — that
-    #    install+restart needs a volume-owner credential (Apple Silicon), so the AGENT does
-    #    it in the coordinated reboot step (runbook Mode C). Non-restart recommended updates
-    #    (Safari, CLI tools, config-data) ARE applied here.
+    # 4) softwareupdate — point + security ONLY; MAJOR macOS jumps (26->27) HELD (`-r` excludes them).
+    #    Never installs a restart-needing update (needs a volume-owner cred) — AGENT reboots, Mode C.
     note "${CYAN}[softwareupdate] scanning (~30-60s)...${NC}"
     SWU=$(/usr/sbin/softwareupdate -l 2>&1)
     CUR_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
