@@ -176,14 +176,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check files under 200 lines
-        run: |
-          status=0
-          for f in harness/*.py computer-use/*.py slack/*.mjs secrets/*.mjs notifications/*.py email/*.mjs hub/src/routes/**/*.svelte; do
-            [ -f "$f" ] || continue
-            lines=$(wc -l < "$f")
-            if [ "$lines" -gt 200 ]; then
-              echo "FAIL: $f has $lines lines (limit: 200)"
-              status=1
-            fi
-          done
-          exit $status
+        # Single source of truth: the same script the hub build runs as a prebuild.
+        # The old inline glob only saw a few hardcoded extensions/paths (missed e.g.
+        # harness/scripts/*.sh), so a >200-line file could pass this gate yet fail the
+        # hub build — exactly what happened to full-update.sh @214 (#768).
+        run: bash scripts/check-file-length.sh
