@@ -18,6 +18,9 @@ is_docker() { [[ -f /.dockerenv ]] || grep -q '"docker".*true' "$CONFIG_FILE" 2>
 # (2026-06-14). The original process tails the log so the agent still sees live output,
 # then exits; the detached worker runs to completion and the summary lands in the log
 # for any session to read. macOS ships no `setsid` binary — use python's os.setsid().
+# CALLER MUST BE NON-INTERACTIVE (cron/relay/CLI — all are): os.setsid() EPERMs from a
+# process that's already a group leader, i.e. under job control / an interactive shell,
+# and the worker would silently no-op. To reuse from an interactive context, fork first.
 # Call as the FIRST real line of a script: ensure_detached "$0" "$@"
 ensure_detached() {
     [ -n "${RELAYGENT_DETACHED:-}" ] && return 0   # already inside the detached worker
