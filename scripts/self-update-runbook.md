@@ -76,7 +76,14 @@ CLI, relaygent, browsers, and any other tools — but **HOLD major release upgra
 2. **Run** `relaygent full-update` and capture output. It applies apt/`softwareupdate` (point +
    security + within-release only), kernel + NVIDIA module (Linux), Ollama, browsers, then the
    standard daily update (repo/CLI/hub/services), and prints a **summary** with a `✓/✗/⚠` per step.
-3. **Read the summary.** Fix any `✗` (autonomous on hub/notifications/package ops; never the relay).
+   **It runs DETACHED** (its own session via `ensure_detached`), so a mid-run session-sleep can't
+   SIGKILL it the way it killed the `brew` step on 2026-06-14. Your `relaygent full-update` call
+   *tails* the live output and returns when the run finishes; if your session sleeps first, the
+   detached worker keeps going and writes the full summary to **`$DATA_DIR/updates/full-update-latest.log`**.
+   The full sweep can take several minutes, so run it in the background (or with a long timeout) — but
+   a tool-timeout is now harmless: the detached worker finishes regardless, just read the latest log.
+3. **Read the summary** (from the tail, or `$DATA_DIR/updates/full-update-latest.log` if you slept
+   through it). Fix any `✗` (autonomous on hub/notifications/package ops; never the relay).
 4. **If the summary says `*** REBOOT REQUIRED ***`** — the script does NOT reboot itself. You do it,
    coordinated:
    a. Confirm your **partner is healthy** (it's your rescuer while you're down) — Health signals below.

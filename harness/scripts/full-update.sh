@@ -12,6 +12,7 @@
 set -uo pipefail   # NOT -e: continue through individual step failures and report them all
 
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+ensure_detached "$0" "$@"   # survive relay session-sleep — detaches, tails log (lib.sh)
 
 SUMMARY=()
 REBOOT_NEEDED=false
