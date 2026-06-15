@@ -11,6 +11,34 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 
 is_docker() { [[ -f /.dockerenv ]] || grep -q '"docker".*true' "$CONFIG_FILE" 2>/dev/null; }
 
+# Re-exec the calling script in a NEW session (its own process group) so a mid-run
+# SIGKILL when the relay session sleeps/ends can't kill a long-running job. The relay
+# kills its session via killpg(session_pgid); a Bash-tool child (even run_in_background)
+# lives in that group, so the weekly full-update was killed mid-`brew` this way
+# (2026-06-14). The original process tails the log so the agent still sees live output,
+# then exits; the detached worker runs to completion and the summary lands in the log
+# for any session to read. macOS ships no `setsid` binary — use python's os.setsid().
+# Call as the FIRST real line of a script: ensure_detached "$0" "$@"
+ensure_detached() {
+    [ -n "${RELAYGENT_DETACHED:-}" ] && return 0   # already inside the detached worker
+    local script="$1"; shift
+    local stem; stem="$(basename "$script" .sh)"
+    local logdir="${RELAYGENT_DATA_DIR:-$HOME/data}/updates"
+    mkdir -p "$logdir" || { echo "ensure_detached: cannot mkdir $logdir — running inline" >&2; return 0; }
+    local log; log="$logdir/$stem-$(date +%Y%m%d-%H%M%S).log"
+    ln -sf "$log" "$logdir/$stem-latest.log"
+    RELAYGENT_DETACHED=1 nohup python3 -c \
+        'import os,sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' \
+        bash "$script" "$@" >"$log" 2>&1 &
+    local worker=$!
+    echo -e "${CYAN}Running detached (pid $worker — survives session-sleep). Log: $log${NC}"
+    tail -n +1 -f "$log" 2>/dev/null & local tp=$!
+    while kill -0 "$worker" 2>/dev/null; do sleep 2; done
+    sleep 1; kill "$tp" 2>/dev/null || true
+    echo -e "${CYAN}Detached run finished — full summary in: $log${NC}"
+    exit 0
+}
+
 load_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "${RED}Not set up yet. Run: ./setup.sh${NC}"; exit 1
