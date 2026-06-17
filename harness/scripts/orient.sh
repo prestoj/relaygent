@@ -32,6 +32,16 @@ check_service "Hub" "${HUB_SCHEME}://127.0.0.1:${HUB_PORT}/api/health"
 CU_NAME="Hammerspoon"; [ "$(uname)" = "Linux" ] && CU_NAME="Computer-use"
 check_service "$CU_NAME" "http://127.0.0.1:${HS_PORT}/health"
 
+# iMessage read health (macOS-only aux daemon). FDA is per-binary, so a brew python bump
+# silently drops chat.db read while send (AppleScript) keeps working — surface it loudly so
+# a session catches it at boot instead of by chance. Quiet when healthy / daemon absent.
+if [ "$(uname)" = "Darwin" ]; then
+    IMSG_HEALTH=$(curl -s --max-time 2 "http://127.0.0.1:8093/health" 2>/dev/null || true)
+    if [ -n "$IMSG_HEALTH" ] && echo "$IMSG_HEALTH" | grep -q '"can_read":false'; then
+        echo -e "  \033[1;33m⚠ iMessage read DOWN\033[0m (FDA dropped on a python bump — re-grant Full Disk Access; send still works)"
+    fi
+fi
+
 # Crash context from previous session
 CRASH_FILE="$DATA_DIR/crash-context.json"
 if [ -f "$CRASH_FILE" ]; then
