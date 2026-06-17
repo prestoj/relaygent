@@ -68,6 +68,22 @@ if command -v npm >/dev/null 2>&1; then
             sudo npm install -g @anthropic-ai/claude-code@latest --quiet 2>"$NPM_ERR" || true
             NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
         fi
+        # Durable symlink repoint (node-MAJOR-bump fallout): a node major upgrade moves npm's
+        # global prefix (/opt/homebrew/lib → /opt/homebrew/Cellar/node/<ver>/lib), so the install
+        # lands `latest` in the NEW prefix while `claude` on PATH still symlinks the OLD prefix's
+        # stale binary — npm reports success but `claude --version` never moves. If npm's installed
+        # binary IS latest but PATH `claude` isn't, repoint the (owned) PATH symlink at npm's shim.
+        if [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ]; then
+            INSTALLED_BIN="$(npm prefix -g 2>/dev/null)/bin/claude"
+            PATH_CLAUDE="$(command -v claude 2>/dev/null || true)"
+            INSTALLED_VER=$([ -e "$INSTALLED_BIN" ] && "$INSTALLED_BIN" --version 2>/dev/null | awk '{print $1}')
+            if [ "$INSTALLED_VER" = "$LATEST_VER" ] && [ -L "$PATH_CLAUDE" ] \
+               && [ -w "$(dirname "$PATH_CLAUDE")" ] && [ "$INSTALLED_BIN" != "$PATH_CLAUDE" ]; then
+                ln -sf "$INSTALLED_BIN" "$PATH_CLAUDE"
+                NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
+                echo -e "  Claude Code: ${YELLOW}repointed stale symlink ($PATH_CLAUDE → $INSTALLED_BIN)${NC}"
+            fi
+        fi
         if [ "$PREV_VER" != "$NEW_VER" ]; then
             echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
         elif [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ]; then
