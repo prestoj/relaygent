@@ -141,3 +141,40 @@ except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
     eval "$cv"
     [[ "${HUB_SCHEME:-http}" == "https" ]] && CURL_K="-k" || CURL_K=""
 }
+
+# Repoint the first-on-PATH `claude` symlink at the live npm-prefix binary when it has drifted.
+# Two drift modes, both fixed by pointing at the current keg's npm shim:
+#   • version-stale — a node bump moved npm's global prefix, so the install landed `latest` in the
+#     NEW prefix while PATH `claude` still points at the OLD prefix's stale binary (#772); or
+#   • off-prefix-but-current — `claude` is already `latest` yet symlinked into an OLD keg that a
+#     later `brew cleanup` deletes → dangling symlink, relay can't exec `claude` (near-outage
+#     2026-06-28; the #772 repoint missed it because the version was already current).
+# Only acts on an owned symlink in a writable dir when the live-prefix binary exists and equals
+# $1 (latest; pass "" to skip the latest gate). No-ops on native-installer layouts (no npm-prefix
+# claude) and system-owned bin dirs, so it's a safe no-op off macOS. Prints a note + returns 0 iff
+# it repointed; returns 1 (no-op) otherwise.
+repoint_claude_symlink() {
+    local latest="$1"
+    local npm_prefix; npm_prefix="$(npm prefix -g 2>/dev/null || true)"
+    [ -n "$npm_prefix" ] || return 1
+    local path_claude; path_claude="$(command -v claude 2>/dev/null || true)"
+    local installed_bin="$npm_prefix/bin/claude"
+    [ -L "$path_claude" ] || return 1
+    [ -w "$(dirname "$path_claude")" ] || return 1
+    [ -e "$installed_bin" ] || return 1
+    [ "$installed_bin" != "$path_claude" ] || return 1
+    local installed_ver; installed_ver="$("$installed_bin" --version 2>/dev/null | awk '{print $1}' || true)"
+    [ -n "$installed_ver" ] || return 1
+    [ -z "$latest" ] || [ "$installed_ver" = "$latest" ] || return 1
+    # Canonicalize both sides (resolve /var→/private/var etc.) so a symlinked prefix component
+    # can't cause a false off-prefix verdict.
+    local prefix_real; prefix_real="$(readlink -f "$npm_prefix" 2>/dev/null || printf '%s' "$npm_prefix")"
+    local target; target="$(readlink -f "$path_claude" 2>/dev/null || true)"
+    local path_ver; path_ver="$("$path_claude" --version 2>/dev/null | awk '{print $1}' || true)"
+    local need=0
+    case "$target" in "$prefix_real"/*) : ;; *) need=1 ;; esac   # resolves outside the live prefix
+    if [ "$path_ver" != "$installed_ver" ]; then need=1; fi       # or points at a stale version
+    if [ "$need" = 0 ]; then return 1; fi                         # healthy — nothing to do
+    ln -sf "$installed_bin" "$path_claude"
+    echo -e "  Claude Code: ${YELLOW}repointed claude symlink → live keg ($path_claude → $installed_bin)${NC}"
+}
