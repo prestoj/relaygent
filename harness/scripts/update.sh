@@ -45,7 +45,11 @@ if command -v npm >/dev/null 2>&1; then
     # code — --quiet + 2>/dev/null hide failures). Empty on network hiccup → we skip the
     # latest-comparison and fall back to "did the version change" reporting.
     LATEST_VER=$(npm view @anthropic-ai/claude-code version 2>/dev/null || echo "")
-    if [ -n "$LATEST_VER" ] && [ "$PREV_VER" = "$LATEST_VER" ]; then
+    # Take the fast-path ONLY when the version is latest AND `claude` resolves under the live npm
+    # prefix. If a node bump left `claude` latest-but-symlinked-into-an-old-keg (claude_off_prefix),
+    # fall through to the install branch so npm reinstalls latest INTO the live prefix — otherwise
+    # there's no live-prefix binary to repoint to and the old keg stays doomed (#774 review catch).
+    if [ -n "$LATEST_VER" ] && [ "$PREV_VER" = "$LATEST_VER" ] && ! claude_off_prefix; then
         echo -e "  Claude Code: ${GREEN}$PREV_VER (latest)${NC}"
     else
         # Pick sudo up front if the global module dir isn't writable (Linux system npm).
@@ -68,21 +72,13 @@ if command -v npm >/dev/null 2>&1; then
             sudo npm install -g @anthropic-ai/claude-code@latest --quiet 2>"$NPM_ERR" || true
             NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
         fi
-        # Durable symlink repoint (node-MAJOR-bump fallout): a node major upgrade moves npm's
-        # global prefix (/opt/homebrew/lib → /opt/homebrew/Cellar/node/<ver>/lib), so the install
-        # lands `latest` in the NEW prefix while `claude` on PATH still symlinks the OLD prefix's
-        # stale binary — npm reports success but `claude --version` never moves. If npm's installed
-        # binary IS latest but PATH `claude` isn't, repoint the (owned) PATH symlink at npm's shim.
-        if [ -n "$LATEST_VER" ] && [ "$NEW_VER" != "$LATEST_VER" ]; then
-            INSTALLED_BIN="$(npm prefix -g 2>/dev/null)/bin/claude"
-            PATH_CLAUDE="$(command -v claude 2>/dev/null || true)"
-            INSTALLED_VER=$([ -e "$INSTALLED_BIN" ] && "$INSTALLED_BIN" --version 2>/dev/null | awk '{print $1}')
-            if [ "$INSTALLED_VER" = "$LATEST_VER" ] && [ -L "$PATH_CLAUDE" ] \
-               && [ -w "$(dirname "$PATH_CLAUDE")" ] && [ "$INSTALLED_BIN" != "$PATH_CLAUDE" ]; then
-                ln -sf "$INSTALLED_BIN" "$PATH_CLAUDE"
-                NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "unknown")
-                echo -e "  Claude Code: ${YELLOW}repointed stale symlink ($PATH_CLAUDE → $INSTALLED_BIN)${NC}"
-            fi
+        # Durable symlink repoint (node-bump fallout): a node bump moves npm's global prefix, so the
+        # install lands `latest` in the NEW prefix while PATH `claude` still points at the OLD
+        # prefix's stale binary (npm reports success but `claude --version` never moves) — or claude
+        # is current but symlinked into an old keg a cleanup will delete. repoint_claude_symlink
+        # (lib.sh) fixes both by repointing the owned symlink at the live keg's npm shim.
+        if repoint_claude_symlink "$LATEST_VER"; then
+            NEW_VER=$(claude --version 2>/dev/null | awk '{print $1}' || echo "$NEW_VER")
         fi
         if [ "$PREV_VER" != "$NEW_VER" ]; then
             echo -e "  Claude Code: ${GREEN}$PREV_VER → $NEW_VER${NC}"
