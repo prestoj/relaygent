@@ -176,7 +176,7 @@ repoint_claude_symlink() {
     if _claude_resolves_offprefix "$npm_prefix" "$path_claude"; then need=1; fi  # off the live prefix
     if [ "$path_ver" != "$installed_ver" ]; then need=1; fi                       # or a stale version
     if [ "$need" = 0 ]; then return 1; fi                                         # healthy — no-op
-    ln -sf "$installed_bin" "$path_claude"
+    ln -sf "$installed_bin" "$path_claude" || return 1  # don't claim success if the relink failed
     echo -e "  Claude Code: ${YELLOW}repointed claude symlink → live keg ($path_claude → $installed_bin)${NC}"
 }
 
