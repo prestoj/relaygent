@@ -45,10 +45,12 @@ if command -v npm >/dev/null 2>&1; then
     # code — --quiet + 2>/dev/null hide failures). Empty on network hiccup → we skip the
     # latest-comparison and fall back to "did the version change" reporting.
     LATEST_VER=$(npm view @anthropic-ai/claude-code version 2>/dev/null || echo "")
-    if [ -n "$LATEST_VER" ] && [ "$PREV_VER" = "$LATEST_VER" ]; then
+    # Take the fast-path ONLY when the version is latest AND `claude` resolves under the live npm
+    # prefix. If a node bump left `claude` latest-but-symlinked-into-an-old-keg (claude_off_prefix),
+    # fall through to the install branch so npm reinstalls latest INTO the live prefix — otherwise
+    # there's no live-prefix binary to repoint to and the old keg stays doomed (#774 review catch).
+    if [ -n "$LATEST_VER" ] && [ "$PREV_VER" = "$LATEST_VER" ] && ! claude_off_prefix; then
         echo -e "  Claude Code: ${GREEN}$PREV_VER (latest)${NC}"
-        # Already latest, but the symlink can still point into an old keg a cleanup will delete.
-        repoint_claude_symlink "$LATEST_VER" || true
     else
         # Pick sudo up front if the global module dir isn't writable (Linux system npm).
         NPM_MODULES="$(npm prefix -g 2>/dev/null)/lib/node_modules"

@@ -142,17 +142,12 @@ except Exception as e: print(f'config error: {e}',file=sys.stderr); sys.exit(1)
     [[ "${HUB_SCHEME:-http}" == "https" ]] && CURL_K="-k" || CURL_K=""
 }
 
-# Repoint the first-on-PATH `claude` symlink at the live npm-prefix binary when it has drifted.
-# Two drift modes, both fixed by pointing at the current keg's npm shim:
-#   • version-stale — a node bump moved npm's global prefix, so the install landed `latest` in the
-#     NEW prefix while PATH `claude` still points at the OLD prefix's stale binary (#772); or
-#   • off-prefix-but-current — `claude` is already `latest` yet symlinked into an OLD keg that a
-#     later `brew cleanup` deletes → dangling symlink, relay can't exec `claude` (near-outage
-#     2026-06-28; the #772 repoint missed it because the version was already current).
-# Only acts on an owned symlink in a writable dir when the live-prefix binary exists and equals
-# $1 (latest; pass "" to skip the latest gate). No-ops on native-installer layouts (no npm-prefix
-# claude) and system-owned bin dirs, so it's a safe no-op off macOS. Prints a note + returns 0 iff
-# it repointed; returns 1 (no-op) otherwise.
+# Repoint the first-on-PATH `claude` symlink at the live npm-prefix binary when it has drifted —
+# either points at a stale version (#772: node bump moved the prefix, install landed latest in the
+# new one) or is current but symlinked into an old keg a `brew cleanup` will delete (near-outage
+# 2026-06-28). Only acts on an owned symlink in a writable dir when the live-prefix binary exists
+# and equals $1 (latest; "" skips the gate). No-ops on native installers / system bins (safe off
+# macOS). Prints a note + returns 0 iff it repointed; 1 otherwise.
 repoint_claude_symlink() {
     local latest="$1"
     local npm_prefix; npm_prefix="$(npm prefix -g 2>/dev/null || true)"
@@ -177,4 +172,22 @@ repoint_claude_symlink() {
     if [ "$need" = 0 ]; then return 1; fi                         # healthy — nothing to do
     ln -sf "$installed_bin" "$path_claude"
     echo -e "  Claude Code: ${YELLOW}repointed claude symlink → live keg ($path_claude → $installed_bin)${NC}"
+}
+
+# True (0) iff the first-on-PATH `claude` is an owned symlink in a writable dir that resolves
+# OUTSIDE the live npm prefix (node bump left it pointing at an old keg) AND we can repoint it.
+# Callers gate the "already latest" fast-path on `! claude_off_prefix` so off-prefix drift forces a
+# reinstall INTO the live prefix even at an unchanged version — the 06-28 hole: latest via the old
+# keg, new prefix empty → nothing to repoint to unless we reinstall first. False on healthy /
+# native / system layouts (safe no-op off macOS).
+claude_off_prefix() {
+    local npm_prefix; npm_prefix="$(npm prefix -g 2>/dev/null || true)"
+    [ -n "$npm_prefix" ] || return 1
+    local path_claude; path_claude="$(command -v claude 2>/dev/null || true)"
+    [ -L "$path_claude" ] || return 1
+    [ -w "$(dirname "$path_claude")" ] || return 1
+    local prefix_real; prefix_real="$(readlink -f "$npm_prefix" 2>/dev/null || printf '%s' "$npm_prefix")"
+    local target; target="$(readlink -f "$path_claude" 2>/dev/null || true)"
+    case "$target" in "$prefix_real"/*) return 1 ;; esac  # under live prefix — healthy
+    return 0
 }
