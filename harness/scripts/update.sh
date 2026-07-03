@@ -109,19 +109,24 @@ if [ "$(uname)" = "Darwin" ] && [ -d "$HOME/.hammerspoon" ] && [ -d "$REPO_DIR/h
     curl -sf --max-time 2 "http://localhost:$HS_PORT/reload" -X POST >/dev/null 2>&1 && echo -e "  Hammerspoon: ${GREEN}config reloaded${NC}" || true
 fi
 
-# Rebuild hub
+# Rebuild hub — on macOS delegate to the lock-aware atomic-swap rebuilder so the daily
+# update doesn't race the 5-min autobuild / session rebuild into a half-written build/
+# (#757 class): staging-build behind hub-rebuild.lock, atomic swap, restart, write
+# hub-build-commit. Linux/Docker: no autobuild + no launchctl → keep the in-place build.
 echo -e "  Rebuilding hub..."
-if (cd "$REPO_DIR/hub" && npx vite build >/dev/null 2>&1); then
+if [ "$(uname)" = "Darwin" ] && [ -f "$REPO_DIR/scripts/hub-rebuild-if-stale.sh" ]; then
+    if bash "$REPO_DIR/scripts/hub-rebuild-if-stale.sh" --force; then
+        echo -e "  Hub: ${GREEN}rebuilt (atomic swap)${NC}"
+    else
+        echo -e "  Hub: ${RED}build failed — check logs${NC}"; exit 1
+    fi
+elif (cd "$REPO_DIR/hub" && npx vite build >/dev/null 2>&1); then
     echo -e "  Hub: ${GREEN}built${NC}"
-    # Resolve DATA_DIR from config paths.data the SAME way the reader does
-    # (hub-rebuild-if-stale.sh:21) — load_config runs below this block, so
-    # DATA_DIR isn't set yet, and $REPO_DIR/data is wrong on boxes where
-    # paths.data differs from the repo dir (writer/reader would diverge).
+    # DATA_DIR resolved from config paths.data (load_config runs below this block).
     DATA_DIR=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['paths']['data'])" 2>/dev/null || echo "$REPO_DIR/data")
     git -C "$REPO_DIR" rev-parse HEAD > "$DATA_DIR/hub-build-commit" 2>/dev/null || true
 else
-    echo -e "  Hub: ${RED}build failed — check logs${NC}"
-    exit 1
+    echo -e "  Hub: ${RED}build failed — check logs${NC}"; exit 1
 fi
 
 load_config
